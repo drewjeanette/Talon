@@ -1,0 +1,224 @@
+// Talon database schema
+// Hosted target: GCP Cloud SQL for MySQL (see docs/DEPLOYMENT.md)
+// Local dev target: docker-compose MySQL service
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum Role {
+  STUDENT
+  SUPERVISOR
+  ADMIN
+}
+
+enum PayType {
+  BIWEEKLY // student workers
+  MONTHLY  // faculty / staff
+}
+
+enum PayPeriodStatus {
+  OPEN
+  PROCESSING
+  CLOSED
+}
+
+enum TimeEntryStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TimeEntrySource {
+  WEB
+  KIOSK
+  MANUAL
+}
+
+enum PayStubStatus {
+  DRAFT
+  FINALIZED
+  PAID
+}
+
+enum ReportScope {
+  DEPARTMENT
+  COLLEGE
+  ALL
+}
+
+// ---------- Org structure ----------
+
+model College {
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  code        String       @unique @db.VarChar(10)
+  departments Department[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Department {
+  id        Int      @id @default(autoincrement())
+  name      String
+  code      String   @unique @db.VarChar(40)
+  // Nullable on purpose: department codes are seeded from the registrar's list
+  // before anyone has gone through and assigned each one to a college. Admins
+  // fill this in (and can change it later) via the department management UI.
+  collegeId Int?
+  college   College? @relation(fields: [collegeId], references: [id])
+  isActive  Boolean  @default(true)
+  users     User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([collegeId])
+}
+
+// ---------- Users & auth ----------
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @db.VarChar(255)
+  firstName    String   @db.VarChar(100)
+  lastName     String   @db.VarChar(100)
+  role         Role     @default(STUDENT)
+  payType      PayType  @default(BIWEEKLY)
+
+  // Student workers: hourly rate. Faculty/staff: annual salary.
+  hourlyRate     Decimal? @db.Decimal(8, 2)
+  annualSalary   Decimal? @db.Decimal(10, 2)
+
+  departmentId Int?
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  supervisorId Int?
+  supervisor   User?   @relation("SupervisorToReports", fields: [supervisorId], references: [id])
+  reports      User[]  @relation("SupervisorToReports")
+
+  isActive     Boolean  @default(true)
+  mustResetPw  Boolean  @default(true)
+  lastLoginAt  DateTime?
+
+  timeEntries    TimeEntry[]     @relation("EntryOwner")
+  editedEntries  TimeEntry[]     @relation("EntryEditor")
+  payStubs       PayStub[]
+  refreshTokens  RefreshToken[]
+  auditLogs      AuditLog[]
+  reportRuns     ReportRun[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([departmentId])
+  @@index([supervisorId])
+}
+
+model RefreshToken {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @db.VarChar(255)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// ---------- Time clock ----------
+
+model TimeEntry {
+  id        Int             @id @default(autoincrement())
+  userId    Int
+  user      User            @relation("EntryOwner", fields: [userId], references: [id])
+
+  clockIn   DateTime
+  clockOut  DateTime?
+  source    TimeEntrySource @default(WEB)
+  notes     String?         @db.VarChar(500)
+
+  status       TimeEntryStatus @default(PENDING)
+  editedById   Int?
+  editedBy     User?           @relation("EntryEditor", fields: [editedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, clockIn])
+  @@index([status])
+}
+
+// ---------- Payroll ----------
+
+model PayPeriod {
+  id        Int              @id @default(autoincrement())
+  type      PayType
+  startDate DateTime
+  endDate   DateTime
+  payDate   DateTime
+  status    PayPeriodStatus  @default(OPEN)
+  payStubs  PayStub[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([type, startDate, endDate])
+  @@index([status])
+}
+
+model PayStub {
+  id            Int           @id @default(autoincrement())
+  userId        Int
+  user          User          @relation(fields: [userId], references: [id])
+  payPeriodId   Int
+  payPeriod     PayPeriod     @relation(fields: [payPeriodId], references: [id])
+
+  regularHours  Decimal       @default(0) @db.Decimal(6, 2)
+  overtimeHours Decimal       @default(0) @db.Decimal(6, 2)
+  grossPay      Decimal       @db.Decimal(10, 2)
+  status        PayStubStatus @default(DRAFT)
+  generatedAt   DateTime      @default(now())
+
+  @@unique([userId, payPeriodId])
+  @@index([payPeriodId])
+}
+
+// ---------- Reporting & audit ----------
+
+model ReportRun {
+  id            Int         @id @default(autoincrement())
+  requestedById Int
+  requestedBy   User        @relation(fields: [requestedById], references: [id])
+  scope         ReportScope
+  scopeId       Int?
+  payPeriodId   Int?
+  format        String      @default("csv") @db.VarChar(20)
+  rowCount      Int         @default(0)
+  createdAt     DateTime    @default(now())
+
+  @@index([requestedById])
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String   @db.VarChar(100)
+  entityType String   @db.VarChar(100)
+  entityId   Int?
+  metadata   Json?
+  ipAddress  String?  @db.VarChar(64)
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType, entityId])
+}

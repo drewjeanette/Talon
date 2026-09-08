@@ -1,0 +1,24 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: talon-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change_me_root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-talon}
+      MYSQL_USER: ${MYSQL_USER:-talon_app}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-change_me_app}
+    # Non-default host port on purpose (see docs/SECURITY.md - "change default ports").
+    # Container-internal port stays 3306; only the host-exposed port is shifted.
+    ports:
+      - "${DB_HOST_PORT:-13306}:3306"
+    volumes:
+      - talon-db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-change_me_root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  talon-db-data:
