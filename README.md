@@ -2,7 +2,7 @@
 
 A redesign of Tennessee Tech's payroll and web-clock system, replacing the Oracle-based application
 with a modern, secure web app running entirely on **Cloudflare** — a Workers API, a D1 database, and
-a React frontend on Pages. No servers, no VMs, no open database ports.
+a React frontend published as Worker static assets. No servers, no VMs, no open database ports.
 
 ## Docs
 
@@ -93,8 +93,7 @@ Full workflow and troubleshooting: [design/README.md](design/README.md).
 ## Deploying
 
 ```bash
-npm run deploy:server    # Worker
-npm run deploy:client    # Pages
+npm run deploy:server    # builds and deploys the API plus React frontend
 ```
 
 One caveat worth knowing before you deploy: the **Workers Free plan allows 10ms of CPU per request**,

@@ -17,7 +17,7 @@ migrations_dir = "migrations"
 [vars]
 JWT_ACCESS_EXPIRY = "15m"
 JWT_REFRESH_EXPIRY = "7d"
-CORS_ORIGIN = "http://localhost:5173"
+CORS_ORIGIN = "https://talontime.org,http://localhost:5173"
 ENVIRONMENT = "production"
 
 # ---------------------------------------------------------------------------
@@ -29,6 +29,18 @@ ENVIRONMENT = "production"
 #
 # For local `wrangler dev`, put them in server/.dev.vars (git-ignored).
 # ---------------------------------------------------------------------------
+
+# Build and publish the React frontend with this Worker. Requests under /api
+# run the Hono server; every other route is served as a React SPA.
+[build]
+command = "npm run build --workspace=client"
+cwd = ".."
+watch_dir = "../client/src"
+
+[assets]
+directory = "../client/dist"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
 
 [observability]
 enabled = true

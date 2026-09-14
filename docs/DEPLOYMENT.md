@@ -1,16 +1,14 @@
 # Deployment Plan (all Cloudflare)
 
 Talon runs entirely on Cloudflare: the API is a **Worker**, the database is **D1**, and the React
-frontend is served from **Cloudflare Pages**. There is no VM, no container, and no open database
+frontend is served as **Worker static assets**. There is no VM, no container, and no open database
 port anywhere in the system.
 
 ```mermaid
 flowchart LR
-    U[Student / Faculty / Admin browser] -->|HTTPS| P[Cloudflare Pages<br/>React frontend]
-    U -->|HTTPS /api| W[Cloudflare Worker<br/>Hono API]
+    U[Student / Faculty / Admin browser] -->|HTTPS| W[Cloudflare Worker<br/>React frontend + Hono API]
     W --> D[(Cloudflare D1<br/>SQLite)]
     W -.->|secrets at runtime| S[Worker Secrets]
-    CF[Cloudflare WAF + Rate Limiting + DNS/TLS] --- P
     CF --- W
 ```
 
@@ -94,14 +92,11 @@ For local development, copy `server/.dev.vars.example` to `server/.dev.vars` (gi
 ## Deploying
 
 ```bash
-npm run deploy:server    # publishes the Worker
-npm run deploy:client    # builds and publishes the frontend to Pages
+npm run deploy:server    # builds and publishes the API and React frontend
 ```
 
-After the first deploy, set the frontend's `VITE_API_BASE_URL` to the Worker URL
-(`https://talon-api.<your-subdomain>.workers.dev/api`) and update `CORS_ORIGIN` in
-`server/wrangler.toml` to the Pages URL, then redeploy both. A custom domain can be attached to
-either from the dashboard.
+The frontend calls `/api` on the same domain. Attach a custom domain to this Worker in the
+Cloudflare dashboard; no separate Pages project or cross-origin API setting is required.
 
 ## Password login requires Workers Paid
 
@@ -144,5 +139,5 @@ See [SECURITY.md](SECURITY.md) for the application-level controls.
 |---|---|---|
 | Workers | 100k requests/day | 10 ms CPU limit is the blocker described above |
 | D1 | 500 MB/database, 5 GB total, 10 databases | Far beyond what this project needs |
-| Pages | Unlimited static requests | Frontend hosting is genuinely free |
+| Worker static assets | Unlimited static asset requests | Included with the Worker deployment |
 | Workers Paid | Minimum $5/month | Required for the deployed scrypt password login |

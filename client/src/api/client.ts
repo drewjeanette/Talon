@@ -1,7 +1,9 @@
 import { ApiError } from "./errors";
 import { MOCK_MODE, mockRequest } from "./mock";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4317/api";
+// Production serves the React app and API from the same Worker/domain. Vite's
+// development proxy sends this path to the local Worker during development.
+const API_BASE_URL = "/api";
 
 // Access token lives in memory only (never localStorage) to limit XSS blast
 // radius; the refresh token is an httpOnly cookie the browser manages.

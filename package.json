@@ -11,7 +11,6 @@
     "dev:server": "npm run dev --workspace=server",
     "dev:client": "npm run dev --workspace=client",
     "deploy:server": "npm run deploy --workspace=server",
-    "deploy:client": "npm run deploy --workspace=client",
     "db:generate": "npm run db:generate --workspace=server",
     "db:migrate:local": "npm run db:migrate:local --workspace=server",
     "db:migrate:remote": "npm run db:migrate:remote --workspace=server",

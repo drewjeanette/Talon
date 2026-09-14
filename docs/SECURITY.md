@@ -3,7 +3,7 @@
 Talon handles payroll data for TN Tech students and faculty. This document covers what is
 implemented in the code today and what is a deliberate deployment decision.
 
-The system runs entirely on Cloudflare (Workers + D1 + Pages), which changes the threat model
+The system runs entirely on Cloudflare (Workers + static assets + D1), which changes the threat model
 compared to a self-hosted server: there is no operating system to patch, no SSH port, and no
 database listening on a network socket.
 

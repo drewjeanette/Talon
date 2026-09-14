@@ -4,13 +4,13 @@
 
 | Layer | Choice | Why |
 |---|---|---|
-| Frontend | React 18 + TypeScript + Vite | Static build, deployable to Cloudflare Pages for free |
+| Frontend | React 18 + TypeScript + Vite | Static build served by the same Worker as the API |
 | API | Hono on Cloudflare Workers | Workers-native framework; Express does not run on the Workers runtime |
 | Database | Cloudflare D1 (SQLite) | Serverless, no host to manage, no network port to expose |
 | ORM / migrations | Drizzle | First-class D1 support, ~8KB bundle (Prisma is 1MB+ and its edge support is still preview) |
 | Auth | JWT via `jose` + scrypt via `node:crypto` | Both run natively on the current Workers runtime |
 | Validation | Zod | Runs anywhere, shared shape between parse and TypeScript types |
-| Hosting | Cloudflare Pages + Workers + D1 | One provider, free tier covers everything except a deployed password login |
+| Hosting | Cloudflare Workers static assets + D1 | One domain for the SPA and API; password login requires Workers Paid |
 
 Everything in this stack was chosen because it runs on the Workers runtime. That constraint drove
 several substitutions away from the more familiar Node equivalents — see
@@ -32,7 +32,7 @@ Talon/
 │     ├─ middleware/auth.ts   JWT verification + RBAC
 │     ├─ routes/              auth, users, org, timeclock, payroll, reports
 │     └─ services/            payroll calculation, CSV reports, audit log
-├─ client/                    React SPA -> Cloudflare Pages
+├─ client/                    React SPA -> Worker static assets
 │  └─ src/
 │     ├─ api/                 fetch wrapper, mock backend for demos
 │     ├─ context/             AuthContext
@@ -45,7 +45,7 @@ Talon/
 
 ```mermaid
 sequenceDiagram
-    participant B as Browser (React on Pages)
+    participant B as Browser (React from Worker assets)
     participant W as Worker (Hono)
     participant D as D1
 
