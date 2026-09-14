@@ -40,7 +40,7 @@ export function LoginPage() {
             placeholder="name@tntech.edu"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            pattern="[^@\\s]+@tntech\\.edu"
+            pattern="[^@ ]+@tntech[.]edu"
             title="Use your @tntech.edu email address"
             required
           />
