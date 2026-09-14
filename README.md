@@ -66,9 +66,8 @@ Demo accounts (change before using real data):
 | Supervisor | supervisor@tntech.edu | `ChangeMe!Super1` |
 | Student | student@tntech.edu | `ChangeMe!Student1` |
 
-> Logins take a couple of seconds. That is PBKDF2 doing 600,000 iterations on purpose. To speed up
-> local demos, regenerate the seed with a lower cost:
-> `PBKDF2_ITERATIONS=100000 npm run db:seed:generate && npm run db:seed:local`
+Passwords are stored as salted scrypt hashes. Talon accepts only normalized addresses ending in
+`@tntech.edu`; this restriction is enforced by both the API and D1 triggers.
 
 ## Working as a team
 
@@ -99,7 +98,6 @@ npm run deploy:client    # Pages
 ```
 
 One caveat worth knowing before you deploy: the **Workers Free plan allows 10ms of CPU per request**,
-and a secure password hash costs far more than that. A deployed password login needs Workers Paid
-($5/mo) or Cloudflare Access for SSO. Local development is unaffected. The measurements and the three
-options are in
-[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#the-workers-free-plan-cannot-run-a-real-password-login).
+and a secure password hash costs more than that. This password-login deployment needs Workers Paid
+(minimum $5/month). Details are in
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#password-login-requires-workers-paid).

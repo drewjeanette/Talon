@@ -45,7 +45,7 @@ gantt
 | Migration to Cloudflare (Workers + D1) | Done | [ARCHITECTURE.md](ARCHITECTURE.md#migration-notes-from-the-node--mysql-design) |
 | Security review | Ongoing | [SECURITY.md](SECURITY.md) |
 | Cloudflare deployment (Workers/Pages/D1) | Not started | [DEPLOYMENT.md](DEPLOYMENT.md) |
-| SSO via Cloudflare Access | Not started | [DEPLOYMENT.md](DEPLOYMENT.md#the-workers-free-plan-cannot-run-a-real-password-login) |
+| SSO via Cloudflare Access | Optional; local passwords selected | [SECURITY.md](SECURITY.md#known-gaps) |
 | Accessibility audit | Baseline in place, needs a real screen-reader pass | `client/src/components` |
 | Responsive (tablet/mobile) work | Not started | `client/src/styles.css` |
 | Testing & QA | Not started | add `server`/`client` test suites |

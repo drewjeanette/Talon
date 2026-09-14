@@ -8,7 +8,6 @@ export interface Bindings {
   JWT_ACCESS_EXPIRY: string;
   JWT_REFRESH_EXPIRY: string;
   CORS_ORIGIN: string;
-  PBKDF2_ITERATIONS?: string;
   ENVIRONMENT?: string;
 }
 

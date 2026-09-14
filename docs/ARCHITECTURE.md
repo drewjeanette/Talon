@@ -8,7 +8,7 @@
 | API | Hono on Cloudflare Workers | Workers-native framework; Express does not run on the Workers runtime |
 | Database | Cloudflare D1 (SQLite) | Serverless, no host to manage, no network port to expose |
 | ORM / migrations | Drizzle | First-class D1 support, ~8KB bundle (Prisma is 1MB+ and its edge support is still preview) |
-| Auth | JWT via `jose` + PBKDF2 via Web Crypto | Both run on Workers; `jsonwebtoken` and `bcrypt` depend on Node APIs and do not |
+| Auth | JWT via `jose` + scrypt via `node:crypto` | Both run natively on the current Workers runtime |
 | Validation | Zod | Runs anywhere, shared shape between parse and TypeScript types |
 | Hosting | Cloudflare Pages + Workers + D1 | One provider, free tier covers everything except a deployed password login |
 
@@ -28,7 +28,7 @@ Talon/
 │  └─ src/
 │     ├─ index.ts             Hono app, routing, error handling
 │     ├─ db/schema.ts         Database schema (source of truth)
-│     ├─ lib/                 password (PBKDF2), jwt (jose), money (cents)
+│     ├─ lib/                 password (scrypt), jwt (jose), money (cents)
 │     ├─ middleware/auth.ts   JWT verification + RBAC
 │     ├─ routes/              auth, users, org, timeclock, payroll, reports
 │     └─ services/            payroll calculation, CSV reports, audit log
@@ -51,7 +51,7 @@ sequenceDiagram
 
     B->>W: POST /api/auth/login {email, password}
     W->>D: SELECT user + department
-    W->>W: PBKDF2 verify (~2.4s CPU - see DEPLOYMENT.md)
+    W->>W: Verify salted scrypt hash
     W->>D: INSERT hashed refresh token
     W-->>B: access token (JSON) + refresh token (httpOnly cookie)
 
@@ -97,7 +97,7 @@ replacing every component that depends on Node-specific APIs:
 | Was | Problem on Workers | Now |
 |---|---|---|
 | Express | Not the Workers runtime | Hono |
-| bcrypt | Native C++ addon, cannot load | PBKDF2 via Web Crypto |
+| bcrypt | Native C++ addon, cannot load | scrypt via Workers `node:crypto` |
 | jsonwebtoken | Requires Node `crypto` | jose |
 | helmet / cors / express-rate-limit | Express middleware | Hono `secureHeaders`/`cors` + Cloudflare WAF and Rate Limiting |
 | Prisma + MySQL | Heavy bundle, edge support preview | Drizzle + D1 |

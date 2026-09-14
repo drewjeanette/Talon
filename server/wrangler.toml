@@ -20,11 +20,6 @@ JWT_REFRESH_EXPIRY = "7d"
 CORS_ORIGIN = "http://localhost:5173"
 ENVIRONMENT = "production"
 
-# PBKDF2 cost. 600000 is the OWASP recommendation and the code's default.
-# It exceeds the Workers FREE plan's 10ms CPU budget, so a deployed login needs
-# Workers Paid. Lower this ONLY for local demos, and say so in your writeup.
-PBKDF2_ITERATIONS = "600000"
-
 # ---------------------------------------------------------------------------
 # Secrets - do NOT put these in [vars] and do NOT commit them.
 # Set them per environment with:

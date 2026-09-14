@@ -1,77 +1,73 @@
-// Password hashing for the Workers runtime.
+// Password hashing for Cloudflare Workers.
 //
-// bcrypt is a native Node addon and does not run on Cloudflare Workers at all,
-// so this uses PBKDF2-HMAC-SHA256 through the Web Crypto API, which is
-// available in the runtime and is FIPS-approved.
-//
-// CPU NOTE: PBKDF2 at OWASP's recommended iteration count costs far more than
-// the 10ms CPU budget of the Workers *Free* plan, so a deployed login needs
-// Workers Paid (30s default CPU) or an SSO front door such as Cloudflare
-// Access. Local `wrangler dev` is not CPU limited, so development and demos
-// work on either plan. The count is configurable rather than silently lowered:
-// weakening it is a security decision that should be made deliberately.
+// The Workers runtime supports node:crypto's native scrypt implementation.
+// Scrypt is intentionally expensive in both CPU and memory, which makes stolen
+// database hashes substantially harder to crack than a fast general-purpose
+// digest. Every password receives its own cryptographically random salt.
 
-const DEFAULT_ITERATIONS = 600_000;
+import { scrypt as nodeScrypt } from "node:crypto";
+
+const SCRYPT_N = 2 ** 15;
+const SCRYPT_R = 8;
+const SCRYPT_P = 3;
+const SCRYPT_MAX_MEMORY = 64 * 1024 * 1024;
 const SALT_BYTES = 16;
-const KEY_BITS = 256;
-
-const encoder = new TextEncoder();
+const KEY_BYTES = 32;
 
 function toBase64(bytes: Uint8Array): string {
   let binary = "";
-  for (const b of bytes) binary += String.fromCharCode(b);
+  for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary);
 }
 
 function fromBase64(value: string): Uint8Array {
   const binary = atob(value);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 }
 
-async function deriveBits(password: string, salt: Uint8Array, iterations: number): Promise<Uint8Array> {
-  const key = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, [
-    "deriveBits",
-  ]);
-  const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", salt, iterations, hash: "SHA-256" },
-    key,
-    KEY_BITS
-  );
-  return new Uint8Array(bits);
+function deriveKey(
+  password: string,
+  salt: Uint8Array,
+  n = SCRYPT_N,
+  r = SCRYPT_R,
+  p = SCRYPT_P
+): Promise<Uint8Array> {
+  return new Promise((resolve, reject) => {
+    nodeScrypt(password, salt, KEY_BYTES, { N: n, r, p, maxmem: SCRYPT_MAX_MEMORY }, (error, key) => {
+      if (error) reject(error);
+      else resolve(new Uint8Array(key));
+    });
+  });
 }
 
-/**
- * Returns a self-describing hash: `pbkdf2$<iterations>$<salt>$<hash>`.
- * Storing the iteration count alongside the hash means the cost can be raised
- * later without invalidating existing passwords.
- */
-export async function hashPassword(password: string, iterations = DEFAULT_ITERATIONS): Promise<string> {
+/** Returns a self-describing hash: `scrypt$N$r$p$salt$hash`. */
+export async function hashPassword(password: string): Promise<string> {
   const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTES));
-  const derived = await deriveBits(password, salt, iterations);
-  return `pbkdf2$${iterations}$${toBase64(salt)}$${toBase64(derived)}`;
+  const derived = await deriveKey(password, salt);
+  return `scrypt$${SCRYPT_N}$${SCRYPT_R}$${SCRYPT_P}$${toBase64(salt)}$${toBase64(derived)}`;
 }
 
-/** Compares two byte arrays in constant time to avoid leaking a match prefix. */
+/** Compares two byte arrays without revealing the first mismatched byte. */
 function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
   if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
-  return diff === 0;
+  let difference = 0;
+  for (let i = 0; i < a.length; i++) difference |= a[i] ^ b[i];
+  return difference === 0;
 }
 
 export async function verifyPassword(password: string, stored: string): Promise<boolean> {
   const parts = stored.split("$");
-  if (parts.length !== 4 || parts[0] !== "pbkdf2") return false;
+  if (parts.length !== 6 || parts[0] !== "scrypt") return false;
 
-  const iterations = Number(parts[1]);
-  if (!Number.isInteger(iterations) || iterations <= 0) return false;
+  const n = Number(parts[1]);
+  const r = Number(parts[2]);
+  const p = Number(parts[3]);
+  if (n !== SCRYPT_N || r !== SCRYPT_R || p !== SCRYPT_P) return false;
 
   try {
-    const salt = fromBase64(parts[2]);
-    const expected = fromBase64(parts[3]);
-    const actual = await deriveBits(password, salt, iterations);
+    const salt = fromBase64(parts[4]);
+    const expected = fromBase64(parts[5]);
+    const actual = await deriveKey(password, salt, n, r, p);
     return timingSafeEqual(actual, expected);
   } catch {
     return false;

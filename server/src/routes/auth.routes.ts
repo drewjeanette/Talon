@@ -20,15 +20,28 @@ export const authRoutes = new Hono<AppEnv>();
 
 const REFRESH_COOKIE = "talon_refresh";
 const REFRESH_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
+const TNTECH_EMAIL_SUFFIX = "@tntech.edu";
+
+const tntechEmail = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .email()
+  .refine((email) => email.endsWith(TNTECH_EMAIL_SUFFIX), {
+    message: "Use a Tennessee Tech email ending in @tntech.edu.",
+  });
 
 const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
+  email: tntechEmail,
+  password: z.string().min(1).max(128),
 });
 
 const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1),
-  newPassword: z.string().min(12, "New password must be at least 12 characters."),
+  currentPassword: z.string().min(1).max(128),
+  newPassword: z
+    .string()
+    .min(12, "New password must be at least 12 characters.")
+    .max(128, "New password must be no more than 128 characters."),
 });
 
 interface UserWithDepartment {
@@ -66,13 +79,6 @@ function serializeUser(user: UserWithDepartment) {
         }
       : null,
   };
-}
-
-function iterations(c: Context<AppEnv>): number | undefined {
-  const raw = c.env.PBKDF2_ITERATIONS;
-  if (!raw) return undefined;
-  const parsed = Number(raw);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
 }
 
 async function issueTokens(
@@ -209,7 +215,7 @@ authRoutes.post("/change-password", requireAuth, async (c) => {
     throw new HTTPException(401, { message: "Current password is incorrect." });
   }
 
-  const passwordHash = await hashPassword(newPassword, iterations(c));
+  const passwordHash = await hashPassword(newPassword);
   await db.batch([
     db.update(users).set({ passwordHash, mustResetPw: false }).where(eq(users.id, user.id)),
     // Every other session is invalidated, so a stolen session dies when the

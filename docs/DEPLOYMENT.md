@@ -103,37 +103,26 @@ After the first deploy, set the frontend's `VITE_API_BASE_URL` to the Worker URL
 `server/wrangler.toml` to the Pages URL, then redeploy both. A custom domain can be attached to
 either from the dashboard.
 
-## The Workers Free plan cannot run a real password login
+## Password login requires Workers Paid
 
-This is the one constraint that materially affects the project, and it is worth stating plainly in
-your writeup because it is a measured result rather than an opinion.
+Talon stores local email-and-password credentials as requested. Passwords are salted scrypt hashes;
+the plaintext is never written to D1. Scrypt deliberately consumes enough CPU and memory to slow
+offline cracking if a database copy is stolen.
 
 | Plan | CPU per request | D1 queries per request | Requests/day |
 |---|---|---|---|
 | Free | **10 ms** | 50 | 100,000 |
 | Paid ($5/mo) | 30 s (up to 5 min) | 1,000 | unmetered |
 
-Password hashing is *deliberately* slow. Measured locally in `wrangler dev`, one login at the
-OWASP-recommended 600,000 PBKDF2 iterations costs **roughly 2.4 seconds of CPU**, against a 0.23 s
-baseline for a request that does no hashing. That is about **240x the Free plan's 10 ms budget**.
-Lowering the iteration count does not rescue it: even a badly weakened 10,000 iterations would still
-land in the tens of milliseconds. No secure password hash fits in 10 ms.
+The Free plan allows 10 ms of CPU per request, which is not enough for Talon's password derivation.
+Use Workers Paid (minimum $5/month), whose default per-request CPU allowance is 30 seconds. The
+stored format records the scrypt parameters (`scrypt$N$r$p$salt$hash`) so hashes remain
+self-describing. Local `wrangler dev` also works for development.
 
-There are three honest options:
-
-1. **Workers Paid ($5/month)** — keep the password login exactly as designed. Simplest, and cheap
-   enough for a semester.
-2. **Cloudflare Access (Zero Trust) in front of the app** — authentication happens at Cloudflare's
-   edge against TN Tech SSO or a one-time email PIN, and the Worker only *verifies* the signed
-   identity token Access injects, which costs about a millisecond. This stays on the free plan and
-   is the better long-term architecture: it is also what the security plan recommends instead of
-   storing local passwords for real employees.
-3. **Local demo only** — `wrangler dev` has no CPU limit, so the full system runs and demos on the
-   free plan as long as it is not publicly deployed.
-
-The code supports all three. `PBKDF2_ITERATIONS` is configurable in `wrangler.toml`, and the stored
-hash records the iteration count it was created with, so the cost can be raised later without
-invalidating existing passwords.
+Talon checks that every account email ends exactly in `@tntech.edu`. That proves the account was
+provisioned with a Tennessee Tech-formatted address; it does not contact Tennessee Tech or prove the
+person currently controls that university mailbox. Official account verification would require TN
+Tech SSO later.
 
 ## Security controls at the edge
 
@@ -156,4 +145,4 @@ See [SECURITY.md](SECURITY.md) for the application-level controls.
 | Workers | 100k requests/day | 10 ms CPU limit is the blocker described above |
 | D1 | 500 MB/database, 5 GB total, 10 databases | Far beyond what this project needs |
 | Pages | Unlimited static requests | Frontend hosting is genuinely free |
-| Workers Paid | $5/month | Needed only for a deployed password login |
+| Workers Paid | Minimum $5/month | Required for the deployed scrypt password login |

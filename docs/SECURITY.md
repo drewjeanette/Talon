@@ -12,25 +12,23 @@ database listening on a network socket.
 | Actor | Goal | Primary mitigation |
 |---|---|---|
 | Outside attacker, no credentials | Reach the API or database directly | D1 has no public endpoint at all; it is reachable only through the Worker binding |
-| Credential stuffing / brute force | Log in as someone else | PBKDF2 at 600,000 iterations, Cloudflare Rate Limiting on `/api/auth/*`, identical failure responses |
+| Credential stuffing / brute force | Log in as someone else | Memory-hard scrypt hashes, Cloudflare Rate Limiting on `/api/auth/*`, identical failure responses |
 | Authenticated student | Read or approve another department's data | Server-side query scoping, verified by test (see below) |
 | Authenticated supervisor | Escalate to admin, or read another department | Role checked from a signed JWT; report scope overwritten server-side |
 | Stolen access token (XSS) | Replay the session | Token held in memory only, 15 minute expiry; refresh token is httpOnly + SameSite=Strict |
-| Stolen database dump | Recover passwords or sessions | Passwords are PBKDF2 hashes; refresh tokens stored as SHA-256 hashes, not raw |
+| Stolen database dump | Recover passwords or sessions | Passwords are salted scrypt hashes; refresh tokens stored as SHA-256 hashes, not raw |
 | Malicious dependency | Supply-chain compromise | `npm audit` in setup; small dependency surface (Hono, Drizzle, jose, Zod) |
 
 ## Authentication
 
-- **Passwords**: PBKDF2-HMAC-SHA256 via the Web Crypto API, 600,000 iterations (the OWASP 2026
-  recommendation), 16-byte random salt per password, constant-time comparison on verify. bcrypt is a
-  native Node addon and cannot run on Workers, which is why PBKDF2 was chosen; it is also the
-  FIPS-approved option. The stored format is self-describing (`pbkdf2$iterations$salt$hash`), so the
-  work factor can be raised later without invalidating existing passwords.
-- **CPU cost is a real constraint.** Measured at ~2.4 s of CPU per login, which exceeds the Workers
-  Free plan's 10 ms budget by roughly 240x. See
-  [DEPLOYMENT.md](DEPLOYMENT.md#the-workers-free-plan-cannot-run-a-real-password-login) for the three
-  supported options. The iteration count is configurable but is **not** silently lowered: weakening
-  a password hash is a decision that should be made explicitly and documented.
+- **Passwords**: scrypt through Cloudflare Workers' native `node:crypto` implementation, using
+  `N=32768`, `r=8`, and `p=3`, with a fresh 16-byte random salt for every password and a constant-time
+  comparison on verify. D1 stores only the self-describing value (`scrypt$N$r$p$salt$hash`).
+- **Email restriction**: login and account provisioning normalize addresses to lowercase and accept
+  only addresses ending exactly in `@tntech.edu`. D1 insert and update triggers enforce the same rule
+  if data is written outside the API.
+- **CPU cost is a real constraint.** Scrypt is deliberately expensive and requires the Workers Paid
+  plan. See [DEPLOYMENT.md](DEPLOYMENT.md#password-login-requires-workers-paid).
 - **Tokens**: 15-minute JWT access token plus a 7-day refresh token. Refresh tokens are stored
   **hashed** (SHA-256) in D1 and **rotate on every use** — the presented token is revoked and a new
   one issued, so a stolen refresh cookie is worth a single use at most.
@@ -41,9 +39,6 @@ database listening on a network socket.
   batch as the password update.
 - **New accounts** receive a cryptographically random one-time password, returned once to the admin
   for out-of-band delivery, with `mustResetPw` set.
-- **For production, replace local passwords with SSO.** TN Tech has an identity provider; Cloudflare
-  Access can sit in front of the app and hand the Worker a verified identity. That removes password
-  storage from this system entirely and simultaneously solves the CPU problem above.
 
 ## Authorization
 
@@ -100,9 +95,8 @@ host to harden and D1 exposes no network port. Equivalent protection now comes f
 - **Cloudflare WAF** — managed rulesets in front of the Worker.
 - **Cloudflare Rate Limiting** — applied at the edge before the Worker executes, so abusive traffic
   costs nothing. Configure a stricter rule for `/api/auth/*`.
-- **Cloudflare Access (Zero Trust)** — restrict the application to TN Tech SSO accounts or to campus
-  IP ranges. This is the correct layer for a "campus network only" requirement; enforcing it inside
-  the application would be bypassable and harder to reason about.
+- **Cloudflare Access (Zero Trust)** can optionally add a second perimeter around the application or
+  restrict it to campus IP ranges. Talon's own email-and-password login remains authoritative.
 - **Automatic TLS** — cannot be accidentally misconfigured to serve plaintext.
 
 ## Secrets management
@@ -129,7 +123,8 @@ host to harden and D1 exposes no network port. Equivalent protection now comes f
 
 ## Known gaps
 
-- No SSO/OIDC integration yet; local passwords are a placeholder.
+- Talon verifies that an account uses the `@tntech.edu` domain; it does not verify employment or
+  enrollment status with Tennessee Tech's identity provider.
 - No automated test suite. The verification above was performed manually.
 - No SSN or bank/direct-deposit fields exist. If added, they need field-level encryption and a
   tighter access policy than anything currently in the schema.

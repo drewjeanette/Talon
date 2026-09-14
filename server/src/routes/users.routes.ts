@@ -60,7 +60,14 @@ userRoutes.get("/", requireRole("SUPERVISOR"), async (c) => {
 
 const createUserSchema = z
   .object({
-    email: z.string().email(),
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .email()
+      .refine((email) => email.endsWith("@tntech.edu"), {
+        message: "Use a Tennessee Tech email ending in @tntech.edu.",
+      }),
     firstName: z.string().min(1),
     lastName: z.string().min(1),
     role: z.enum(["STUDENT", "SUPERVISOR", "ADMIN"]),
@@ -84,11 +91,7 @@ userRoutes.post("/", requireRole("ADMIN"), async (c) => {
   const db = getDb(c.env.DB);
 
   const tempPassword = generateTempPassword();
-  const rawIterations = Number(c.env.PBKDF2_ITERATIONS);
-  const passwordHash = await hashPassword(
-    tempPassword,
-    Number.isInteger(rawIterations) && rawIterations > 0 ? rawIterations : undefined
-  );
+  const passwordHash = await hashPassword(tempPassword);
 
   const [user] = await db
     .insert(users)

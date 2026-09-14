@@ -37,8 +37,11 @@ export function LoginPage() {
             id="email"
             type="email"
             autoComplete="username"
+            placeholder="name@tntech.edu"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            pattern="[^@\\s]+@tntech\\.edu"
+            title="Use your @tntech.edu email address"
             required
           />
         </div>

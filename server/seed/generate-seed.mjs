@@ -1,4 +1,4 @@
-// Generates seed/seed.sql, including real PBKDF2 password hashes for the demo
+// Generates seed/seed.sql, including real scrypt password hashes for the demo
 // accounts. Run with:  npm run db:seed:generate --workspace=server
 //
 // Hashes are produced here with the same Web Crypto algorithm and the same
@@ -8,12 +8,17 @@
 // integer({ mode: "timestamp" }), which stores seconds.
 
 import { writeFileSync } from "node:fs";
+import { scrypt as nodeScrypt } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { promisify } from "node:util";
 import { INITIAL_DEPARTMENT_CODES } from "./departmentCodes.mjs";
 
-const ITERATIONS = Number(process.env.PBKDF2_ITERATIONS ?? 600_000);
-const encoder = new TextEncoder();
+const SCRYPT_N = 2 ** 15;
+const SCRYPT_R = 8;
+const SCRYPT_P = 3;
+const SCRYPT_MAX_MEMORY = 64 * 1024 * 1024;
+const scrypt = promisify(nodeScrypt);
 
 function toBase64(bytes) {
   return Buffer.from(bytes).toString("base64");
@@ -21,15 +26,13 @@ function toBase64(bytes) {
 
 async function hashPassword(password) {
   const salt = crypto.getRandomValues(new Uint8Array(16));
-  const key = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, [
-    "deriveBits",
-  ]);
-  const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", salt, iterations: ITERATIONS, hash: "SHA-256" },
-    key,
-    256
-  );
-  return `pbkdf2$${ITERATIONS}$${toBase64(salt)}$${toBase64(new Uint8Array(bits))}`;
+  const key = await scrypt(password, salt, 32, {
+    N: SCRYPT_N,
+    r: SCRYPT_R,
+    p: SCRYPT_P,
+    maxmem: SCRYPT_MAX_MEMORY,
+  });
+  return `scrypt$${SCRYPT_N}$${SCRYPT_R}$${SCRYPT_P}$${toBase64(salt)}$${toBase64(key)}`;
 }
 
 /** Escapes a value for a single-quoted SQL string literal. */
@@ -150,4 +153,4 @@ const outPath = join(dirname(fileURLToPath(import.meta.url)), "seed.sql");
 writeFileSync(outPath, lines.join("\n") + "\n", "utf8");
 console.log(`Wrote ${outPath}`);
 console.log(`Departments: ${INITIAL_DEPARTMENT_CODES.length}, users: ${demoUsers.length}`);
-console.log(`PBKDF2 iterations: ${ITERATIONS}`);
+console.log(`Password hashes: scrypt N=${SCRYPT_N}, r=${SCRYPT_R}, p=${SCRYPT_P}`);

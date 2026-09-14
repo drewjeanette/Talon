@@ -33,7 +33,7 @@ erDiagram
     USERS {
         int id PK
         text email
-        text password_hash "pbkdf2$iterations$salt$hash"
+        text password_hash "scrypt$N$r$p$salt$hash"
         text first_name
         text last_name
         text role "STUDENT | SUPERVISOR | ADMIN"
@@ -133,7 +133,7 @@ npm run db:migrate:local --workspace=server   # apply to your own local D1
 npm run db:migrate:remote --workspace=server  # apply to the shared database
 ```
 
-Seed data is generated rather than hand-written, because the demo accounts need real PBKDF2 hashes:
+Seed data is generated rather than hand-written, because the demo accounts need real salted scrypt hashes:
 
 ```bash
 npm run db:seed:generate --workspace=server   # writes seed/seed.sql
