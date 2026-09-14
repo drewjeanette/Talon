@@ -1,0 +1,10 @@
+# Copy to server/.dev.vars for local `wrangler dev`. Git-ignored - never commit .dev.vars.
+# Generate real values with: openssl rand -base64 48
+
+JWT_ACCESS_SECRET=local_dev_access_secret_replace_me_with_random_value
+JWT_REFRESH_SECRET=local_dev_refresh_secret_replace_me_with_different_value
+
+# Local demos only: the OWASP-recommended 600000 is slow enough to be
+# noticeable when logging in repeatedly against a local dev server. Deployed
+# environments should use the default in wrangler.toml.
+PBKDF2_ITERATIONS=600000

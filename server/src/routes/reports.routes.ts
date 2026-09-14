@@ -1,14 +1,16 @@
-import { Router } from "express";
+import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { prisma } from "../config/prisma.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
+import { getDb } from "../db/index.js";
+import { reportRuns, users } from "../db/schema.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { HttpError } from "../middleware/errorHandler.js";
-import { buildPayrollReportRows, rowsToCsv } from "../services/report.service.js";
+import { buildPayrollReportRows, rowsToCsv, type ReportScope } from "../services/report.service.js";
+import type { AppEnv } from "../types.js";
 
-export const reportsRouter = Router();
+export const reportRoutes = new Hono<AppEnv>();
 
-reportsRouter.use(requireAuth, requireRole("SUPERVISOR", "ADMIN"));
+reportRoutes.use("*", requireAuth, requireRole("SUPERVISOR"));
 
 const querySchema = z.object({
   scope: z.enum(["DEPARTMENT", "COLLEGE", "ALL"]).default("DEPARTMENT"),
@@ -17,46 +19,53 @@ const querySchema = z.object({
   format: z.enum(["csv", "json"]).default("csv"),
 });
 
-// Auto-generates a payroll report scoped to a department or college for a
-// given pay period. Supervisors are hard-pinned to their own department -
-// the scope/scopeId they pass is ignored to prevent viewing other units' pay data.
-reportsRouter.get(
-  "/payroll",
-  asyncHandler(async (req, res) => {
-    const query = querySchema.parse(req.query);
+/**
+ * Auto-generates a payroll report for a pay period.
+ *
+ * Supervisors are pinned to their own department: whatever scope they pass is
+ * overwritten with their department id from the database, so the parameter
+ * cannot be tampered with to read another unit's pay data.
+ */
+reportRoutes.get("/payroll", async (c) => {
+  const query = querySchema.parse({
+    scope: c.req.query("scope"),
+    scopeId: c.req.query("scopeId"),
+    payPeriodId: c.req.query("payPeriodId"),
+    format: c.req.query("format"),
+  });
 
-    let scope = query.scope;
-    let scopeId = query.scopeId;
+  const db = getDb(c.env.DB);
+  const me = c.get("user");
 
-    if (req.user!.role === "SUPERVISOR") {
-      const supervisor = await prisma.user.findUnique({ where: { id: req.user!.id } });
-      if (!supervisor?.departmentId) {
-        throw new HttpError(422, "Your account has no department assigned.");
-      }
-      scope = "DEPARTMENT";
-      scopeId = supervisor.departmentId;
+  let scope: ReportScope = query.scope;
+  let scopeId = query.scopeId;
+
+  if (me.role === "SUPERVISOR") {
+    const supervisor = await db.query.users.findFirst({ where: eq(users.id, me.id) });
+    if (!supervisor?.departmentId) {
+      throw new HTTPException(422, { message: "Your account has no department assigned." });
     }
+    scope = "DEPARTMENT";
+    scopeId = supervisor.departmentId;
+  }
 
-    const rows = await buildPayrollReportRows({ scope, scopeId, payPeriodId: query.payPeriodId });
+  const rows = await buildPayrollReportRows(db, { scope, scopeId, payPeriodId: query.payPeriodId });
 
-    await prisma.reportRun.create({
-      data: {
-        requestedById: req.user!.id,
-        scope,
-        scopeId,
-        payPeriodId: query.payPeriodId,
-        format: query.format,
-        rowCount: rows.length,
-      },
-    });
+  await db.insert(reportRuns).values({
+    requestedById: me.id,
+    scope,
+    scopeId: scopeId ?? null,
+    payPeriodId: query.payPeriodId,
+    format: query.format,
+    rowCount: rows.length,
+  });
 
-    if (query.format === "json") {
-      return res.json(rows);
-    }
+  if (query.format === "json") return c.json(rows);
 
-    const csv = rowsToCsv(rows);
-    res.setHeader("Content-Type", "text/csv");
-    res.setHeader("Content-Disposition", `attachment; filename="payroll-report-${query.payPeriodId}.csv"`);
-    res.send(csv);
-  })
-);
+  return new Response(rowsToCsv(rows), {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="payroll-report-${query.payPeriodId}.csv"`,
+    },
+  });
+});

@@ -1,8 +1,8 @@
 {
   "name": "talon",
   "private": true,
-  "version": "0.1.0",
-  "description": "Talon - Tennessee Tech payroll & web-clock system (redesign)",
+  "version": "0.2.0",
+  "description": "Talon - Tennessee Tech payroll & web-clock system (Cloudflare Workers + D1)",
   "workspaces": [
     "server",
     "client"
@@ -10,10 +10,21 @@
   "scripts": {
     "dev:server": "npm run dev --workspace=server",
     "dev:client": "npm run dev --workspace=client",
-    "db:up": "docker compose up -d db",
-    "db:down": "docker compose down",
-    "prisma:migrate": "npm run prisma:migrate --workspace=server",
-    "prisma:seed": "npm run prisma:seed --workspace=server",
-    "prisma:studio": "npm run prisma:studio --workspace=server"
+    "deploy:server": "npm run deploy --workspace=server",
+    "deploy:client": "npm run deploy --workspace=client",
+    "db:generate": "npm run db:generate --workspace=server",
+    "db:migrate:local": "npm run db:migrate:local --workspace=server",
+    "db:migrate:remote": "npm run db:migrate:remote --workspace=server",
+    "db:seed:generate": "npm run db:seed:generate --workspace=server",
+    "db:seed:local": "npm run db:seed:local --workspace=server",
+    "db:seed:remote": "npm run db:seed:remote --workspace=server",
+    "design:export": "node client/scripts/design-export.mjs",
+    "design:import": "node client/scripts/design-import.mjs",
+    "design:check": "node client/scripts/design-import.mjs --dry-run",
+    "design:import:force": "node client/scripts/design-import.mjs --force",
+    "typecheck": "npm run typecheck --workspace=server && npm run build --workspace=client"
+  },
+  "devDependencies": {
+    "drizzle-orm": "^0.45.2"
   }
 }

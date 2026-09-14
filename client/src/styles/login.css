@@ -1,0 +1,107 @@
+/*
+  TALON DESIGN - LOGIN / WELCOME VIEW
+
+  An AI coding tool may change the CSS in this stylesheet. Open the returned
+  design file in a browser to review the result.
+
+  What is on the Login screen, and the names used to style each part:
+
+    body ....................... the full browser background
+    .skip-link ................. accessibility link shown when focused
+    .login-page ................ centers and positions the sign-in card
+      .login-card .............. the white sign-in panel
+        #login-heading ......... the "Talon Sign In" heading
+        .form-row .............. each label and input pair
+        label .................. field labels
+        input .................. email and password fields
+        .form-error ............ an unsuccessful-login message
+        button ................. the Sign in button
+
+  Before returning this file:
+    - Keep text readable against its background (strong contrast).
+    - Keep the :focus-visible outline so keyboard users can see where they are.
+    - Keep the layout usable on narrow phone screens.
+*/
+
+:root {
+  --tt-purple: #4b2e83;
+  --tt-purple-dark: #33205a;
+  --tt-gold: #c9a13b;
+  --text: #1a1a1a;
+  --bg: #f7f6f9;
+  --surface: #ffffff;
+  --border: #d6d3de;
+  --danger: #9b1c1c;
+  --focus: #1a56d6;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.5;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.login-page {
+  display: flex;
+  justify-content: center;
+  padding: 4rem 1.5rem 1.5rem;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+}
+
+#login-heading {
+  color: var(--tt-purple-dark);
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+input {
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+button {
+  padding: 0.6rem 1.1rem;
+  border: 0;
+  border-radius: 4px;
+  background: var(--tt-purple);
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: var(--tt-purple-dark);
+}
+
+.form-error {
+  color: var(--danger);
+  font-weight: 600;
+}

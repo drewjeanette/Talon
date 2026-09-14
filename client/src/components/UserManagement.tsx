@@ -81,9 +81,9 @@ export function UserManagement() {
   }
 
   return (
-    <section aria-labelledby="users-heading" className="card">
+    <section aria-labelledby="users-heading" className="card user-management">
       <h2 id="users-heading">User Management</h2>
-      <form onSubmit={handleCreate} className="form-row-group">
+      <form onSubmit={handleCreate} className="form-row-group user-management__form">
         <div className="form-row">
           <label htmlFor="new-email">Email</label>
           <input id="new-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
@@ -132,40 +132,42 @@ export function UserManagement() {
         <button type="submit">Create user</button>
       </form>
 
-      <table>
-        <caption className="sr-only">All users</caption>
-        <thead>
-          <tr>
-            <th scope="col">Name</th>
-            <th scope="col">Email</th>
-            <th scope="col">Role</th>
-            <th scope="col">Pay type</th>
-            <th scope="col">Department</th>
-            <th scope="col">Active</th>
-            <th scope="col">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map((u) => (
-            <tr key={u.id}>
-              <td>
-                {u.firstName} {u.lastName}
-              </td>
-              <td>{u.email}</td>
-              <td>{u.role}</td>
-              <td>{u.payType}</td>
-              <td>{u.department?.name ?? "—"}</td>
-              <td>{u.isActive ? "Yes" : "No"}</td>
-              <td>
-                <button type="button" onClick={() => handleDeactivate(u.id)} disabled={!u.isActive} className="button--danger">
-                  Deactivate
-                </button>
-              </td>
+      <div className="table-scroll">
+        <table>
+          <caption className="sr-only">All users</caption>
+          <thead>
+            <tr>
+              <th scope="col">Name</th>
+              <th scope="col">Email</th>
+              <th scope="col">Role</th>
+              <th scope="col">Pay type</th>
+              <th scope="col">Department</th>
+              <th scope="col">Active</th>
+              <th scope="col">Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-      <p role="status" aria-live="polite">
+          </thead>
+          <tbody>
+            {users.map((u) => (
+              <tr key={u.id}>
+                <td>
+                  {u.firstName} {u.lastName}
+                </td>
+                <td>{u.email}</td>
+                <td>{u.role}</td>
+                <td>{u.payType}</td>
+                <td>{u.department?.name ?? "—"}</td>
+                <td>{u.isActive ? "Yes" : "No"}</td>
+                <td>
+                  <button type="button" onClick={() => handleDeactivate(u.id)} disabled={!u.isActive} className="button--danger">
+                    Deactivate
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p role="status" aria-live="polite" className="status-message">
         {message}
       </p>
     </section>

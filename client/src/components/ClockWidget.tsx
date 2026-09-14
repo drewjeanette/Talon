@@ -55,21 +55,21 @@ export function ClockWidget({ onChange }: { onChange?: () => void }) {
   }
 
   return (
-    <section aria-labelledby="clock-heading" className="card">
+    <section aria-labelledby="clock-heading" className="card clock-widget">
       <h2 id="clock-heading">Web Clock</h2>
-      <p>
+      <p className="clock-widget__status">
         Status:{" "}
         <strong>{openEntry ? `Clocked in since ${new Date(openEntry.clockIn).toLocaleTimeString()}` : "Clocked out"}</strong>
       </p>
-      <div className="button-row">
-        <button type="button" onClick={handleClockIn} disabled={busy || !!openEntry}>
+      <div className="button-row clock-widget__actions">
+        <button type="button" onClick={handleClockIn} disabled={busy || !!openEntry} className="clock-widget__in">
           Clock In
         </button>
-        <button type="button" onClick={handleClockOut} disabled={busy || !openEntry}>
+        <button type="button" onClick={handleClockOut} disabled={busy || !openEntry} className="clock-widget__out">
           Clock Out
         </button>
       </div>
-      <p role="status" aria-live="polite">
+      <p role="status" aria-live="polite" className="status-message">
         {message}
       </p>
     </section>

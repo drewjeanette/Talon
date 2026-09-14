@@ -1,146 +1,155 @@
 # Database Design
 
-Talon is modeled in [`server/prisma/schema.prisma`](../server/prisma/schema.prisma) and targets
-**MySQL 8** (local: Docker Compose; hosted: GCP Cloud SQL for MySQL — see
-[DEPLOYMENT.md](DEPLOYMENT.md)). Prisma is the ORM/migration tool, so the schema file is the
-single source of truth — never hand-edit the database.
+Talon's schema is defined in [`server/src/db/schema.ts`](../server/src/db/schema.ts) using **Drizzle
+ORM**, and targets **Cloudflare D1** (SQLite). The schema file is the single source of truth;
+migrations are generated from it and committed to git. Never hand-edit the database.
 
 ## Entity-relationship diagram
 
 ```mermaid
 erDiagram
-    COLLEGE ||--o{ DEPARTMENT : has
-    DEPARTMENT ||--o{ USER : employs
-    USER ||--o{ USER : supervises
-    USER ||--o{ TIME_ENTRY : logs
-    USER ||--o{ TIME_ENTRY : "edits (supervisor correction)"
-    USER ||--o{ PAY_STUB : receives
-    USER ||--o{ REFRESH_TOKEN : holds
-    USER ||--o{ AUDIT_LOG : performs
-    USER ||--o{ REPORT_RUN : requests
-    PAY_PERIOD ||--o{ PAY_STUB : covers
+    COLLEGES ||--o{ DEPARTMENTS : has
+    DEPARTMENTS ||--o{ USERS : employs
+    USERS ||--o{ USERS : supervises
+    USERS ||--o{ TIME_ENTRIES : logs
+    USERS ||--o{ PAY_STUBS : receives
+    USERS ||--o{ REFRESH_TOKENS : holds
+    USERS ||--o{ AUDIT_LOGS : performs
+    USERS ||--o{ REPORT_RUNS : requests
+    PAY_PERIODS ||--o{ PAY_STUBS : covers
 
-    COLLEGE {
+    COLLEGES {
         int id PK
-        string name
-        string code
+        text name
+        text code
     }
-    DEPARTMENT {
+    DEPARTMENTS {
         int id PK
-        string name
-        string code
-        int collegeId FK "nullable, until an admin assigns one"
-        bool isActive
+        text name
+        text code
+        int college_id FK "nullable until an admin assigns one"
+        int is_active "boolean"
     }
-    USER {
+    USERS {
         int id PK
-        string email
-        string passwordHash
-        string firstName
-        string lastName
-        enum role "STUDENT | SUPERVISOR | ADMIN"
-        enum payType "BIWEEKLY | MONTHLY"
-        decimal hourlyRate "nullable"
-        decimal annualSalary "nullable"
-        int departmentId FK
-        int supervisorId FK "nullable, self-reference"
-        bool isActive
-        bool mustResetPw
+        text email
+        text password_hash "pbkdf2$iterations$salt$hash"
+        text first_name
+        text last_name
+        text role "STUDENT | SUPERVISOR | ADMIN"
+        text pay_type "BIWEEKLY | MONTHLY"
+        int hourly_rate_cents "nullable"
+        int annual_salary_cents "nullable"
+        int department_id FK
+        int supervisor_id FK "self-reference"
+        int is_active "boolean"
+        int must_reset_pw "boolean"
     }
-    TIME_ENTRY {
+    TIME_ENTRIES {
         int id PK
-        int userId FK
-        datetime clockIn
-        datetime clockOut "nullable"
-        enum source "WEB | KIOSK | MANUAL"
-        enum status "PENDING | APPROVED | REJECTED"
-        int editedById FK "nullable"
+        int user_id FK
+        int clock_in "unix seconds"
+        int clock_out "nullable"
+        text source "WEB | KIOSK | MANUAL"
+        text status "PENDING | APPROVED | REJECTED"
+        int edited_by_id FK "nullable"
     }
-    PAY_PERIOD {
+    PAY_PERIODS {
         int id PK
-        enum type "BIWEEKLY | MONTHLY"
-        datetime startDate
-        datetime endDate
-        datetime payDate
-        enum status "OPEN | PROCESSING | CLOSED"
+        text type "BIWEEKLY | MONTHLY"
+        int start_date
+        int end_date
+        int pay_date
+        text status "OPEN | PROCESSING | CLOSED"
     }
-    PAY_STUB {
+    PAY_STUBS {
         int id PK
-        int userId FK
-        int payPeriodId FK
-        decimal regularHours
-        decimal overtimeHours
-        decimal grossPay
-        enum status "DRAFT | FINALIZED | PAID"
+        int user_id FK
+        int pay_period_id FK
+        int regular_minutes
+        int overtime_minutes
+        int gross_pay_cents
+        text status "DRAFT | FINALIZED | PAID"
     }
-    REPORT_RUN {
+    REPORT_RUNS {
         int id PK
-        int requestedById FK
-        enum scope "DEPARTMENT | COLLEGE | ALL"
-        int scopeId "nullable"
-        int payPeriodId "nullable"
+        int requested_by_id FK
+        text scope "DEPARTMENT | COLLEGE | ALL"
+        int scope_id "nullable"
+        int pay_period_id "nullable"
+        int row_count
     }
-    AUDIT_LOG {
+    AUDIT_LOGS {
         int id PK
-        int userId FK "nullable, actor"
-        string action
-        string entityType
-        int entityId "nullable"
-        json metadata
-        string ipAddress
+        int user_id FK "nullable actor"
+        text action
+        text entity_type
+        int entity_id "nullable"
+        text metadata "json"
+        text ip_address
     }
-    REFRESH_TOKEN {
+    REFRESH_TOKENS {
         int id PK
-        int userId FK
-        string tokenHash
-        datetime expiresAt
-        datetime revokedAt "nullable"
+        int user_id FK
+        text token_hash "sha-256"
+        int expires_at
+        int revoked_at "nullable"
     }
 ```
 
 ## Key design decisions
 
-- **`Role` (permission level) is separate from `PayType` (pay cycle).** The prompt's "student /
-  supervisor / admin" levels are an authorization concept; "biweekly / monthly" is a payroll
-  concept. Collapsing them (e.g. assuming every STUDENT is biweekly) would break the moment a
-  grad assistant or salaried student-services role shows up. `ADMIN` sits above `SUPERVISOR`
-  in the permission hierarchy (see [`auth.ts`](../server/src/middleware/auth.ts)) rather than
-  being a disjoint role, matching how the real payroll office works.
-- **Department codes are data, not source code.** `Department.code`/`name`/`collegeId`/`isActive`
-  are ordinary editable rows, managed from the admin dashboard's Department Management screen
-  (`POST`/`PATCH /api/org/departments`) rather than a hardcoded list — see
-  [`server/prisma/departmentCodes.ts`](../server/prisma/departmentCodes.ts) for the one-time seed
-  list and [`org.routes.ts`](../server/src/routes/org.routes.ts) for the CRUD API. `collegeId` is
-  nullable because a freshly seeded or newly added department code often doesn't have a college
-  assignment yet; `isActive` lets an admin retire a code from the "new user" dropdown without
-  breaking history for employees already on it (deactivate, not delete — same pattern as `User.isActive`).
-- **`User.supervisorId` self-relation** drives the approval chain: a supervisor's `/timeclock/pending`
-  and `/reports/payroll` queries are scoped to `WHERE supervisorId = <me>` / `WHERE departmentId = <my dept>`
-  at the database level, not just hidden in the UI — see [SECURITY.md](SECURITY.md#authorization).
-- **Time entries are never overwritten in place by employees.** Clock-out sets `clockOut`, but any
-  correction after the fact goes through `PATCH /timeclock/:id/correct`, which is supervisor/admin-only,
-  resets `status` back to `PENDING`, and stamps `editedById` — so there's always a record of who
-  changed a timesheet and it re-enters the approval queue instead of silently taking effect.
-- **Pay stubs are derived, not entered.** `PayStub` rows are generated by
-  [`payroll.service.ts`](../server/src/services/payroll.service.ts) from approved `TimeEntry` rows
-  (biweekly) or `annualSalary` (monthly) — there's no path to hand-key a gross pay number, which
-  removes a whole class of payroll-fraud and fat-finger risk.
-- **`ReportRun` is an audit trail, not report storage.** Reports are generated on demand as CSV and
-  streamed to the requester; we log *who ran what report, over what scope, when* without persisting
-  a second copy of sensitive pay data that then needs its own retention/access policy.
-- **Money fields use `Decimal`, never `Float`.** `hourlyRate`, `annualSalary`, `grossPay`, etc. are
-  `Decimal(_, 2)` in MySQL to avoid binary floating-point rounding errors in payroll math.
-- **Indexes** are placed on every foreign key plus the columns the app actually filters/sorts by
-  (`TimeEntry(userId, clockIn)`, `TimeEntry(status)`, `AuditLog(entityType, entityId)`) rather than
-  indexing speculatively.
+- **Money is INTEGER cents; worked time is INTEGER minutes.** This is the most important difference
+  from the earlier MySQL design, which used `DECIMAL(10,2)`. **SQLite has no true DECIMAL type** —
+  a "decimal" column has NUMERIC affinity and real values are stored as floating point, which would
+  introduce rounding drift into wages. Storing cents keeps every intermediate value exact, with a
+  single rounding step at the end ([`lib/money.ts`](../server/src/lib/money.ts)). The API converts at
+  the boundary, so clients still see `"195.50"` and `"17.00"`.
+- **Timestamps are unix seconds** (Drizzle `integer({ mode: "timestamp" })`), which is SQLite's
+  natural representation and sorts and compares correctly.
+- **Enums are TEXT with a checked set of values.** SQLite has no native enum; Drizzle's
+  `text({ enum: [...] })` gives compile-time type safety over a plain text column.
+- **`Role` (permission level) is separate from `payType` (pay cycle).** "student/supervisor/admin" is
+  an authorization concept; "biweekly/monthly" is a payroll one. Collapsing them breaks the first
+  time a salaried student-services employee or an hourly supervisor appears.
+- **Department codes are data, not source code.** `code`, `name`, `college_id` and `is_active` are
+  ordinary editable rows managed from the admin UI. `college_id` is nullable because the registrar's
+  code list arrives before anyone has assigned each code to a college; `is_active` retires a code
+  from the "new user" form without breaking history for employees already assigned to it.
+- **`users.supervisor_id` self-relation** drives the approval chain and the query-level scoping that
+  keeps a supervisor inside their own team.
+- **Pay stubs are derived from approved time entries**, never hand-entered.
+- **Deactivate, never delete** — payroll history must survive an employee leaving.
 
 ## Migrations
 
+Migrations live in `server/migrations/` and are committed to git. **This folder, not the remote
+database, is how the team shares schema changes.**
+
 ```bash
-npm run prisma:migrate --workspace=server   # dev: create + apply a migration
-npm run prisma:seed --workspace=server      # load College/Department/sample users
-npm run prisma:studio --workspace=server    # browse data in a GUI
+# after editing src/db/schema.ts
+npm run db:generate --workspace=server        # write a new migration file
+npm run db:migrate:local --workspace=server   # apply to your own local D1
+npm run db:migrate:remote --workspace=server  # apply to the shared database
 ```
 
-In production, `prisma migrate deploy` (no interactive prompts) runs from CI/CD against Cloud SQL —
-see [DEPLOYMENT.md](DEPLOYMENT.md).
+Seed data is generated rather than hand-written, because the demo accounts need real PBKDF2 hashes:
+
+```bash
+npm run db:seed:generate --workspace=server   # writes seed/seed.sql
+npm run db:seed:local --workspace=server
+```
+
+The seed creates 2 colleges, all 104 registrar department codes, 3 demo users, sample time entries,
+and two pay periods.
+
+## Query budget
+
+D1 counts every query as a subrequest, and the Workers **Free** plan allows only **50 per
+invocation** (1,000 on Paid). Code that queries inside a loop over employees will fail once the
+payroll grows past ~48 people.
+
+`generatePayStubsForPeriod()` is therefore written to use a **fixed** number of queries regardless of
+headcount: one for the employees, one for all their approved time entries (`inArray`), and one
+`db.batch()` for all the writes. The batch is also atomic, so a partially generated payroll run
+cannot be left behind.

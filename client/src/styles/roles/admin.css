@@ -1,0 +1,278 @@
+/*
+  TALON DESIGN - ADMIN VIEW
+
+  Everything in this stylesheet controls how the Admin screens look.
+  An AI coding tool may change the CSS in this stylesheet. Open the returned
+  design file in a browser to review the result.
+
+  What is on the Admin screen, and the names used to style each part:
+
+    .app-header ........................ purple bar across the top
+      .app-header__brand ............... the "Talon" logo text
+      .app-header__nav ................. the Dashboard link
+      .app-header__name ................ the signed-in name and role
+      .app-header__logout .............. the Log out button
+    .dashboard ......................... the page under the header
+      .dashboard__title ................ the "Welcome" heading
+      .dashboard-grid .................. holds every card; try display: grid to put cards side by side
+    .pay-stubs ......................... the My Pay Stubs card
+    .approval-queue .................... the Pending Time Entry Approvals card
+      .approval-queue__approve ......... the Approve buttons
+      .approval-queue__reject .......... the Reject buttons
+    .report-generator .................. the Auto-Generate Payroll Report card
+      .report-generator__submit ........ the Generate CSV button
+    .pay-period-manager ................ the Pay Periods card
+      .pay-period-manager__form ........ the create-a-pay-period form
+    .user-management ................... the User Management card
+      .user-management__form ........... the create-a-user form
+    .department-management ............. the Department Management card
+      .department-management__intro .... the explanation paragraph
+      .department-management__form .... the add-a-department form
+
+  Shared pieces used across the screen:
+    .card, button, .button--danger, table, th, td, caption, .button-row,
+    .table-scroll, .form-row, .form-row-group, label, input, select, .status-message
+
+  Before you send this back:
+    - Keep text readable against its background (strong contrast).
+    - Keep the :focus-visible outline so keyboard users can see where they are.
+*/
+
+/* ---------- Theme colors: the easiest place to start ---------- */
+:root {
+  --tt-purple: #4b2e83;
+  --tt-purple-dark: #33205a;
+  --tt-gold: #c9a13b;
+  --text: #1a1a1a;
+  --bg: #f7f6f9;
+  --surface: #ffffff;
+  --border: #d6d3de;
+  --table-header: #efecf5;
+  --danger: #9b1c1c;
+  --danger-dark: #6e1414;
+  --disabled: #9c96a8;
+  --focus: #1a56d6;
+}
+
+/* ---------- Page ---------- */
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.5;
+}
+
+h1,
+h2 {
+  color: var(--tt-purple-dark);
+}
+
+/* Keyboard focus ring. Keep it clearly visible for accessibility. */
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* ---------- Header bar ---------- */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--tt-purple);
+  color: #fff;
+}
+
+.app-header a {
+  color: #fff;
+  font-weight: 600;
+}
+
+.app-header__brand {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.app-header__nav {
+}
+
+.app-header__user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.app-header__name {
+}
+
+.app-header__logout {
+}
+
+/* ---------- Page layout ---------- */
+.dashboard {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.dashboard__title {
+}
+
+.dashboard-grid {
+}
+
+/* ---------- Cards ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ---------- My Pay Stubs ---------- */
+.pay-stubs {
+}
+
+/* ---------- Pending Time Entry Approvals ---------- */
+.approval-queue {
+}
+
+.approval-queue__approve {
+}
+
+.approval-queue__reject {
+}
+
+/* ---------- Auto-Generate Payroll Report ---------- */
+.report-generator {
+}
+
+.report-generator__submit {
+}
+
+/* ---------- Pay Periods ---------- */
+.pay-period-manager {
+}
+
+.pay-period-manager__form {
+}
+
+/* ---------- User Management ---------- */
+.user-management {
+}
+
+.user-management__form {
+}
+
+/* ---------- Department Management ---------- */
+.department-management {
+}
+
+.department-management__intro {
+}
+
+.department-management__form {
+}
+
+/* ---------- Buttons ---------- */
+button {
+  background: var(--tt-purple);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.6rem 1.1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: var(--tt-purple-dark);
+}
+
+button:disabled {
+  background: var(--disabled);
+  cursor: not-allowed;
+}
+
+button.button--danger {
+  background: var(--danger);
+}
+
+button.button--danger:hover:not(:disabled) {
+  background: var(--danger-dark);
+}
+
+.button-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ---------- Forms ---------- */
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.form-row-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0 1rem;
+  align-items: end;
+}
+
+label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+input,
+select {
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+/* ---------- Tables ---------- */
+.table-scroll {
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.table-scroll > table {
+  margin: 0;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+
+th {
+  background: var(--table-header);
+  color: var(--tt-purple-dark);
+}
+
+caption {
+  text-align: left;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+/* ---------- Messages ---------- */
+.status-message {
+}

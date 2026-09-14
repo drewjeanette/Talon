@@ -1,42 +1,64 @@
-import express from "express";
-import cookieParser from "cookie-parser";
-import morgan from "morgan";
-import { env } from "./config/env.js";
-import { corsMiddleware, helmetMiddleware, apiRateLimiter, networkAllowlist } from "./middleware/security.js";
-import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
-import { authRouter } from "./routes/auth.routes.js";
-import { usersRouter } from "./routes/users.routes.js";
-import { orgRouter } from "./routes/org.routes.js";
-import { timeclockRouter } from "./routes/timeclock.routes.js";
-import { payrollRouter } from "./routes/payroll.routes.js";
-import { reportsRouter } from "./routes/reports.routes.js";
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+import { secureHeaders } from "hono/secure-headers";
+import { HTTPException } from "hono/http-exception";
+import { ZodError } from "zod";
+import { authRoutes } from "./routes/auth.routes.js";
+import { userRoutes } from "./routes/users.routes.js";
+import { orgRoutes } from "./routes/org.routes.js";
+import { timeclockRoutes } from "./routes/timeclock.routes.js";
+import { payrollRoutes } from "./routes/payroll.routes.js";
+import { reportRoutes } from "./routes/reports.routes.js";
+import type { AppEnv } from "./types.js";
 
-const app = express();
+const app = new Hono<AppEnv>();
 
-// Trust one hop of proxy (Cloudflare / load balancer) so req.ip and
-// x-forwarded-for are read correctly in production.
-app.set("trust proxy", 1);
+app.use("*", secureHeaders());
 
-app.use(helmetMiddleware);
-app.use(corsMiddleware);
-app.use(networkAllowlist);
-app.use(express.json({ limit: "1mb" }));
-app.use(cookieParser());
-app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
-app.use("/api", apiRateLimiter);
-
-app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
-
-app.use("/api/auth", authRouter);
-app.use("/api/users", usersRouter);
-app.use("/api/org", orgRouter);
-app.use("/api/timeclock", timeclockRouter);
-app.use("/api/payroll", payrollRouter);
-app.use("/api/reports", reportsRouter);
-
-app.use(notFoundHandler);
-app.use(errorHandler);
-
-app.listen(env.PORT, () => {
-  console.log(`Talon API listening on port ${env.PORT} (${env.NODE_ENV})`);
+// Explicit origin allowlist, never "*", because the API is called with credentials.
+app.use("/api/*", async (c, next) => {
+  const allowed = (c.env.CORS_ORIGIN ?? "").split(",").map((o) => o.trim()).filter(Boolean);
+  return cors({
+    origin: (origin) => (allowed.includes(origin) ? origin : allowed[0] ?? ""),
+    credentials: true,
+    allowHeaders: ["Content-Type", "Authorization"],
+    allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+  })(c, next);
 });
+
+app.get("/api/health", (c) => c.json({ status: "ok" }));
+
+app.route("/api/auth", authRoutes);
+app.route("/api/users", userRoutes);
+app.route("/api/org", orgRoutes);
+app.route("/api/timeclock", timeclockRoutes);
+app.route("/api/payroll", payrollRoutes);
+app.route("/api/reports", reportRoutes);
+
+app.notFound((c) => c.json({ error: "Not found." }, 404));
+
+/**
+ * Central error handling. Response bodies never contain stack traces or raw
+ * driver errors in any environment; full detail goes to the Worker log
+ * (`wrangler tail`) where a developer can read it without exposing it to callers.
+ */
+app.onError((err, c) => {
+  if (err instanceof ZodError) {
+    return c.json({ error: "Validation failed.", details: err.issues }, 400);
+  }
+
+  if (err instanceof HTTPException) {
+    return c.json({ error: err.message }, err.status);
+  }
+
+  // D1 surfaces unique-constraint violations as SQLITE_CONSTRAINT errors.
+  const message = err instanceof Error ? err.message : String(err);
+  if (message.includes("UNIQUE constraint failed")) {
+    return c.json({ error: "A record with that value already exists." }, 409);
+  }
+
+  console.error("Unhandled error:", err);
+  return c.json({ error: "Internal server error." }, 500);
+});
+
+export default app;

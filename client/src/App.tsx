@@ -4,8 +4,13 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { LoginPage } from "./pages/LoginPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { useAuth } from "./context/AuthContext";
+import { useRoleStylesheet } from "./design/roleStyles";
 
 export default function App() {
+  const { user } = useAuth();
+  useRoleStylesheet(user?.role);
+
   return (
     <>
       <a href="#main-content" className="skip-link">

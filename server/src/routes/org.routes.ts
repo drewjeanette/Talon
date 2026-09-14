@@ -1,53 +1,66 @@
-import { Router } from "express";
+import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
+import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { prisma } from "../config/prisma.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
+import { getDb } from "../db/index.js";
+import { colleges, departments } from "../db/schema.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { writeAuditLog } from "../services/audit.service.js";
+import type { AppEnv } from "../types.js";
 
-export const orgRouter = Router();
+export const orgRoutes = new Hono<AppEnv>();
 
-orgRouter.use(requireAuth);
+orgRoutes.use("*", requireAuth);
 
-orgRouter.get(
-  "/colleges",
-  asyncHandler(async (_req, res) => {
-    const colleges = await prisma.college.findMany({
-      include: { departments: { select: { id: true, name: true, code: true, isActive: true } } },
-      orderBy: { name: "asc" },
-    });
-    res.json(colleges);
-  })
-);
+orgRoutes.get("/colleges", async (c) => {
+  const db = getDb(c.env.DB);
+  const rows = await db.query.colleges.findMany({
+    with: {
+      departments: { columns: { id: true, name: true, code: true, isActive: true } },
+    },
+    orderBy: asc(colleges.name),
+  });
+  return c.json(rows);
+});
 
 const collegeSchema = z.object({
   name: z.string().min(1),
   code: z.string().min(1).max(10),
 });
 
-// Admin-only: colleges are few and change rarely, but the department list
-// below needs somewhere to point new/reassigned departments at.
-orgRouter.post(
-  "/colleges",
-  requireRole("ADMIN"),
-  asyncHandler(async (req, res) => {
-    const data = collegeSchema.parse(req.body);
-    const college = await prisma.college.create({ data });
-    await writeAuditLog(req, "COLLEGE_CREATE", "College", college.id);
-    res.status(201).json(college);
-  })
-);
+orgRoutes.post("/colleges", requireRole("ADMIN"), async (c) => {
+  const data = collegeSchema.parse(await c.req.json());
+  const db = getDb(c.env.DB);
+  const [college] = await db.insert(colleges).values(data).returning();
+  await writeAuditLog(c, "COLLEGE_CREATE", "College", college.id);
+  return c.json(college, 201);
+});
 
-orgRouter.get(
-  "/departments",
-  asyncHandler(async (_req, res) => {
-    const departments = await prisma.department.findMany({
-      include: { college: { select: { id: true, name: true } } },
-      orderBy: { code: "asc" },
-    });
-    res.json(departments);
-  })
-);
+orgRoutes.get("/departments", async (c) => {
+  const db = getDb(c.env.DB);
+  const rows = await db
+    .select({
+      id: departments.id,
+      code: departments.code,
+      name: departments.name,
+      isActive: departments.isActive,
+      collegeId: colleges.id,
+      collegeName: colleges.name,
+    })
+    .from(departments)
+    .leftJoin(colleges, eq(departments.collegeId, colleges.id))
+    .orderBy(asc(departments.code));
+
+  return c.json(
+    rows.map((r) => ({
+      id: r.id,
+      code: r.code,
+      name: r.name,
+      isActive: r.isActive,
+      college: r.collegeId ? { id: r.collegeId, name: r.collegeName } : null,
+    }))
+  );
+});
 
 const createDepartmentSchema = z.object({
   code: z.string().min(1).max(40),
@@ -55,19 +68,19 @@ const createDepartmentSchema = z.object({
   collegeId: z.number().int().nullable().optional(),
 });
 
-// Admin-only: this is the editable home for department codes - no more
-// hardcoding a list in source. New departments start unassigned to a college
-// (see schema.prisma) until an admin picks one.
-orgRouter.post(
-  "/departments",
-  requireRole("ADMIN"),
-  asyncHandler(async (req, res) => {
-    const data = createDepartmentSchema.parse(req.body);
-    const department = await prisma.department.create({ data });
-    await writeAuditLog(req, "DEPARTMENT_CREATE", "Department", department.id);
-    res.status(201).json(department);
-  })
-);
+// Department codes are data, not source code: admins add, rename, reassign and
+// retire them here rather than a developer editing a hardcoded list.
+orgRoutes.post("/departments", requireRole("ADMIN"), async (c) => {
+  const data = createDepartmentSchema.parse(await c.req.json());
+  const db = getDb(c.env.DB);
+  const [department] = await db
+    .insert(departments)
+    .values({ code: data.code, name: data.name, collegeId: data.collegeId ?? null })
+    .returning();
+
+  await writeAuditLog(c, "DEPARTMENT_CREATE", "Department", department.id);
+  return c.json(department, 201);
+});
 
 const updateDepartmentSchema = z.object({
   code: z.string().min(1).max(40).optional(),
@@ -76,14 +89,21 @@ const updateDepartmentSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-orgRouter.patch(
-  "/departments/:id",
-  requireRole("ADMIN"),
-  asyncHandler(async (req, res) => {
-    const id = Number(req.params.id);
-    const data = updateDepartmentSchema.parse(req.body);
-    const department = await prisma.department.update({ where: { id }, data });
-    await writeAuditLog(req, "DEPARTMENT_UPDATE", "Department", id, data);
-    res.json(department);
-  })
-);
+orgRoutes.patch("/departments/:id", requireRole("ADMIN"), async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isInteger(id)) throw new HTTPException(400, { message: "Invalid department id." });
+
+  const data = updateDepartmentSchema.parse(await c.req.json());
+  const db = getDb(c.env.DB);
+
+  const [department] = await db
+    .update(departments)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(departments.id, id))
+    .returning();
+
+  if (!department) throw new HTTPException(404, { message: "Department not found." });
+
+  await writeAuditLog(c, "DEPARTMENT_UPDATE", "Department", id, data);
+  return c.json(department);
+});

@@ -1,106 +1,129 @@
-import { Router } from "express";
+import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
-import { prisma } from "../config/prisma.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
+import { getDb } from "../db/index.js";
+import { timeEntries, users } from "../db/schema.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { HttpError } from "../middleware/errorHandler.js";
 import { writeAuditLog } from "../services/audit.service.js";
+import type { AppEnv } from "../types.js";
 
-export const timeclockRouter = Router();
+export const timeclockRoutes = new Hono<AppEnv>();
 
-timeclockRouter.use(requireAuth);
+timeclockRoutes.use("*", requireAuth);
 
-timeclockRouter.post(
-  "/clock-in",
-  asyncHandler(async (req, res) => {
-    const openEntry = await prisma.timeEntry.findFirst({
-      where: { userId: req.user!.id, clockOut: null },
-    });
-    if (openEntry) throw new HttpError(409, "Already clocked in.");
+timeclockRoutes.post("/clock-in", async (c) => {
+  const db = getDb(c.env.DB);
+  const me = c.get("user");
 
-    const entry = await prisma.timeEntry.create({
-      data: { userId: req.user!.id, clockIn: new Date(), source: "WEB" },
-    });
-    await writeAuditLog(req, "CLOCK_IN", "TimeEntry", entry.id);
-    res.status(201).json(entry);
-  })
-);
+  const open = await db.query.timeEntries.findFirst({
+    where: and(eq(timeEntries.userId, me.id), isNull(timeEntries.clockOut)),
+  });
+  if (open) throw new HTTPException(409, { message: "Already clocked in." });
 
-timeclockRouter.post(
-  "/clock-out",
-  asyncHandler(async (req, res) => {
-    const openEntry = await prisma.timeEntry.findFirst({
-      where: { userId: req.user!.id, clockOut: null },
-    });
-    if (!openEntry) throw new HttpError(409, "Not currently clocked in.");
+  const [entry] = await db
+    .insert(timeEntries)
+    .values({ userId: me.id, clockIn: new Date(), source: "WEB" })
+    .returning();
 
-    const entry = await prisma.timeEntry.update({
-      where: { id: openEntry.id },
-      data: { clockOut: new Date() },
-    });
-    await writeAuditLog(req, "CLOCK_OUT", "TimeEntry", entry.id);
-    res.json(entry);
-  })
-);
+  await writeAuditLog(c, "CLOCK_IN", "TimeEntry", entry.id);
+  return c.json(entry, 201);
+});
 
-timeclockRouter.get(
-  "/my-entries",
-  asyncHandler(async (req, res) => {
-    const entries = await prisma.timeEntry.findMany({
-      where: { userId: req.user!.id },
-      orderBy: { clockIn: "desc" },
-      take: 100,
-    });
-    res.json(entries);
-  })
-);
+timeclockRoutes.post("/clock-out", async (c) => {
+  const db = getDb(c.env.DB);
+  const me = c.get("user");
 
-// Entries awaiting a supervisor/admin's approval for their reports.
-timeclockRouter.get(
-  "/pending",
-  requireRole("SUPERVISOR", "ADMIN"),
-  asyncHandler(async (req, res) => {
-    const where =
-      req.user!.role === "ADMIN"
-        ? { status: "PENDING" as const }
-        : { status: "PENDING" as const, user: { supervisorId: req.user!.id } };
+  const open = await db.query.timeEntries.findFirst({
+    where: and(eq(timeEntries.userId, me.id), isNull(timeEntries.clockOut)),
+  });
+  if (!open) throw new HTTPException(409, { message: "Not currently clocked in." });
 
-    const entries = await prisma.timeEntry.findMany({
-      where,
-      include: { user: { select: { id: true, firstName: true, lastName: true } } },
-      orderBy: { clockIn: "asc" },
-    });
-    res.json(entries);
-  })
-);
+  const [entry] = await db
+    .update(timeEntries)
+    .set({ clockOut: new Date() })
+    .where(eq(timeEntries.id, open.id))
+    .returning();
+
+  await writeAuditLog(c, "CLOCK_OUT", "TimeEntry", entry.id);
+  return c.json(entry);
+});
+
+timeclockRoutes.get("/my-entries", async (c) => {
+  const db = getDb(c.env.DB);
+  const entries = await db
+    .select()
+    .from(timeEntries)
+    .where(eq(timeEntries.userId, c.get("user").id))
+    .orderBy(desc(timeEntries.clockIn))
+    .limit(100);
+  return c.json(entries);
+});
+
+timeclockRoutes.get("/pending", requireRole("SUPERVISOR"), async (c) => {
+  const db = getDb(c.env.DB);
+  const me = c.get("user");
+
+  // Supervisors see only their own direct reports. Enforced in the query, not
+  // just hidden in the UI.
+  const conditions = [eq(timeEntries.status, "PENDING" as const)];
+  if (me.role !== "ADMIN") conditions.push(eq(users.supervisorId, me.id));
+
+  const rows = await db
+    .select({
+      id: timeEntries.id,
+      clockIn: timeEntries.clockIn,
+      clockOut: timeEntries.clockOut,
+      status: timeEntries.status,
+      userId: users.id,
+      firstName: users.firstName,
+      lastName: users.lastName,
+    })
+    .from(timeEntries)
+    .innerJoin(users, eq(timeEntries.userId, users.id))
+    .where(and(...conditions))
+    .orderBy(timeEntries.clockIn);
+
+  return c.json(
+    rows.map((r) => ({
+      id: r.id,
+      clockIn: r.clockIn,
+      clockOut: r.clockOut,
+      status: r.status,
+      user: { id: r.userId, firstName: r.firstName, lastName: r.lastName },
+    }))
+  );
+});
 
 const decisionSchema = z.object({ status: z.enum(["APPROVED", "REJECTED"]) });
 
-timeclockRouter.patch(
-  "/:id/decision",
-  requireRole("SUPERVISOR", "ADMIN"),
-  asyncHandler(async (req, res) => {
-    const id = Number(req.params.id);
-    const { status } = decisionSchema.parse(req.body);
+timeclockRoutes.patch("/:id/decision", requireRole("SUPERVISOR"), async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isInteger(id)) throw new HTTPException(400, { message: "Invalid entry id." });
 
-    const entry = await prisma.timeEntry.findUnique({ where: { id } });
-    if (!entry) throw new HttpError(404, "Time entry not found.");
+  const { status } = decisionSchema.parse(await c.req.json());
+  const db = getDb(c.env.DB);
+  const me = c.get("user");
 
-    if (req.user!.role === "SUPERVISOR") {
-      const owner = await prisma.user.findUnique({ where: { id: entry.userId } });
-      if (owner?.supervisorId !== req.user!.id) {
-        throw new HttpError(403, "You do not supervise this employee.");
-      }
+  const entry = await db.query.timeEntries.findFirst({ where: eq(timeEntries.id, id) });
+  if (!entry) throw new HTTPException(404, { message: "Time entry not found." });
+
+  if (me.role === "SUPERVISOR") {
+    const owner = await db.query.users.findFirst({ where: eq(users.id, entry.userId) });
+    if (owner?.supervisorId !== me.id) {
+      throw new HTTPException(403, { message: "You do not supervise this employee." });
     }
+  }
 
-    const updated = await prisma.timeEntry.update({
-      where: { id },
-      data: { status, editedById: req.user!.id },
-    });
-    await writeAuditLog(req, `TIME_ENTRY_${status}`, "TimeEntry", id);
-    res.json(updated);
-  })
-);
+  const [updated] = await db
+    .update(timeEntries)
+    .set({ status, editedById: me.id, updatedAt: new Date() })
+    .where(eq(timeEntries.id, id))
+    .returning();
+
+  await writeAuditLog(c, `TIME_ENTRY_${status}`, "TimeEntry", id);
+  return c.json(updated);
+});
 
 const correctionSchema = z.object({
   clockIn: z.string().datetime(),
@@ -108,28 +131,46 @@ const correctionSchema = z.object({
   notes: z.string().max(500).optional(),
 });
 
-timeclockRouter.patch(
-  "/:id/correct",
-  requireRole("SUPERVISOR", "ADMIN"),
-  asyncHandler(async (req, res) => {
-    const id = Number(req.params.id);
-    const body = correctionSchema.parse(req.body);
+timeclockRoutes.patch("/:id/correct", requireRole("SUPERVISOR"), async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isInteger(id)) throw new HTTPException(400, { message: "Invalid entry id." });
 
-    if (body.clockOut && new Date(body.clockOut) <= new Date(body.clockIn)) {
-      throw new HttpError(400, "clockOut must be after clockIn.");
+  const body = correctionSchema.parse(await c.req.json());
+  const clockIn = new Date(body.clockIn);
+  const clockOut = body.clockOut ? new Date(body.clockOut) : null;
+  if (clockOut && clockOut <= clockIn) {
+    throw new HTTPException(400, { message: "clockOut must be after clockIn." });
+  }
+
+  const db = getDb(c.env.DB);
+  const me = c.get("user");
+
+  if (me.role === "SUPERVISOR") {
+    const entry = await db.query.timeEntries.findFirst({ where: eq(timeEntries.id, id) });
+    if (!entry) throw new HTTPException(404, { message: "Time entry not found." });
+    const owner = await db.query.users.findFirst({ where: eq(users.id, entry.userId) });
+    if (owner?.supervisorId !== me.id) {
+      throw new HTTPException(403, { message: "You do not supervise this employee." });
     }
+  }
 
-    const updated = await prisma.timeEntry.update({
-      where: { id },
-      data: {
-        clockIn: new Date(body.clockIn),
-        clockOut: body.clockOut ? new Date(body.clockOut) : null,
-        notes: body.notes,
-        status: "PENDING",
-        editedById: req.user!.id,
-      },
-    });
-    await writeAuditLog(req, "TIME_ENTRY_CORRECT", "TimeEntry", id);
-    res.json(updated);
-  })
-);
+  // A correction re-enters the approval queue rather than silently taking
+  // effect, and records who made it.
+  const [updated] = await db
+    .update(timeEntries)
+    .set({
+      clockIn,
+      clockOut,
+      notes: body.notes ?? null,
+      status: "PENDING",
+      editedById: me.id,
+      updatedAt: new Date(),
+    })
+    .where(eq(timeEntries.id, id))
+    .returning();
+
+  if (!updated) throw new HTTPException(404, { message: "Time entry not found." });
+
+  await writeAuditLog(c, "TIME_ENTRY_CORRECT", "TimeEntry", id);
+  return c.json(updated);
+});

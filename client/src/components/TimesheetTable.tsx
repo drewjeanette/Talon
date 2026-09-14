@@ -13,31 +13,33 @@ function formatHours(entry: TimeEntry): string {
 
 export function TimesheetTable({ entries, caption }: { entries: TimeEntry[]; caption: string }) {
   return (
-    <table>
-      <caption>{caption}</caption>
-      <thead>
-        <tr>
-          <th scope="col">Clock In</th>
-          <th scope="col">Clock Out</th>
-          <th scope="col">Hours</th>
-          <th scope="col">Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        {entries.length === 0 && (
+    <div className="timesheet table-scroll">
+      <table>
+        <caption>{caption}</caption>
+        <thead>
           <tr>
-            <td colSpan={4}>No entries yet.</td>
+            <th scope="col">Clock In</th>
+            <th scope="col">Clock Out</th>
+            <th scope="col">Hours</th>
+            <th scope="col">Status</th>
           </tr>
-        )}
-        {entries.map((entry) => (
-          <tr key={entry.id}>
-            <td>{new Date(entry.clockIn).toLocaleString()}</td>
-            <td>{entry.clockOut ? new Date(entry.clockOut).toLocaleString() : "In progress"}</td>
-            <td>{formatHours(entry)}</td>
-            <td>{entry.status}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {entries.length === 0 && (
+            <tr>
+              <td colSpan={4}>No entries yet.</td>
+            </tr>
+          )}
+          {entries.map((entry) => (
+            <tr key={entry.id}>
+              <td>{new Date(entry.clockIn).toLocaleString()}</td>
+              <td>{entry.clockOut ? new Date(entry.clockOut).toLocaleString() : "In progress"}</td>
+              <td>{formatHours(entry)}</td>
+              <td>{entry.status}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

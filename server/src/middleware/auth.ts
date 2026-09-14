@@ -1,40 +1,39 @@
-import type { NextFunction, Request, Response } from "express";
-import type { Role } from "@prisma/client";
-import { verifyAccessToken } from "../utils/jwt.js";
+import type { MiddlewareHandler } from "hono";
+import { HTTPException } from "hono/http-exception";
+import { verifyAccessToken, type Role } from "../lib/jwt.js";
+import type { AppEnv } from "../types.js";
 
-declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace Express {
-    interface Request {
-      user?: { id: number; role: Role; email: string };
-    }
-  }
-}
-
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  const header = req.headers.authorization;
+export const requireAuth: MiddlewareHandler<AppEnv> = async (c, next) => {
+  const header = c.req.header("Authorization");
   if (!header?.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Missing or malformed Authorization header." });
+    throw new HTTPException(401, { message: "Missing or malformed Authorization header." });
   }
 
   try {
-    const payload = verifyAccessToken(header.slice("Bearer ".length));
-    req.user = { id: payload.sub, role: payload.role, email: payload.email };
-    next();
+    const payload = await verifyAccessToken(header.slice("Bearer ".length), c.env.JWT_ACCESS_SECRET);
+    c.set("user", { id: payload.sub, role: payload.role, email: payload.email });
   } catch {
-    return res.status(401).json({ error: "Invalid or expired token." });
+    throw new HTTPException(401, { message: "Invalid or expired token." });
   }
-}
 
-// Role-based access control - pass the roles allowed to hit a route.
-// ADMIN always passes: it sits above SUPERVISOR/STUDENT in the permission
-// hierarchy (student < supervisor < admin) rather than being a disjoint role.
-export function requireRole(...roles: Role[]) {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user) return res.status(401).json({ error: "Not authenticated." });
-    if (req.user.role !== "ADMIN" && !roles.includes(req.user.role)) {
-      return res.status(403).json({ error: "Insufficient permissions." });
+  await next();
+};
+
+/**
+ * Role-based access control. ADMIN always passes: the hierarchy is
+ * student < supervisor < admin rather than three disjoint roles.
+ *
+ * This gates the *route*. Handlers additionally scope the *data* they return
+ * (see reports/timeclock), so a miss in one layer does not expose another
+ * department's records.
+ */
+export function requireRole(...roles: Role[]): MiddlewareHandler<AppEnv> {
+  return async (c, next) => {
+    const user = c.get("user");
+    if (!user) throw new HTTPException(401, { message: "Not authenticated." });
+    if (user.role !== "ADMIN" && !roles.includes(user.role)) {
+      throw new HTTPException(403, { message: "Insufficient permissions." });
     }
-    next();
+    await next();
   };
 }

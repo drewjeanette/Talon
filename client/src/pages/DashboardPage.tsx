@@ -32,33 +32,37 @@ export function DashboardPage() {
 
   if (!user) return null;
 
+  // The class hooks here (dashboard, dashboard-grid) let each role's designer
+  // rearrange the cards with CSS alone, since design files cannot change markup.
   return (
-    <main id="main-content">
-      <h1>Welcome, {user.firstName}</h1>
+    <main id="main-content" className={`dashboard dashboard--${user.role.toLowerCase()}`}>
+      <h1 className="dashboard__title">Welcome, {user.firstName}</h1>
 
-      {user.payType === "BIWEEKLY" && (
-        <>
-          <ClockWidget onChange={loadEntries} />
-          <TimesheetTable entries={entries} caption="My recent time entries" />
-        </>
-      )}
+      <div className="dashboard-grid">
+        {user.payType === "BIWEEKLY" && (
+          <>
+            <ClockWidget onChange={loadEntries} />
+            <TimesheetTable entries={entries} caption="My recent time entries" />
+          </>
+        )}
 
-      <PayStubList />
+        <PayStubList />
 
-      {(user.role === "SUPERVISOR" || user.role === "ADMIN") && (
-        <>
-          <ApprovalQueue />
-          <ReportGenerator />
-        </>
-      )}
+        {(user.role === "SUPERVISOR" || user.role === "ADMIN") && (
+          <>
+            <ApprovalQueue />
+            <ReportGenerator />
+          </>
+        )}
 
-      {user.role === "ADMIN" && (
-        <>
-          <PayPeriodManager />
-          <UserManagement />
-          <DepartmentManagement />
-        </>
-      )}
+        {user.role === "ADMIN" && (
+          <>
+            <PayPeriodManager />
+            <UserManagement />
+            <DepartmentManagement />
+          </>
+        )}
+      </div>
     </main>
   );
 }

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { api, setAccessToken, tryRefresh, ApiError } from "../api/client";
+import { DESIGN_ACCOUNTS, DESIGN_MODE, getDesignRole } from "../design/designMode";
 
 export type Role = "STUDENT" | "SUPERVISOR" | "ADMIN";
 
@@ -35,6 +36,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     (async () => {
+      // Dashboard design files sign in as their exported role. The shared login
+      // design deliberately stays signed out.
+      const designRole = getDesignRole();
+      if (designRole === "login") {
+        setLoading(false);
+        return;
+      }
+      if (designRole) {
+        try {
+          const data = await api.post<{ accessToken: string; user: CurrentUser }>(
+            "/auth/login",
+            DESIGN_ACCOUNTS[designRole]
+          );
+          setAccessToken(data.accessToken);
+          setUser(data.user);
+        } catch {
+          setUser(null);
+        }
+        setLoading(false);
+        return;
+      }
+
       const restored = await tryRefresh();
       if (restored) {
         try {
@@ -54,6 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
+    // Signing out of a design file would strand the designer on the login page.
+    if (DESIGN_MODE) return;
     try {
       await api.post("/auth/logout");
     } catch {

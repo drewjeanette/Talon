@@ -51,7 +51,7 @@ export function ReportGenerator() {
   }
 
   return (
-    <section aria-labelledby="report-heading" className="card">
+    <section aria-labelledby="report-heading" className="card report-generator">
       <h2 id="report-heading">Auto-Generate Payroll Report</h2>
       <div className="form-row">
         <label htmlFor="pay-period-select">Pay period</label>
@@ -74,11 +74,11 @@ export function ReportGenerator() {
           </select>
         </div>
       )}
-      {!isAdmin && <p>Scoped automatically to your department.</p>}
-      <button type="button" onClick={handleGenerate}>
+      {!isAdmin && <p className="report-generator__note">Scoped automatically to your department.</p>}
+      <button type="button" onClick={handleGenerate} className="report-generator__submit">
         Generate CSV
       </button>
-      <p role="status" aria-live="polite">
+      <p role="status" aria-live="polite" className="status-message">
         {message}
       </p>
     </section>

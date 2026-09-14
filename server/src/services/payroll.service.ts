@@ -1,104 +1,161 @@
-import { prisma } from "../config/prisma.js";
-import type { PayPeriod, User } from "@prisma/client";
-import { HttpError } from "../middleware/errorHandler.js";
+import { and, eq, gte, inArray, lte } from "drizzle-orm";
+import { HTTPException } from "hono/http-exception";
+import type { Db } from "../db/index.js";
+import { payPeriods, payStubs, timeEntries, users } from "../db/schema.js";
+import { minutesBetween, payForMinutes } from "../lib/money.js";
 
-const WEEKLY_OVERTIME_THRESHOLD_HOURS = 40;
+const WEEKLY_OVERTIME_THRESHOLD_MINUTES = 40 * 60;
 const OVERTIME_MULTIPLIER = 1.5;
-const MS_PER_HOUR = 1000 * 60 * 60;
 
-function isoWeekKey(date: Date): string {
-  // Group hours into Sun-Sat weeks for overtime calculation purposes.
+/** Sunday-anchored week key, used to apply the FLSA 40 hour/week threshold. */
+function weekKey(date: Date): string {
   const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
   d.setUTCDate(d.getUTCDate() - d.getUTCDay());
   return d.toISOString().slice(0, 10);
 }
 
-interface HourlyBreakdown {
-  regularHours: number;
-  overtimeHours: number;
+interface Breakdown {
+  regularMinutes: number;
+  overtimeMinutes: number;
 }
 
-/** Splits approved time-entry hours for a biweekly period into regular vs. overtime,
- * applying the FLSA 40-hour/week threshold per calendar week within the period. */
-function computeHourlyBreakdown(entries: { clockIn: Date; clockOut: Date | null }[]): HourlyBreakdown {
-  const hoursByWeek = new Map<string, number>();
+/** Splits a user's entries into regular vs overtime minutes, week by week. */
+function splitRegularAndOvertime(entries: { clockIn: Date; clockOut: Date | null }[]): Breakdown {
+  const minutesByWeek = new Map<string, number>();
 
   for (const entry of entries) {
-    if (!entry.clockOut) continue; // ignore entries still clocked in
-    const hours = (entry.clockOut.getTime() - entry.clockIn.getTime()) / MS_PER_HOUR;
-    const week = isoWeekKey(entry.clockIn);
-    hoursByWeek.set(week, (hoursByWeek.get(week) ?? 0) + hours);
+    if (!entry.clockOut) continue; // still clocked in - not payable yet
+    const minutes = minutesBetween(entry.clockIn, entry.clockOut);
+    if (minutes <= 0) continue;
+    const key = weekKey(entry.clockIn);
+    minutesByWeek.set(key, (minutesByWeek.get(key) ?? 0) + minutes);
   }
 
-  let regularHours = 0;
-  let overtimeHours = 0;
-  for (const weekHours of hoursByWeek.values()) {
-    regularHours += Math.min(weekHours, WEEKLY_OVERTIME_THRESHOLD_HOURS);
-    overtimeHours += Math.max(weekHours - WEEKLY_OVERTIME_THRESHOLD_HOURS, 0);
+  let regularMinutes = 0;
+  let overtimeMinutes = 0;
+  for (const weekMinutes of minutesByWeek.values()) {
+    regularMinutes += Math.min(weekMinutes, WEEKLY_OVERTIME_THRESHOLD_MINUTES);
+    overtimeMinutes += Math.max(weekMinutes - WEEKLY_OVERTIME_THRESHOLD_MINUTES, 0);
   }
-
-  return {
-    regularHours: Math.round(regularHours * 100) / 100,
-    overtimeHours: Math.round(overtimeHours * 100) / 100,
-  };
+  return { regularMinutes, overtimeMinutes };
 }
 
-async function calculateBiweeklyPayStub(user: User, payPeriod: PayPeriod) {
-  if (user.hourlyRate === null) {
-    throw new HttpError(422, `User ${user.id} has no hourly rate set for biweekly pay.`);
+/**
+ * Generates (or regenerates) DRAFT pay stubs for every active employee whose
+ * pay type matches the period.
+ *
+ * D1 counts each query as a subrequest, and the Workers Free plan allows only
+ * 50 per invocation, so this deliberately runs a fixed number of queries
+ * regardless of headcount: one for the employees, one for all of their time
+ * entries, and one batch for the writes. Querying per employee in a loop -
+ * which is how this worked on MySQL - would exceed the limit at ~48 employees.
+ */
+export async function generatePayStubsForPeriod(db: Db, payPeriodId: number) {
+  const period = await db.query.payPeriods.findFirst({ where: eq(payPeriods.id, payPeriodId) });
+  if (!period) throw new HTTPException(404, { message: "Pay period not found." });
+  if (period.status === "CLOSED") {
+    throw new HTTPException(409, { message: "Pay period is already closed." });
   }
-  const rate = Number(user.hourlyRate);
 
-  const entries = await prisma.timeEntry.findMany({
-    where: {
-      userId: user.id,
-      status: "APPROVED",
-      clockIn: { gte: payPeriod.startDate, lte: payPeriod.endDate },
-    },
-    select: { clockIn: true, clockOut: true },
+  // Query 1: everyone on this pay cycle.
+  const employees = await db
+    .select()
+    .from(users)
+    .where(and(eq(users.payType, period.type), eq(users.isActive, true)));
+
+  if (employees.length === 0) return { generated: 0 };
+
+  // Query 2: every approved entry in range for all of them at once.
+  const entries =
+    period.type === "BIWEEKLY"
+      ? await db
+          .select({
+            userId: timeEntries.userId,
+            clockIn: timeEntries.clockIn,
+            clockOut: timeEntries.clockOut,
+          })
+          .from(timeEntries)
+          .where(
+            and(
+              inArray(
+                timeEntries.userId,
+                employees.map((e) => e.id)
+              ),
+              eq(timeEntries.status, "APPROVED"),
+              gte(timeEntries.clockIn, period.startDate),
+              lte(timeEntries.clockIn, period.endDate)
+            )
+          )
+      : [];
+
+  const entriesByUser = new Map<number, { clockIn: Date; clockOut: Date | null }[]>();
+  for (const entry of entries) {
+    const list = entriesByUser.get(entry.userId) ?? [];
+    list.push({ clockIn: entry.clockIn, clockOut: entry.clockOut });
+    entriesByUser.set(entry.userId, list);
+  }
+
+  const rows = employees.map((employee) => {
+    if (period.type === "BIWEEKLY") {
+      const rate = employee.hourlyRateCents;
+      if (rate === null) {
+        throw new HTTPException(422, {
+          message: `${employee.email} has no hourly rate set for biweekly pay.`,
+        });
+      }
+      const { regularMinutes, overtimeMinutes } = splitRegularAndOvertime(
+        entriesByUser.get(employee.id) ?? []
+      );
+      const grossPayCents =
+        payForMinutes(regularMinutes, rate) +
+        payForMinutes(overtimeMinutes, rate, OVERTIME_MULTIPLIER);
+      return { userId: employee.id, payPeriodId, regularMinutes, overtimeMinutes, grossPayCents };
+    }
+
+    const salary = employee.annualSalaryCents;
+    if (salary === null) {
+      throw new HTTPException(422, {
+        message: `${employee.email} has no annual salary set for monthly pay.`,
+      });
+    }
+    return {
+      userId: employee.id,
+      payPeriodId,
+      regularMinutes: 0,
+      overtimeMinutes: 0,
+      grossPayCents: Math.round(salary / 12),
+    };
   });
 
-  const { regularHours, overtimeHours } = computeHourlyBreakdown(entries);
-  const grossPay = regularHours * rate + overtimeHours * rate * OVERTIME_MULTIPLIER;
+  // One batch = one subrequest, and it commits atomically.
+  const statements = rows.map((row) =>
+    db
+      .insert(payStubs)
+      .values({ ...row, status: "DRAFT" as const })
+      .onConflictDoUpdate({
+        target: [payStubs.userId, payStubs.payPeriodId],
+        set: {
+          regularMinutes: row.regularMinutes,
+          overtimeMinutes: row.overtimeMinutes,
+          grossPayCents: row.grossPayCents,
+          status: "DRAFT" as const,
+        },
+      })
+  );
 
-  return { regularHours, overtimeHours, grossPay: Math.round(grossPay * 100) / 100 };
+  await db.batch([
+    ...(statements as [(typeof statements)[number], ...typeof statements]),
+    db.update(payPeriods).set({ status: "PROCESSING" }).where(eq(payPeriods.id, payPeriodId)),
+  ]);
+
+  return { generated: rows.length };
 }
 
-function calculateMonthlyPayStub(user: User) {
-  if (user.annualSalary === null) {
-    throw new HttpError(422, `User ${user.id} has no annual salary set for monthly pay.`);
-  }
-  const grossPay = Number(user.annualSalary) / 12;
-  return { regularHours: 0, overtimeHours: 0, grossPay: Math.round(grossPay * 100) / 100 };
-}
+export async function finalizePayPeriod(db: Db, payPeriodId: number) {
+  await db.batch([
+    db.update(payStubs).set({ status: "FINALIZED" }).where(eq(payStubs.payPeriodId, payPeriodId)),
+    db.update(payPeriods).set({ status: "CLOSED" }).where(eq(payPeriods.id, payPeriodId)),
+  ]);
 
-/** Generates (or regenerates) DRAFT pay stubs for every active user whose payType
- * matches the pay period, then returns the created/updated stubs. */
-export async function generatePayStubsForPeriod(payPeriodId: number) {
-  const payPeriod = await prisma.payPeriod.findUnique({ where: { id: payPeriodId } });
-  if (!payPeriod) throw new HttpError(404, "Pay period not found.");
-  if (payPeriod.status === "CLOSED") throw new HttpError(409, "Pay period is already closed.");
-
-  const users = await prisma.user.findMany({ where: { payType: payPeriod.type, isActive: true } });
-
-  const stubs = [];
-  for (const user of users) {
-    const breakdown =
-      payPeriod.type === "BIWEEKLY" ? await calculateBiweeklyPayStub(user, payPeriod) : calculateMonthlyPayStub(user);
-
-    const stub = await prisma.payStub.upsert({
-      where: { userId_payPeriodId: { userId: user.id, payPeriodId } },
-      update: { ...breakdown, status: "DRAFT" },
-      create: { userId: user.id, payPeriodId, ...breakdown, status: "DRAFT" },
-    });
-    stubs.push(stub);
-  }
-
-  await prisma.payPeriod.update({ where: { id: payPeriodId }, data: { status: "PROCESSING" } });
-  return stubs;
-}
-
-export async function finalizePayPeriod(payPeriodId: number) {
-  await prisma.payStub.updateMany({ where: { payPeriodId }, data: { status: "FINALIZED" } });
-  return prisma.payPeriod.update({ where: { id: payPeriodId }, data: { status: "CLOSED" } });
+  return db.query.payPeriods.findFirst({ where: eq(payPeriods.id, payPeriodId) });
 }

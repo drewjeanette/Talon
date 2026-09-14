@@ -17,14 +17,14 @@ export function NavBar() {
       <div className="app-header__brand">
         <span aria-hidden="true">🦅</span> Talon
       </div>
-      <nav aria-label="Primary">
+      <nav aria-label="Primary" className="app-header__nav">
         <Link to="/">Dashboard</Link>
       </nav>
       <div className="app-header__user">
-        <span>
+        <span className="app-header__name">
           {user.firstName} {user.lastName} &middot; {user.role}
         </span>
-        <button type="button" onClick={handleLogout}>
+        <button type="button" onClick={handleLogout} className="app-header__logout">
           Log out
         </button>
       </div>

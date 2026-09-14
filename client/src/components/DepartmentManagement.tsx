@@ -119,15 +119,15 @@ export function DepartmentManagement() {
   }
 
   return (
-    <section aria-labelledby="departments-heading" className="card">
+    <section aria-labelledby="departments-heading" className="card department-management">
       <h2 id="departments-heading">Department Management</h2>
-      <p>
+      <p className="department-management__intro">
         Department codes live in the database, not source code - add, rename, reassign to a college,
         or deactivate any of them here. Deactivating hides a code from the "new user" form without
         deleting history for employees already assigned to it.
       </p>
 
-      <form onSubmit={handleCreateDepartment} className="form-row-group">
+      <form onSubmit={handleCreateDepartment} className="form-row-group department-management__form">
         <div className="form-row">
           <label htmlFor="new-dept-code">Code</label>
           <input id="new-dept-code" value={newCode} onChange={(e) => setNewCode(e.target.value)} required maxLength={40} />
@@ -173,97 +173,99 @@ export function DepartmentManagement() {
         </button>
       )}
 
-      <table>
-        <caption className="sr-only">All departments</caption>
-        <thead>
-          <tr>
-            <th scope="col">Code</th>
-            <th scope="col">Name</th>
-            <th scope="col">College</th>
-            <th scope="col">Active</th>
-            <th scope="col">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {departments.map((dept) => {
-            const isEditing = editingId === dept.id;
-            return (
-              <tr key={dept.id}>
-                {isEditing && draft ? (
-                  <>
-                    <td>
-                      <label htmlFor={`edit-code-${dept.id}`} className="sr-only">
-                        Code
-                      </label>
-                      <input
-                        id={`edit-code-${dept.id}`}
-                        value={draft.code}
-                        onChange={(e) => setDraft({ ...draft, code: e.target.value })}
-                        maxLength={40}
-                      />
-                    </td>
-                    <td>
-                      <label htmlFor={`edit-name-${dept.id}`} className="sr-only">
-                        Name
-                      </label>
-                      <input id={`edit-name-${dept.id}`} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-                    </td>
-                    <td>
-                      <label htmlFor={`edit-college-${dept.id}`} className="sr-only">
-                        College
-                      </label>
-                      <select
-                        id={`edit-college-${dept.id}`}
-                        value={draft.collegeId}
-                        onChange={(e) => setDraft({ ...draft, collegeId: e.target.value })}
-                      >
-                        <option value="">Unassigned</option>
-                        {colleges.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.name}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td>
-                      <label htmlFor={`edit-active-${dept.id}`} className="sr-only">
-                        Active
-                      </label>
-                      <input
-                        id={`edit-active-${dept.id}`}
-                        type="checkbox"
-                        checked={draft.isActive}
-                        onChange={(e) => setDraft({ ...draft, isActive: e.target.checked })}
-                      />
-                    </td>
-                    <td className="button-row">
-                      <button type="button" onClick={() => saveEdit(dept.id)}>
-                        Save
-                      </button>
-                      <button type="button" onClick={cancelEdit}>
-                        Cancel
-                      </button>
-                    </td>
-                  </>
-                ) : (
-                  <>
-                    <td>{dept.code}</td>
-                    <td>{dept.name}</td>
-                    <td>{dept.college?.name ?? "Unassigned"}</td>
-                    <td>{dept.isActive ? "Yes" : "No"}</td>
-                    <td>
-                      <button type="button" onClick={() => startEdit(dept)}>
-                        Edit
-                      </button>
-                    </td>
-                  </>
-                )}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      <p role="status" aria-live="polite">
+      <div className="table-scroll">
+        <table>
+          <caption className="sr-only">All departments</caption>
+          <thead>
+            <tr>
+              <th scope="col">Code</th>
+              <th scope="col">Name</th>
+              <th scope="col">College</th>
+              <th scope="col">Active</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {departments.map((dept) => {
+              const isEditing = editingId === dept.id;
+              return (
+                <tr key={dept.id}>
+                  {isEditing && draft ? (
+                    <>
+                      <td>
+                        <label htmlFor={`edit-code-${dept.id}`} className="sr-only">
+                          Code
+                        </label>
+                        <input
+                          id={`edit-code-${dept.id}`}
+                          value={draft.code}
+                          onChange={(e) => setDraft({ ...draft, code: e.target.value })}
+                          maxLength={40}
+                        />
+                      </td>
+                      <td>
+                        <label htmlFor={`edit-name-${dept.id}`} className="sr-only">
+                          Name
+                        </label>
+                        <input id={`edit-name-${dept.id}`} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+                      </td>
+                      <td>
+                        <label htmlFor={`edit-college-${dept.id}`} className="sr-only">
+                          College
+                        </label>
+                        <select
+                          id={`edit-college-${dept.id}`}
+                          value={draft.collegeId}
+                          onChange={(e) => setDraft({ ...draft, collegeId: e.target.value })}
+                        >
+                          <option value="">Unassigned</option>
+                          {colleges.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
+                        <label htmlFor={`edit-active-${dept.id}`} className="sr-only">
+                          Active
+                        </label>
+                        <input
+                          id={`edit-active-${dept.id}`}
+                          type="checkbox"
+                          checked={draft.isActive}
+                          onChange={(e) => setDraft({ ...draft, isActive: e.target.checked })}
+                        />
+                      </td>
+                      <td className="button-row">
+                        <button type="button" onClick={() => saveEdit(dept.id)}>
+                          Save
+                        </button>
+                        <button type="button" onClick={cancelEdit}>
+                          Cancel
+                        </button>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td>{dept.code}</td>
+                      <td>{dept.name}</td>
+                      <td>{dept.college?.name ?? "Unassigned"}</td>
+                      <td>{dept.isActive ? "Yes" : "No"}</td>
+                      <td>
+                        <button type="button" onClick={() => startEdit(dept)}>
+                          Edit
+                        </button>
+                      </td>
+                    </>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p role="status" aria-live="polite" className="status-message">
         {message}
       </p>
     </section>

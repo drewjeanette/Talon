@@ -1,80 +1,64 @@
 # Talon
 
-A redesign of Tennessee Tech's payroll & web-clock system (the brief: replace the Oracle-based
-system with something modern, secure, and cloud-hosted). This repo is a **locally-runnable
-full-stack scaffold** — auth/RBAC, web clock, payroll calculation, and auto-generated department
-reports all work today against a local MySQL instance. Cloud hosting (GCP + Cloudflare) is designed
-but not yet connected — see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+A redesign of Tennessee Tech's payroll and web-clock system, replacing the Oracle-based application
+with a modern, secure web app running entirely on **Cloudflare** — a Workers API, a D1 database, and
+a React frontend on Pages. No servers, no VMs, no open database ports.
 
 ## Docs
 
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — stack, folder layout, request flow, role/feature matrix
-- [docs/DATABASE.md](docs/DATABASE.md) — ER diagram and schema design rationale
-- [docs/SECURITY.md](docs/SECURITY.md) — threat model, auth design, network hardening, subnet-restriction options
-- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — GCP free-tier + Cloudflare hosting plan
-- [docs/GANTT.md](docs/GANTT.md) — suggested capstone project timeline
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — stack, layout, request flow, role/feature matrix
+- [docs/DATABASE.md](docs/DATABASE.md) — ER diagram, schema decisions, migrations
+- [docs/SECURITY.md](docs/SECURITY.md) — threat model, auth design, verified RBAC tests
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — **sharing D1 with your team**, deploying, plan limits
+- [docs/GANTT.md](docs/GANTT.md) — project timeline
 
-## Features implemented
+## Features
 
 - JWT auth with rotating refresh tokens; role hierarchy student < supervisor < admin
-- Web clock (clock in/out) with a supervisor/admin approval queue and correction workflow
-- Payroll engine: biweekly hourly pay (with per-week overtime) for students, monthly salary for
-  faculty/staff
-- Auto-generated CSV payroll reports scoped by department or college (supervisors are server-side
-  pinned to their own department)
+- Web clock with a supervisor approval queue and an auditable correction workflow
+- Payroll engine: biweekly hourly pay with per-week FLSA overtime, monthly salary for faculty/staff
+- Auto-generated CSV payroll reports scoped by department or college, with supervisors pinned
+  server-side to their own department
 - Admin user management and pay-period lifecycle (create → generate stubs → finalize)
-- Admin department/college management — codes seeded from a registrar list but fully editable
-  (add, rename, reassign to a college, deactivate) from the dashboard, backed by real DB rows
-  rather than a hardcoded list
-- Security hardening: helmet CSP/HSTS, rate limiting, input validation, audit logging, non-default
-  ports, optional network CIDR allowlist — details in [docs/SECURITY.md](docs/SECURITY.md)
-- Accessible UI: labeled form controls, visible focus states, `aria-live` status regions, skip link
+- Admin department/college management — all 104 registrar codes seeded but fully editable
+- Audit logging of every significant action, with the true client IP
+- Accessible UI: labeled controls, visible focus, `aria-live` status regions, skip link
 
-## Quick start — just want to see the UI? (no database needed)
+## Quick start — just the UI, no backend
 
-The frontend has a **mock mode** that fakes every API call in-memory, so you can click through all
-three dashboards (student/supervisor/admin) with zero setup — no Docker, no MySQL, no server process.
-
-```bash
-npm install --workspace=client
-cp client/.env.example client/.env
-# open client/.env and set VITE_MOCK_MODE=true
-npm run dev:client   # http://localhost:5173
-```
-
-Log in with any of the seeded demo accounts below — mock mode accepts the same credentials as the
-real seed data. State (clock in/out, approvals, new users/pay periods you create) lives only in
-memory and resets on page reload. See [`client/src/api/mock.ts`](client/src/api/mock.ts) — it's an
-isolated fake API layer, not part of the real app logic, safe to delete once the real backend is
-connected.
-
-## Quick start — full stack (real database)
-
-Prerequisites: Node.js 20+, Docker (for local MySQL) — or point `DATABASE_URL` at any MySQL 8 instance.
+The frontend has a mock mode that fakes every API call in memory. No Cloudflare account needed.
 
 ```bash
 npm install
-
-# Start local MySQL (or skip this and use your own MySQL instance)
-npm run db:up
-
-# Configure environment
-cp server/.env.example server/.env
 cp client/.env.example client/.env
-# edit server/.env: set real JWT_ACCESS_SECRET / JWT_REFRESH_SECRET (openssl rand -base64 48)
-# edit client/.env: make sure VITE_MOCK_MODE=false so it talks to the real server
-
-# Set up the database
-npm run prisma:migrate
-npm run prisma:seed
-
-# Run both apps
-npm run dev:server   # http://localhost:4317
-npm run dev:client   # http://localhost:5173
+# set VITE_MOCK_MODE=true in client/.env
+npm run dev:client        # http://localhost:5173
 ```
 
-Seeded accounts (see `server/prisma/seed.ts`) — all use the passwords below and are forced to keep
-them only because `mustResetPw` is off for seed data; **change these before using real data**:
+## Quick start — full stack, locally
+
+`wrangler dev` runs a real Worker against a **local** D1 database. Nothing touches the shared
+remote database, and there is no CPU limit locally.
+
+```bash
+npm install
+npx wrangler login
+
+# One person creates the database and commits the id into server/wrangler.toml
+npx wrangler d1 create talon-db
+
+cp server/.dev.vars.example server/.dev.vars   # then set real JWT secrets
+cp client/.env.example client/.env             # VITE_MOCK_MODE=false
+
+npm run db:migrate:local     # create the schema
+npm run db:seed:generate     # build seed.sql (real password hashes)
+npm run db:seed:local        # load demo data
+
+npm run dev:server           # Worker on http://localhost:8787
+npm run dev:client           # UI on http://localhost:5173
+```
+
+Demo accounts (change before using real data):
 
 | Role | Email | Password |
 |---|---|---|
@@ -82,6 +66,40 @@ them only because `mustResetPw` is off for seed data; **change these before usin
 | Supervisor | supervisor@tntech.edu | `ChangeMe!Super1` |
 | Student | student@tntech.edu | `ChangeMe!Student1` |
 
-## Project structure
+> Logins take a couple of seconds. That is PBKDF2 doing 600,000 iterations on purpose. To speed up
+> local demos, regenerate the seed with a lower cost:
+> `PBKDF2_ITERATIONS=100000 npm run db:seed:generate && npm run db:seed:local`
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#repository-layout).
+## Working as a team
+
+Add your teammates to the **Cloudflare account** (Manage Account → Members → Invite → *Cloudflare
+Workers Admin*), then everyone develops against their **own local D1**. The schema is shared through
+the committed `server/migrations/` folder, not by everyone pointing at the remote database.
+
+Full instructions: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#sharing-the-database-with-your-team).
+
+## Design handoff
+
+The shared Login/Welcome screen and the Student, Supervisor, and Admin screens each have one standalone
+HTML design file. Teammates open their file by double-clicking, give that same file to an AI coding tool,
+review the returned file in a browser, and return it to you. Each design imports independently.
+
+```bash
+npm run design:export    # writes the four standalone files into design/outbox/
+npm run design:import    # imports the files you saved into design/inbox/
+```
+
+Full workflow and troubleshooting: [design/README.md](design/README.md).
+
+## Deploying
+
+```bash
+npm run deploy:server    # Worker
+npm run deploy:client    # Pages
+```
+
+One caveat worth knowing before you deploy: the **Workers Free plan allows 10ms of CPU per request**,
+and a secure password hash costs far more than that. A deployed password login needs Workers Paid
+($5/mo) or Cloudflare Access for SSO. Local development is unaffected. The measurements and the three
+options are in
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#the-workers-free-plan-cannot-run-a-real-password-login).

@@ -67,9 +67,9 @@ export function PayPeriodManager() {
   }
 
   return (
-    <section aria-labelledby="pay-period-heading" className="card">
+    <section aria-labelledby="pay-period-heading" className="card pay-period-manager">
       <h2 id="pay-period-heading">Pay Periods</h2>
-      <form onSubmit={handleCreate} className="form-row-group">
+      <form onSubmit={handleCreate} className="form-row-group pay-period-manager__form">
         <div className="form-row">
           <label htmlFor="period-type">Type</label>
           <select id="period-type" value={type} onChange={(e) => setType(e.target.value as typeof type)}>
@@ -92,39 +92,41 @@ export function PayPeriodManager() {
         <button type="submit">Create pay period</button>
       </form>
 
-      <table>
-        <caption className="sr-only">Existing pay periods</caption>
-        <thead>
-          <tr>
-            <th scope="col">Type</th>
-            <th scope="col">Range</th>
-            <th scope="col">Pay date</th>
-            <th scope="col">Status</th>
-            <th scope="col">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {periods.map((p) => (
-            <tr key={p.id}>
-              <td>{p.type}</td>
-              <td>
-                {new Date(p.startDate).toLocaleDateString()} - {new Date(p.endDate).toLocaleDateString()}
-              </td>
-              <td>{new Date(p.payDate).toLocaleDateString()}</td>
-              <td>{p.status}</td>
-              <td className="button-row">
-                <button type="button" onClick={() => handleGenerate(p.id)} disabled={p.status === "CLOSED"}>
-                  Generate stubs
-                </button>
-                <button type="button" onClick={() => handleFinalize(p.id)} disabled={p.status !== "PROCESSING"}>
-                  Finalize
-                </button>
-              </td>
+      <div className="table-scroll">
+        <table>
+          <caption className="sr-only">Existing pay periods</caption>
+          <thead>
+            <tr>
+              <th scope="col">Type</th>
+              <th scope="col">Range</th>
+              <th scope="col">Pay date</th>
+              <th scope="col">Status</th>
+              <th scope="col">Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-      <p role="status" aria-live="polite">
+          </thead>
+          <tbody>
+            {periods.map((p) => (
+              <tr key={p.id}>
+                <td>{p.type}</td>
+                <td>
+                  {new Date(p.startDate).toLocaleDateString()} - {new Date(p.endDate).toLocaleDateString()}
+                </td>
+                <td>{new Date(p.payDate).toLocaleDateString()}</td>
+                <td>{p.status}</td>
+                <td className="button-row">
+                  <button type="button" onClick={() => handleGenerate(p.id)} disabled={p.status === "CLOSED"}>
+                    Generate stubs
+                  </button>
+                  <button type="button" onClick={() => handleFinalize(p.id)} disabled={p.status !== "PROCESSING"}>
+                    Finalize
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p role="status" aria-live="polite" className="status-message">
         {message}
       </p>
     </section>

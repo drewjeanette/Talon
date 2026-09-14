@@ -37,13 +37,16 @@ gantt
 
 | Phase | Status | Artifact |
 |---|---|---|
-| Architecture & DB design | Done | [DATABASE.md](DATABASE.md), `server/prisma/schema.prisma` |
-| Auth & RBAC | Done (local scaffold) | `server/src/routes/auth.routes.ts`, `middleware/auth.ts` |
-| Timeclock & payroll engine | Done (local scaffold) | `server/src/services/payroll.service.ts` |
-| Reports API | Done (local scaffold) | `server/src/routes/reports.routes.ts` |
-| Frontend dashboards | Done (local scaffold) | `client/src/pages`, `client/src/components` |
+| Architecture & DB design | Done | [DATABASE.md](DATABASE.md), `server/src/db/schema.ts` |
+| Auth & RBAC | Done, verified against D1 | `server/src/routes/auth.routes.ts`, `middleware/auth.ts` |
+| Timeclock & payroll engine | Done, verified (incl. overtime) | `server/src/services/payroll.service.ts` |
+| Reports API | Done, verified | `server/src/routes/reports.routes.ts` |
+| Frontend dashboards | Done, verified against the Worker | `client/src/pages`, `client/src/components` |
+| Migration to Cloudflare (Workers + D1) | Done | [ARCHITECTURE.md](ARCHITECTURE.md#migration-notes-from-the-node--mysql-design) |
 | Security review | Ongoing | [SECURITY.md](SECURITY.md) |
-| GCP + Cloudflare deployment | Not started | [DEPLOYMENT.md](DEPLOYMENT.md) |
-| Accessibility audit | Baseline in place, needs a real screen-reader pass | [SECURITY.md#accessibility](SECURITY.md#accessibility-as-a-security-adjacent-requirement) |
+| Cloudflare deployment (Workers/Pages/D1) | Not started | [DEPLOYMENT.md](DEPLOYMENT.md) |
+| SSO via Cloudflare Access | Not started | [DEPLOYMENT.md](DEPLOYMENT.md#the-workers-free-plan-cannot-run-a-real-password-login) |
+| Accessibility audit | Baseline in place, needs a real screen-reader pass | `client/src/components` |
+| Responsive (tablet/mobile) work | Not started | `client/src/styles.css` |
 | Testing & QA | Not started | add `server`/`client` test suites |
 | Documentation & presentation | Ongoing | this `docs/` folder |

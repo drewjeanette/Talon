@@ -33,44 +33,50 @@ export function ApprovalQueue() {
   }
 
   return (
-    <section aria-labelledby="approvals-heading" className="card">
+    <section aria-labelledby="approvals-heading" className="card approval-queue">
       <h2 id="approvals-heading">Pending Time Entry Approvals</h2>
-      <table>
-        <caption className="sr-only">Time entries awaiting approval</caption>
-        <thead>
-          <tr>
-            <th scope="col">Employee</th>
-            <th scope="col">Clock In</th>
-            <th scope="col">Clock Out</th>
-            <th scope="col">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.length === 0 && (
+      <div className="table-scroll">
+        <table>
+          <caption className="sr-only">Time entries awaiting approval</caption>
+          <thead>
             <tr>
-              <td colSpan={4}>Nothing pending.</td>
+              <th scope="col">Employee</th>
+              <th scope="col">Clock In</th>
+              <th scope="col">Clock Out</th>
+              <th scope="col">Actions</th>
             </tr>
-          )}
-          {entries.map((entry) => (
-            <tr key={entry.id}>
-              <td>
-                {entry.user.firstName} {entry.user.lastName}
-              </td>
-              <td>{new Date(entry.clockIn).toLocaleString()}</td>
-              <td>{entry.clockOut ? new Date(entry.clockOut).toLocaleString() : "In progress"}</td>
-              <td className="button-row">
-                <button type="button" onClick={() => decide(entry.id, "APPROVED")}>
-                  Approve
-                </button>
-                <button type="button" onClick={() => decide(entry.id, "REJECTED")} className="button--danger">
-                  Reject
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <p role="status" aria-live="polite">
+          </thead>
+          <tbody>
+            {entries.length === 0 && (
+              <tr>
+                <td colSpan={4}>Nothing pending.</td>
+              </tr>
+            )}
+            {entries.map((entry) => (
+              <tr key={entry.id}>
+                <td>
+                  {entry.user.firstName} {entry.user.lastName}
+                </td>
+                <td>{new Date(entry.clockIn).toLocaleString()}</td>
+                <td>{entry.clockOut ? new Date(entry.clockOut).toLocaleString() : "In progress"}</td>
+                <td className="button-row">
+                  <button type="button" onClick={() => decide(entry.id, "APPROVED")} className="approval-queue__approve">
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => decide(entry.id, "REJECTED")}
+                    className="button--danger approval-queue__reject"
+                  >
+                    Reject
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p role="status" aria-live="polite" className="status-message">
         {message}
       </p>
     </section>
