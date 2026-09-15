@@ -278,6 +278,13 @@ th:last-child { border-radius: 0 8px 8px 0; }
   background: var(--tt-purple-soft);
 }
 
+.timesheet tbody td.status--pending, .pay-stubs tbody td.status--draft {
+  color: #755100; background: #fff0bc; outline-color: var(--tt-gold);
+}
+.timesheet tbody td.status--approved, .pay-stubs tbody td.status--finalized, .pay-stubs tbody td.status--paid {
+  color: var(--success-dark); background: #e2f3e5; outline-color: var(--success);
+}
+
 @media (max-width: 800px) {
   .clock-widget, .timesheet, .pay-stubs { grid-column: 1 / -1; }
 }

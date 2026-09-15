@@ -35,7 +35,7 @@ export function TimesheetTable({ entries, caption }: { entries: TimeEntry[]; cap
               <td>{new Date(entry.clockIn).toLocaleString()}</td>
               <td>{entry.clockOut ? new Date(entry.clockOut).toLocaleString() : "In progress"}</td>
               <td>{formatHours(entry)}</td>
-              <td>{entry.status}</td>
+              <td className={`status--${entry.status.toLowerCase()}`}>{entry.status}</td>
             </tr>
           ))}
         </tbody>

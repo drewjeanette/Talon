@@ -48,7 +48,7 @@ export function PayStubList() {
                 <td>{s.regularHours}</td>
                 <td>{s.overtimeHours}</td>
                 <td>${s.grossPay}</td>
-                <td>{s.status}</td>
+                <td className={`status--${s.status.toLowerCase()}`}>{s.status}</td>
               </tr>
             ))}
           </tbody>

@@ -64,7 +64,7 @@ const demoUsers = [
   {
     email: "student@tntech.edu",
     password: "ChangeMe!Student1",
-    firstName: "Stu",
+    firstName: "Chris",
     lastName: "Student",
     role: "STUDENT",
     payType: "BIWEEKLY",
