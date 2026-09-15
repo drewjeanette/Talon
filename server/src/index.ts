@@ -4,6 +4,7 @@ import { secureHeaders } from "hono/secure-headers";
 import { HTTPException } from "hono/http-exception";
 import { ZodError } from "zod";
 import { authRoutes } from "./routes/auth.routes.js";
+import { profilePhotoRoutes } from "./routes/profile-photo.routes.js";
 import { userRoutes } from "./routes/users.routes.js";
 import { orgRoutes } from "./routes/org.routes.js";
 import { timeclockRoutes } from "./routes/timeclock.routes.js";
@@ -29,6 +30,7 @@ app.use("/api/*", async (c, next) => {
 app.get("/api/health", (c) => c.json({ status: "ok" }));
 
 app.route("/api/auth", authRoutes);
+app.route("/api/auth", profilePhotoRoutes);
 app.route("/api/users", userRoutes);
 app.route("/api/org", orgRoutes);
 app.route("/api/timeclock", timeclockRoutes);

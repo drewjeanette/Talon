@@ -97,6 +97,7 @@ const users: MockUser[] = [
     mustResetPw: false,
   },
 ];
+const profilePhotos = new Map<number, Blob>();
 let nextUserId = 4;
 
 const now = Date.now();
@@ -215,7 +216,7 @@ async function delay() {
 export async function mockRequest<T>(path: string, options: RequestInit): Promise<T> {
   await delay();
   const method = (options.method ?? "GET").toUpperCase();
-  const body = options.body ? JSON.parse(options.body as string) : undefined;
+  const body = typeof options.body === "string" ? JSON.parse(options.body) : undefined;
 
   // --- auth ---
   if (path === "/auth/login" && method === "POST") {
@@ -236,6 +237,20 @@ export async function mockRequest<T>(path: string, options: RequestInit): Promis
   }
   if (path === "/auth/me" && method === "GET") {
     return publicUser(me()) as T;
+  }
+  if (path === "/auth/profile-photo" && method === "GET") {
+    const photo = profilePhotos.get(me().id);
+    if (!photo) throw new ApiError(404, "No profile photo uploaded.");
+    return photo as T;
+  }
+  if (path === "/auth/profile-photo" && method === "POST") {
+    if (!(options.body instanceof Blob)) throw new ApiError(400, "Invalid profile photo.");
+    profilePhotos.set(me().id, options.body);
+    return { saved: true } as T;
+  }
+  if (path === "/auth/profile-photo" && method === "DELETE") {
+    profilePhotos.delete(me().id);
+    return undefined as T;
   }
 
   // --- timeclock ---

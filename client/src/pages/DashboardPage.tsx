@@ -10,6 +10,7 @@ import { DepartmentManagement } from "../components/DepartmentManagement";
 import { PayStubList } from "../components/PayStubList";
 import { SupervisorOrganizer } from "../components/SupervisorOrganizer";
 import { AdminLaunchpad } from "../components/AdminLaunchpad";
+import { ProfilePhotoButton } from "../components/ProfilePhotoButton";
 import type { AdminToolKey } from "../components/AdminLaunchpad";
 import { api } from "../api/client";
 
@@ -25,6 +26,7 @@ export function DashboardPage() {
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [hour, setHour] = useState(() => new Date().getHours());
   const [adminSection, setAdminSection] = useState<AdminToolKey | null>(null);
+  const [photoStatus, setPhotoStatus] = useState<string | null>(null);
 
   async function loadEntries() {
     const data = await api.get<TimeEntry[]>("/timeclock/my-entries");
@@ -54,7 +56,8 @@ export function DashboardPage() {
   // rearrange the cards with CSS alone, since design files cannot change markup.
   return (
     <main id="main-content" className={`dashboard dashboard--${user.role.toLowerCase()}`} data-admin-view={user.role === "ADMIN" && adminSection ? adminSection : undefined}>
-      <h1 className="dashboard__title">{greeting}, {user.firstName}</h1>
+      <h1 className="dashboard__title"><ProfilePhotoButton userId={user.id} onStatus={setPhotoStatus} /><span>{greeting}, {user.firstName}</span></h1>
+      {photoStatus && <p className="dashboard__photo-message" role="status">{photoStatus}</p>}
 
       {user.role === "SUPERVISOR" && <SupervisorOrganizer />}
       {user.role === "ADMIN" && (

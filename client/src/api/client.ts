@@ -26,7 +26,7 @@ async function request<T>(path: string, options: RequestInit = {}, retry = true)
   if (MOCK_MODE) return mockRequest<T>(path, options);
 
   const headers = new Headers(options.headers);
-  headers.set("Content-Type", "application/json");
+  if (!headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
 
   const res = await fetch(`${API_BASE_URL}${path}`, {
@@ -48,6 +48,9 @@ async function request<T>(path: string, options: RequestInit = {}, retry = true)
 
   const contentType = res.headers.get("content-type") ?? "";
   if (contentType.includes("text/csv")) {
+    return (await res.blob()) as unknown as T;
+  }
+  if (contentType.startsWith("image/")) {
     return (await res.blob()) as unknown as T;
   }
   return res.json() as Promise<T>;
@@ -72,6 +75,13 @@ export const api = {
     request<T>(path, { method: "POST", body: body !== undefined ? JSON.stringify(body) : undefined }),
   patch: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PATCH", body: body !== undefined ? JSON.stringify(body) : undefined }),
+  getPhoto: () => request<Blob>("/auth/profile-photo"),
+  uploadPhoto: (photo: Blob) => request<{ saved: boolean }>("/auth/profile-photo", {
+    method: "POST",
+    headers: { "Content-Type": photo.type },
+    body: photo,
+  }),
+  removePhoto: () => request<void>("/auth/profile-photo", { method: "DELETE" }),
 };
 
 export { tryRefresh, ApiError };

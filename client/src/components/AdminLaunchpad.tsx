@@ -49,8 +49,8 @@ export function AdminLaunchpad({ selected, onSelect }: { selected: AdminToolKey 
       <aside className="admin-work-panel">
         <h2 className="admin-panel-title">Work to Do</h2>
         <div className="admin-work-list">
-          <div className="admin-work-item"><span>Pending approvals</span><strong className="admin-work-count">{pending}</strong></div>
-          <div className="admin-work-item"><span>Open pay periods</span><strong className="admin-work-count">{openPeriods}</strong></div>
+          <button type="button" className="admin-work-item" onClick={() => onSelect("approvals")}><span>Pending approvals</span><strong className="admin-work-count">{pending}</strong></button>
+          <button type="button" className="admin-work-item" onClick={() => onSelect("payroll")}><span>Open pay periods</span><strong className="admin-work-count">{openPeriods}</strong></button>
         </div>
         <RoleCalendar role="admin" />
       </aside>
