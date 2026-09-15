@@ -27,7 +27,7 @@ export function TimesheetTable({ entries, caption }: { entries: TimeEntry[]; cap
         <tbody>
           {entries.length === 0 && (
             <tr>
-              <td colSpan={4}>No entries yet.</td>
+              <td colSpan={4}>No time entries have been recorded yet.</td>
             </tr>
           )}
           {entries.map((entry) => (
@@ -35,7 +35,7 @@ export function TimesheetTable({ entries, caption }: { entries: TimeEntry[]; cap
               <td>{new Date(entry.clockIn).toLocaleString()}</td>
               <td>{entry.clockOut ? new Date(entry.clockOut).toLocaleString() : "In progress"}</td>
               <td>{formatHours(entry)}</td>
-              <td className={`status--${entry.status.toLowerCase()}`}>{entry.status}</td>
+              <td>{entry.status}</td>
             </tr>
           ))}
         </tbody>

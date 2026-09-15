@@ -238,7 +238,7 @@ body { background: linear-gradient(180deg, #eee8f5 0, var(--bg) 260px); }
 .clock-widget { grid-column: span 4; border-top: 5px solid var(--tt-gold); display: flex; flex-direction: column; }
 .timesheet { grid-column: span 8; }
 .pay-stubs { grid-column: 1 / -1; }
-.clock-widget__status { display: inline-flex; align-self: flex-start; gap: .25rem; margin: .15rem 0 1.25rem; padding: .45rem .75rem; border-radius: 999px; background: var(--tt-purple-soft); color: var(--tt-purple-dark); font-weight: 700; }
+.clock-widget__status { display: inline-flex; align-self: flex-start; margin: .15rem 0 1.25rem; padding: .45rem .75rem; border-radius: 999px; background: var(--tt-purple-soft); color: var(--tt-purple-dark); font-weight: 700; }
 .clock-widget__actions { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin-top: auto; }
 button { min-height: 44px; border-radius: 8px; padding: .7rem 1.15rem; transition: background .15s ease, transform .15s ease, box-shadow .15s ease; }
 button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 10px #33205a26; }
@@ -276,13 +276,6 @@ th:last-child { border-radius: 0 8px 8px 0; }
   outline: 2px solid var(--tt-purple);
   outline-offset: -5px;
   background: var(--tt-purple-soft);
-}
-
-.timesheet tbody td.status--pending, .pay-stubs tbody td.status--draft {
-  color: #755100; background: #fff0bc; outline-color: var(--tt-gold);
-}
-.timesheet tbody td.status--approved, .pay-stubs tbody td.status--finalized, .pay-stubs tbody td.status--paid {
-  color: var(--success-dark); background: #e2f3e5; outline-color: var(--success);
 }
 
 @media (max-width: 800px) {

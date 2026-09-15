@@ -362,7 +362,5 @@ th:last-child { border-radius:0 8px 8px 0; }
   .admin-table-tools { align-items:stretch; flex-direction:column; }
   .admin-filter-count { white-space:normal; }
 }
-.timesheet tbody td.status--pending,.pay-stubs tbody td.status--draft { color:#755100; background:#fff0bc; outline-color:var(--tt-gold); }
-.timesheet tbody td.status--approved,.pay-stubs tbody td.status--finalized,.pay-stubs tbody td.status--paid { color:var(--success-dark); background:#e2f3e5; outline-color:var(--success); }
 @media (max-width:960px) { .approval-queue,.report-generator,.pay-period-manager,.pay-stubs,.user-management,.department-management { grid-column:1 / -1; } }
 @media (max-width:560px) { .app-header { flex-wrap:wrap; } .app-header__user { width:100%; justify-content:space-between; } }

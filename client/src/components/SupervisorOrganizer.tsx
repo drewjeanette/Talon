@@ -1,35 +1,15 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { RoleCalendar } from "./RoleCalendar";
 
 const REMINDERS = [
   { id: "entries", label: "Review pending time entries" },
-  { id: "paystubs", label: "Check my pay stubs" },
-  { id: "report", label: "Review payroll reports" },
+  { id: "report", label: "Confirm payroll report details" },
+  { id: "paystubs", label: "Check employee pay-stub statuses" },
 ];
 
-function localDateKey() {
-  const now = new Date();
-  return `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
-}
-
-export function SupervisorOrganizer({ userId }: { userId: number }) {
-  const storageKey = `talon-supervisor-reminders:${userId}:${localDateKey()}`;
-  const [completed, setCompleted] = useState<string[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem(storageKey) || "[]") as string[];
-    } catch {
-      return [];
-    }
-  });
+export function SupervisorOrganizer() {
+  const [completed, setCompleted] = useState<string[]>([]);
   const [removing, setRemoving] = useState<string[]>([]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(completed));
-    } catch {
-      // The checklist still works when browser storage is unavailable.
-    }
-  }, [completed, storageKey]);
 
   function finish(id: string) {
     if (removing.includes(id)) return;
@@ -37,7 +17,7 @@ export function SupervisorOrganizer({ userId }: { userId: number }) {
     window.setTimeout(() => {
       setCompleted((items) => [...items, id]);
       setRemoving((items) => items.filter((item) => item !== id));
-    }, 220);
+    }, 240);
   }
 
   const visible = REMINDERS.filter((item) => !completed.includes(item.id));
@@ -46,12 +26,12 @@ export function SupervisorOrganizer({ userId }: { userId: number }) {
   return (
     <div className="supervisor-organizer">
       <section className={`supervisor-todos${allDone ? " supervisor-todos--complete" : ""}`} aria-labelledby="supervisor-reminders-heading">
-        <h2 id="supervisor-reminders-heading" className="supervisor-organizer__title">Today's reminders</h2>
+        <h2 id="supervisor-reminders-heading" className="supervisor-organizer__title">To-Dos</h2>
         <div className="supervisor-todo-list">
           {allDone ? (
             <div role="status" aria-live="polite">
-              <span className="supervisor-success" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M10 25l10 10 18-22" /></svg></span>
-              <p className="supervisor-todo-empty">All reminders complete!</p>
+              <span className="supervisor-success" aria-hidden="true"><svg viewBox="0 0 64 64"><path d="M14 33l12 12 25-28" /></svg></span>
+              <p className="supervisor-todo-empty">All Clear For Now! No Pending Tasks.</p>
             </div>
           ) : visible.map((item) => (
             <label key={item.id} className={`supervisor-todo${removing.includes(item.id) ? " supervisor-todo--removing" : ""}`}>
@@ -62,7 +42,6 @@ export function SupervisorOrganizer({ userId }: { userId: number }) {
         </div>
       </section>
       <section className="supervisor-calendar" aria-label="Supervisor calendar">
-        <h2 className="supervisor-organizer__title">Calendar</h2>
         <RoleCalendar role="supervisor" />
       </section>
     </div>

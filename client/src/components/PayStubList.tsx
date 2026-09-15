@@ -36,7 +36,7 @@ export function PayStubList() {
           <tbody>
             {stubs.length === 0 && (
               <tr>
-                <td colSpan={6}>No pay stubs yet.</td>
+                <td colSpan={6}>No pay stubs are available yet.</td>
               </tr>
             )}
             {stubs.map((s) => (
@@ -48,7 +48,7 @@ export function PayStubList() {
                 <td>{s.regularHours}</td>
                 <td>{s.overtimeHours}</td>
                 <td>${s.grossPay}</td>
-                <td className={`status--${s.status.toLowerCase()}`}>{s.status}</td>
+                <td>{s.status}</td>
               </tr>
             ))}
           </tbody>

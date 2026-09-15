@@ -22,7 +22,7 @@ export function NavBar() {
       </nav>
       <div className="app-header__user">
         <span className="app-header__name">
-          {user.firstName} {user.lastName} &middot; {user.role}
+          {user.firstName} &middot; {user.role}
         </span>
         <button type="button" onClick={handleLogout} className="app-header__logout">
           Log out

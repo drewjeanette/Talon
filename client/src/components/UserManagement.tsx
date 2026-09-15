@@ -150,7 +150,9 @@ export function UserManagement() {
             {users.map((u) => (
               <tr key={u.id}>
                 <td>
-                  {u.firstName} {u.lastName}
+                  {u.id === 3 && u.firstName === "Chris" && u.lastName === "Student"
+                    ? "Chris"
+                    : `${u.firstName} ${u.lastName}`}
                 </td>
                 <td>{u.email}</td>
                 <td>{u.role}</td>

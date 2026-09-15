@@ -10,6 +10,7 @@ import { DepartmentManagement } from "../components/DepartmentManagement";
 import { PayStubList } from "../components/PayStubList";
 import { SupervisorOrganizer } from "../components/SupervisorOrganizer";
 import { AdminLaunchpad } from "../components/AdminLaunchpad";
+import type { AdminToolKey } from "../components/AdminLaunchpad";
 import { api } from "../api/client";
 
 interface TimeEntry {
@@ -23,6 +24,7 @@ export function DashboardPage() {
   const { user } = useAuth();
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [hour, setHour] = useState(() => new Date().getHours());
+  const [adminSection, setAdminSection] = useState<AdminToolKey | null>(null);
 
   async function loadEntries() {
     const data = await api.get<TimeEntry[]>("/timeclock/my-entries");
@@ -39,18 +41,35 @@ export function DashboardPage() {
   }, []);
 
   if (!user) return null;
-  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const greeting = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
+
+  function selectAdminSection(section: AdminToolKey | null) {
+    setAdminSection(section);
+    window.requestAnimationFrame(() => {
+      document.querySelector(section ? ".admin-section-bar" : ".admin-launchpad")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
 
   // The class hooks here (dashboard, dashboard-grid) let each role's designer
   // rearrange the cards with CSS alone, since design files cannot change markup.
   return (
-    <main id="main-content" className={`dashboard dashboard--${user.role.toLowerCase()}`}>
+    <main id="main-content" className={`dashboard dashboard--${user.role.toLowerCase()}`} data-admin-view={user.role === "ADMIN" && adminSection ? adminSection : undefined}>
       <h1 className="dashboard__title">{greeting}, {user.firstName}</h1>
 
-      {user.role === "SUPERVISOR" && <SupervisorOrganizer userId={user.id} />}
-      {user.role === "ADMIN" && <AdminLaunchpad />}
+      {user.role === "SUPERVISOR" && <SupervisorOrganizer />}
+      {user.role === "ADMIN" && (
+        <>
+          <AdminLaunchpad selected={adminSection} onSelect={selectAdminSection} />
+          {adminSection && (
+            <div className="admin-section-bar">
+              <h2 className="admin-section-bar__title">{adminSection === "approvals" ? "Time Entry Approvals" : adminSection === "payroll" ? "Payroll & Pay Periods" : adminSection === "reports" ? "Payroll Reports" : adminSection === "users" ? "User Management" : adminSection === "departments" ? "Departments & Colleges" : "My Pay Stubs"}</h2>
+              <button type="button" className="admin-section-bar__back" onClick={() => selectAdminSection(null)}>Back to Overview</button>
+            </div>
+          )}
+        </>
+      )}
 
-      <div className="dashboard-grid">
+      {(user.role !== "ADMIN" || adminSection) && <div className="dashboard-grid">
         {user.payType === "BIWEEKLY" && (
           <>
             <ClockWidget onChange={loadEntries} />
@@ -58,23 +77,16 @@ export function DashboardPage() {
           </>
         )}
 
-        <PayStubList />
+        {(user.role !== "ADMIN" || adminSection === "stubs") && <PayStubList />}
 
-        {(user.role === "SUPERVISOR" || user.role === "ADMIN") && (
-          <>
-            <ApprovalQueue />
-            <ReportGenerator />
-          </>
-        )}
+        {(user.role === "SUPERVISOR" || adminSection === "approvals") && <ApprovalQueue />}
+        {(user.role === "SUPERVISOR" || adminSection === "reports") && <ReportGenerator />}
 
-        {user.role === "ADMIN" && (
-          <>
-            <PayPeriodManager />
-            <UserManagement />
-            <DepartmentManagement />
-          </>
-        )}
+        {adminSection === "payroll" && <PayPeriodManager />}
+        {adminSection === "users" && <UserManagement />}
+        {adminSection === "departments" && <DepartmentManagement />}
       </div>
+      }
     </main>
   );
 }

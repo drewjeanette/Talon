@@ -44,7 +44,7 @@ const demoUsers = [
   {
     email: "admin@tntech.edu",
     password: "ChangeMe!Admin1",
-    firstName: "Ada",
+    firstName: "Renee",
     lastName: "Admin",
     role: "ADMIN",
     payType: "MONTHLY",
@@ -54,7 +54,7 @@ const demoUsers = [
   {
     email: "supervisor@tntech.edu",
     password: "ChangeMe!Super1",
-    firstName: "Sam",
+    firstName: "Sabrina",
     lastName: "Supervisor",
     role: "SUPERVISOR",
     payType: "MONTHLY",
