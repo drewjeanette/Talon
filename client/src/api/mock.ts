@@ -98,6 +98,7 @@ const users: MockUser[] = [
   },
 ];
 const profilePhotos = new Map<number, Blob>();
+const profilePhotoViews = new Map<number, { zoom: number; x: number; y: number }>();
 let nextUserId = 4;
 
 const now = Date.now();
@@ -243,13 +244,29 @@ export async function mockRequest<T>(path: string, options: RequestInit): Promis
     if (!photo) throw new ApiError(404, "No profile photo uploaded.");
     return photo as T;
   }
+  if (path === "/auth/profile-photo/view" && method === "GET") {
+    if (!profilePhotos.has(me().id)) throw new ApiError(404, "No profile photo uploaded.");
+    return (profilePhotoViews.get(me().id) ?? { zoom: 1, x: 0, y: 0 }) as T;
+  }
+  if (path === "/auth/profile-photo/view" && method === "PATCH") {
+    if (!profilePhotos.has(me().id)) throw new ApiError(404, "No profile photo uploaded.");
+    if (!body || typeof body.zoom !== "number" || body.zoom < 1 || body.zoom > 3 ||
+        typeof body.x !== "number" || body.x < -1 || body.x > 1 ||
+        typeof body.y !== "number" || body.y < -1 || body.y > 1) {
+      throw new ApiError(400, "Invalid profile photo view.");
+    }
+    profilePhotoViews.set(me().id, body);
+    return body as T;
+  }
   if (path === "/auth/profile-photo" && method === "POST") {
     if (!(options.body instanceof Blob)) throw new ApiError(400, "Invalid profile photo.");
     profilePhotos.set(me().id, options.body);
+    profilePhotoViews.delete(me().id);
     return { saved: true } as T;
   }
   if (path === "/auth/profile-photo" && method === "DELETE") {
     profilePhotos.delete(me().id);
+    profilePhotoViews.delete(me().id);
     return undefined as T;
   }
 

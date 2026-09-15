@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, blob, index, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, blob, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { relations, sql } from "drizzle-orm";
 
 // Talon schema for Cloudflare D1 (SQLite).
@@ -78,6 +78,9 @@ export const userProfilePhotos = sqliteTable("user_profile_photos", {
   userId: integer("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
   mimeType: text("mime_type", { enum: ["image/jpeg", "image/png", "image/webp"] }).notNull(),
   photo: blob("photo", { mode: "buffer" }).notNull(),
+  viewZoom: real("view_zoom").notNull().default(1),
+  viewX: real("view_x").notNull().default(0),
+  viewY: real("view_y").notNull().default(0),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 

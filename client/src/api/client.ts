@@ -13,6 +13,8 @@ export function setAccessToken(token: string | null) {
   accessToken = token;
 }
 
+export interface ProfilePhotoView { zoom: number; x: number; y: number }
+
 async function parseErrorBody(res: Response): Promise<string> {
   try {
     const body = await res.json();
@@ -76,6 +78,10 @@ export const api = {
   patch: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PATCH", body: body !== undefined ? JSON.stringify(body) : undefined }),
   getPhoto: () => request<Blob>("/auth/profile-photo"),
+  getPhotoView: () => request<ProfilePhotoView>("/auth/profile-photo/view"),
+  savePhotoView: (view: ProfilePhotoView) => request<ProfilePhotoView>("/auth/profile-photo/view", {
+    method: "PATCH", body: JSON.stringify(view),
+  }),
   uploadPhoto: (photo: Blob) => request<{ saved: boolean }>("/auth/profile-photo", {
     method: "POST",
     headers: { "Content-Type": photo.type },

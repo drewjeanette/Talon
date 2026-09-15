@@ -1,12 +1,18 @@
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { HTTPException } from "hono/http-exception";
+import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
 import { writeAuditLog } from "../services/audit.service.js";
 import type { AppEnv } from "../types.js";
 
 export const profilePhotoRoutes = new Hono<AppEnv>();
 const MAX_PHOTO_BYTES = 512 * 1024;
+const photoViewSchema = z.object({
+  zoom: z.number().min(1).max(3),
+  x: z.number().min(-1).max(1),
+  y: z.number().min(-1).max(1),
+}).strict();
 
 function imageType(bytes: Uint8Array): "image/jpeg" | "image/png" | "image/webp" | null {
   if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
@@ -28,6 +34,26 @@ profilePhotoRoutes.get("/profile-photo", requireAuth, async (c) => {
       "Content-Disposition": "inline",
     },
   });
+});
+
+profilePhotoRoutes.get("/profile-photo/view", requireAuth, async (c) => {
+  const row = await c.env.DB.prepare("SELECT view_zoom, view_x, view_y FROM user_profile_photos WHERE user_id = ?")
+    .bind(c.get("user").id)
+    .first<{ view_zoom: number; view_x: number; view_y: number }>();
+  if (!row) throw new HTTPException(404, { message: "No profile photo uploaded." });
+  return c.json({ zoom: row.view_zoom, x: row.view_x, y: row.view_y });
+});
+
+profilePhotoRoutes.patch("/profile-photo/view", requireAuth, async (c) => {
+  const parsed = photoViewSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) throw new HTTPException(400, { message: "Invalid profile photo view." });
+  const userId = c.get("user").id;
+  const result = await c.env.DB.prepare(`
+    UPDATE user_profile_photos SET view_zoom = ?, view_x = ?, view_y = ?, updated_at = unixepoch()
+    WHERE user_id = ?
+  `).bind(parsed.data.zoom, parsed.data.x, parsed.data.y, userId).run();
+  if (!result.meta.changes) throw new HTTPException(404, { message: "No profile photo uploaded." });
+  return c.json(parsed.data);
 });
 
 profilePhotoRoutes.post(
@@ -55,6 +81,9 @@ profilePhotoRoutes.post(
       ON CONFLICT(user_id) DO UPDATE SET
         mime_type = excluded.mime_type,
         photo = excluded.photo,
+        view_zoom = 1,
+        view_x = 0,
+        view_y = 0,
         updated_at = excluded.updated_at
     `).bind(userId, submittedType, bytes).run();
     await writeAuditLog(c, "PROFILE_PHOTO_UPDATE", "User", userId);
