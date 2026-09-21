@@ -167,11 +167,30 @@ export const payStubs = sqliteTable(
     generatedAt: integer("generated_at", { mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`),
+    finalizedById: integer("finalized_by_id").references(() => users.id),
   },
   (t) => [
     uniqueIndex("pay_stubs_user_period_idx").on(t.userId, t.payPeriodId),
     index("pay_stubs_period_idx").on(t.payPeriodId),
   ]
+);
+
+export const notifications = sqliteTable(
+  "notifications",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    recipientUserId: integer("recipient_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    senderUserId: integer("sender_user_id").references(() => users.id, { onDelete: "set null" }),
+    type: text("type").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    action: text("action"),
+    requiresAction: integer("requires_action", { mode: "boolean" }).notNull().default(false),
+    readAt: integer("read_at", { mode: "timestamp" }),
+    dismissedAt: integer("dismissed_at", { mode: "timestamp" }),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  },
+  (t) => [index("notifications_recipient_idx").on(t.recipientUserId, t.dismissedAt, t.createdAt)]
 );
 
 export const reportRuns = sqliteTable(

@@ -7,7 +7,7 @@ const REMINDERS = [
   { id: "paystubs", label: "Check employee pay-stub statuses" },
 ];
 
-export function SupervisorOrganizer() {
+export function SupervisorOrganizer({ reportSender }: { reportSender?: string | null }) {
   const [completed, setCompleted] = useState<string[]>([]);
   const [removing, setRemoving] = useState<string[]>([]);
 
@@ -36,7 +36,7 @@ export function SupervisorOrganizer() {
           ) : visible.map((item) => (
             <label key={item.id} className={`supervisor-todo${removing.includes(item.id) ? " supervisor-todo--removing" : ""}`}>
               <input type="checkbox" checked={removing.includes(item.id)} onChange={() => finish(item.id)} />
-              <span>{item.label}</span>
+              <span>{item.id === "report" && reportSender ? `Review payroll report from ${reportSender}` : item.label}</span>
             </label>
           ))}
         </div>

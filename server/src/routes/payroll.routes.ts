@@ -1,9 +1,9 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "../db/index.js";
-import { payPeriods, payStubs } from "../db/schema.js";
+import { payPeriods, payStubs, users } from "../db/schema.js";
 import { centsToDollarString, minutesToHourString } from "../lib/money.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { finalizePayPeriod, generatePayStubsForPeriod } from "../services/payroll.service.js";
@@ -65,7 +65,7 @@ payrollRoutes.post("/periods/:id/finalize", requireRole("ADMIN"), async (c) => {
   if (!Number.isInteger(id)) throw new HTTPException(400, { message: "Invalid pay period id." });
 
   const db = getDb(c.env.DB);
-  const period = await finalizePayPeriod(db, id);
+  const period = await finalizePayPeriod(db, id, c.get("user").id);
   if (!period) throw new HTTPException(404, { message: "Pay period not found." });
 
   await writeAuditLog(c, "PAY_PERIOD_FINALIZE", "PayPeriod", id);
@@ -81,6 +81,7 @@ payrollRoutes.get("/my-stubs", async (c) => {
       overtimeMinutes: payStubs.overtimeMinutes,
       grossPayCents: payStubs.grossPayCents,
       status: payStubs.status,
+      finalizedById: payStubs.finalizedById,
       startDate: payPeriods.startDate,
       endDate: payPeriods.endDate,
       payDate: payPeriods.payDate,
@@ -90,6 +91,12 @@ payrollRoutes.get("/my-stubs", async (c) => {
     .where(eq(payStubs.userId, c.get("user").id))
     .orderBy(desc(payPeriods.startDate));
 
+  const processorIds = [...new Set(rows.map((row) => row.finalizedById).filter((id): id is number => id !== null))];
+  const processors = processorIds.length
+    ? await db.select({ id: users.id, firstName: users.firstName }).from(users).where(inArray(users.id, processorIds))
+    : [];
+  const processorNames = new Map(processors.map((processor) => [processor.id, processor.firstName]));
+
   // Cents/minutes are an internal storage detail; the API speaks dollars and hours.
   return c.json(
     rows.map((r) => ({
@@ -98,6 +105,7 @@ payrollRoutes.get("/my-stubs", async (c) => {
       overtimeHours: minutesToHourString(r.overtimeMinutes),
       grossPay: centsToDollarString(r.grossPayCents),
       status: r.status,
+      processedBy: r.finalizedById ? processorNames.get(r.finalizedById) ?? null : null,
       payPeriod: { startDate: r.startDate, endDate: r.endDate, payDate: r.payDate },
     }))
   );

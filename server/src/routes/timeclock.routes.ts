@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "../db/index.js";
 import { timeEntries, users } from "../db/schema.js";
@@ -46,6 +46,13 @@ timeclockRoutes.post("/clock-out", async (c) => {
     .returning();
 
   await writeAuditLog(c, "CLOCK_OUT", "TimeEntry", entry.id);
+  await c.env.DB.prepare(`
+    INSERT INTO notifications (recipient_user_id, sender_user_id, type, title, body, action, requires_action)
+    SELECT id, ?, 'CLOCK_OUT', 'Biweekly pay ready',
+           (SELECT first_name FROM users WHERE id = ?) || ' clocked out. Review and finalize pay for the current biweekly period.',
+           'FINALIZE_PAY', 1
+    FROM users WHERE role = 'ADMIN' AND is_active = 1
+  `).bind(me.id, me.id).run();
   return c.json(entry);
 });
 
@@ -57,7 +64,15 @@ timeclockRoutes.get("/my-entries", async (c) => {
     .where(eq(timeEntries.userId, c.get("user").id))
     .orderBy(desc(timeEntries.clockIn))
     .limit(100);
-  return c.json(entries);
+  const reviewerIds = [...new Set(entries.filter((entry) => entry.status !== "PENDING" && entry.editedById).map((entry) => entry.editedById!))];
+  const reviewers = reviewerIds.length
+    ? await db.select({ id: users.id, firstName: users.firstName }).from(users).where(inArray(users.id, reviewerIds))
+    : [];
+  const reviewerNames = new Map(reviewers.map((reviewer) => [reviewer.id, reviewer.firstName]));
+  return c.json(entries.map((entry) => ({
+    ...entry,
+    reviewedBy: entry.status === "PENDING" || !entry.editedById ? null : reviewerNames.get(entry.editedById) ?? null,
+  })));
 });
 
 timeclockRoutes.get("/pending", requireRole("SUPERVISOR"), async (c) => {

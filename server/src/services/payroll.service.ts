@@ -139,6 +139,7 @@ export async function generatePayStubsForPeriod(db: Db, payPeriodId: number) {
           overtimeMinutes: row.overtimeMinutes,
           grossPayCents: row.grossPayCents,
           status: "DRAFT" as const,
+          finalizedById: null,
         },
       })
   );
@@ -151,9 +152,9 @@ export async function generatePayStubsForPeriod(db: Db, payPeriodId: number) {
   return { generated: rows.length };
 }
 
-export async function finalizePayPeriod(db: Db, payPeriodId: number) {
+export async function finalizePayPeriod(db: Db, payPeriodId: number, finalizedById: number) {
   await db.batch([
-    db.update(payStubs).set({ status: "FINALIZED" }).where(eq(payStubs.payPeriodId, payPeriodId)),
+    db.update(payStubs).set({ status: "FINALIZED", finalizedById }).where(eq(payStubs.payPeriodId, payPeriodId)),
     db.update(payPeriods).set({ status: "CLOSED" }).where(eq(payPeriods.id, payPeriodId)),
   ]);
 

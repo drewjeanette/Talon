@@ -78,6 +78,22 @@ body {
 
 #login-heading {
   color: var(--tt-purple-dark);
+  margin: 0.35rem 0 1.25rem;
+  font-size: 1.6rem;
+}
+
+.ttu-corner-logo {
+  display: block;
+  width: 165px;
+  height: auto;
+  object-fit: contain;
+  margin: 0 0 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .ttu-corner-logo {
+    width: 145px;
+  }
 }
 
 .form-row {

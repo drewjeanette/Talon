@@ -11,6 +11,7 @@ import { PayStubList } from "../components/PayStubList";
 import { SupervisorOrganizer } from "../components/SupervisorOrganizer";
 import { AdminLaunchpad } from "../components/AdminLaunchpad";
 import { ProfilePhotoButton } from "../components/ProfilePhotoButton";
+import { NotificationInbox } from "../components/NotificationInbox";
 import type { AdminToolKey } from "../components/AdminLaunchpad";
 import { api } from "../api/client";
 
@@ -19,6 +20,7 @@ interface TimeEntry {
   clockIn: string;
   clockOut: string | null;
   status: "PENDING" | "APPROVED" | "REJECTED";
+  reviewedBy?: string | null;
 }
 
 export function DashboardPage() {
@@ -27,6 +29,7 @@ export function DashboardPage() {
   const [hour, setHour] = useState(() => new Date().getHours());
   const [adminSection, setAdminSection] = useState<AdminToolKey | null>(null);
   const [photoStatus, setPhotoStatus] = useState<string | null>(null);
+  const [reportSender, setReportSender] = useState<string | null>(null);
 
   async function loadEntries() {
     const data = await api.get<TimeEntry[]>("/timeclock/my-entries");
@@ -59,7 +62,8 @@ export function DashboardPage() {
       <h1 className="dashboard__title"><ProfilePhotoButton userId={user.id} onStatus={setPhotoStatus} /><span>{greeting}, {user.firstName}</span></h1>
       {photoStatus && <p className="dashboard__photo-message" role="status">{photoStatus}</p>}
 
-      {user.role === "SUPERVISOR" && <SupervisorOrganizer />}
+      {user.role === "SUPERVISOR" && <NotificationInbox onReportSender={setReportSender} />}
+      {user.role === "SUPERVISOR" && <SupervisorOrganizer reportSender={reportSender} />}
       {user.role === "ADMIN" && (
         <>
           <AdminLaunchpad selected={adminSection} onSelect={selectAdminSection} />
@@ -80,10 +84,9 @@ export function DashboardPage() {
           </>
         )}
 
-        {(user.role !== "ADMIN" || adminSection === "stubs") && <PayStubList />}
-
-        {(user.role === "SUPERVISOR" || adminSection === "approvals") && <ApprovalQueue />}
         {(user.role === "SUPERVISOR" || adminSection === "reports") && <ReportGenerator />}
+        {(user.role !== "ADMIN" || adminSection === "stubs") && <PayStubList />}
+        {(user.role === "SUPERVISOR" || adminSection === "approvals") && <ApprovalQueue />}
 
         {adminSection === "payroll" && <PayPeriodManager />}
         {adminSection === "users" && <UserManagement />}

@@ -111,6 +111,7 @@ interface MockTimeEntry {
   clockIn: string;
   clockOut: string | null;
   status: "PENDING" | "APPROVED" | "REJECTED";
+  reviewedBy?: string | null;
 }
 
 const timeEntries: MockTimeEntry[] = [
@@ -120,6 +121,7 @@ const timeEntries: MockTimeEntry[] = [
     clockIn: new Date(now - 6 * DAY + 9 * HOUR).toISOString(),
     clockOut: new Date(now - 6 * DAY + 13 * HOUR).toISOString(),
     status: "APPROVED",
+    reviewedBy: "Sabrina",
   },
   {
     id: 2,
@@ -127,6 +129,7 @@ const timeEntries: MockTimeEntry[] = [
     clockIn: new Date(now - 4 * DAY + 9 * HOUR).toISOString(),
     clockOut: new Date(now - 4 * DAY + 17 * HOUR).toISOString(),
     status: "APPROVED",
+    reviewedBy: "Sabrina",
   },
   {
     id: 3,
@@ -175,16 +178,45 @@ interface MockPayStub {
   overtimeHours: string;
   grossPay: string;
   status: "DRAFT" | "FINALIZED" | "PAID";
+  processedBy?: string | null;
 }
 
 const payStubs: MockPayStub[] = [
-  { id: 1, userId: 3, payPeriodId: 1, regularHours: "32.00", overtimeHours: "0.00", grossPay: "368.00", status: "FINALIZED" },
+  { id: 1, userId: 3, payPeriodId: 1, regularHours: "32.00", overtimeHours: "0.00", grossPay: "368.00", status: "FINALIZED", processedBy: "Renee" },
   { id: 2, userId: 1, payPeriodId: 2, regularHours: "0.00", overtimeHours: "0.00", grossPay: "5416.67", status: "DRAFT" },
   { id: 3, userId: 2, payPeriodId: 2, regularHours: "0.00", overtimeHours: "0.00", grossPay: "4833.33", status: "DRAFT" },
 ];
 let nextStubId = 4;
 
 let currentUserId: number | null = null;
+
+interface MockNotification {
+  id: number;
+  recipientUserId: number;
+  senderName: string;
+  type: string;
+  title: string;
+  body: string;
+  action: string | null;
+  requiresAction: boolean;
+  read: boolean;
+  dismissed: boolean;
+  createdAt: string;
+}
+const notifications: MockNotification[] = [{
+  id: 1,
+  recipientUserId: 2,
+  senderName: "Renee",
+  type: "REPORT_READY",
+  title: "Payroll report ready",
+  body: "Please review the current payroll report details.",
+  action: "OPEN_REPORT",
+  requiresAction: true,
+  read: false,
+  dismissed: false,
+  createdAt: new Date(now - DAY).toISOString(),
+}];
+let nextNotificationId = 2;
 
 function me(): MockUser {
   const u = users.find((u) => u.id === currentUserId);
@@ -270,6 +302,19 @@ export async function mockRequest<T>(path: string, options: RequestInit): Promis
     return undefined as T;
   }
 
+  // --- notifications ---
+  if (path === "/notifications" && method === "GET") {
+    return notifications.filter((notification) => notification.recipientUserId === me().id && !notification.dismissed) as T;
+  }
+  const notificationMatch = path.match(/^\/notifications\/(\d+)$/);
+  if (notificationMatch && method === "PATCH") {
+    const notification = notifications.find((item) => item.id === Number(notificationMatch[1]) && item.recipientUserId === me().id);
+    if (!notification) throw new ApiError(404, "Notification not found.");
+    if (body.read !== undefined) notification.read = body.read;
+    if (body.dismissed !== undefined) notification.dismissed = body.dismissed;
+    return { saved: true } as T;
+  }
+
   // --- timeclock ---
   if (path === "/timeclock/clock-in" && method === "POST") {
     const user = me();
@@ -285,6 +330,12 @@ export async function mockRequest<T>(path: string, options: RequestInit): Promis
     const entry = timeEntries.find((e) => e.userId === user.id && e.clockOut === null);
     if (!entry) throw new ApiError(409, "Not currently clocked in.");
     entry.clockOut = new Date().toISOString();
+    const sender = user.firstName;
+    users.filter((candidate) => candidate.role === "ADMIN" && candidate.isActive).forEach((admin) => notifications.push({
+      id: nextNotificationId++, recipientUserId: admin.id, senderName: sender, type: "CLOCK_OUT",
+      title: "Biweekly pay ready", body: `${sender} clocked out. Review and finalize pay for the current biweekly period.`,
+      action: "FINALIZE_PAY", requiresAction: true, read: false, dismissed: false, createdAt: new Date().toISOString(),
+    }));
     return entry as T;
   }
   if (path === "/timeclock/my-entries" && method === "GET") {
@@ -310,6 +361,7 @@ export async function mockRequest<T>(path: string, options: RequestInit): Promis
     const entry = timeEntries.find((e) => e.id === Number(decisionMatch[1]));
     if (!entry) throw new ApiError(404, "Time entry not found.");
     entry.status = body.status;
+    entry.reviewedBy = me().firstName;
     return entry as T;
   }
 
@@ -330,7 +382,7 @@ export async function mockRequest<T>(path: string, options: RequestInit): Promis
     const eligible = users.filter((u) => u.payType === period.type && u.isActive);
     for (const u of eligible) {
       if (!payStubs.some((s) => s.userId === u.id && s.payPeriodId === period.id)) {
-        payStubs.push({ id: nextStubId++, userId: u.id, payPeriodId: period.id, regularHours: "0.00", overtimeHours: "0.00", grossPay: "0.00", status: "DRAFT" });
+        payStubs.push({ id: nextStubId++, userId: u.id, payPeriodId: period.id, regularHours: "0.00", overtimeHours: "0.00", grossPay: "0.00", status: "DRAFT", processedBy: null });
       }
     }
     return { generated: eligible.length } as T;
@@ -340,7 +392,7 @@ export async function mockRequest<T>(path: string, options: RequestInit): Promis
     const period = payPeriods.find((p) => p.id === Number(finalizeMatch[1]));
     if (!period) throw new ApiError(404, "Pay period not found.");
     period.status = "CLOSED";
-    payStubs.filter((s) => s.payPeriodId === period.id).forEach((s) => (s.status = "FINALIZED"));
+    payStubs.filter((s) => s.payPeriodId === period.id).forEach((s) => { s.status = "FINALIZED"; s.processedBy = me().firstName; });
     return period as T;
   }
   if (path === "/payroll/my-stubs" && method === "GET") {

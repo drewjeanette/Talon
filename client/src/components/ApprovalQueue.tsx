@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../api/client";
+import { useAuth } from "../context/AuthContext";
 
 interface PendingEntry {
   id: number;
@@ -9,8 +10,10 @@ interface PendingEntry {
 }
 
 export function ApprovalQueue() {
+  const { user } = useAuth();
   const [entries, setEntries] = useState<PendingEntry[]>([]);
   const [message, setMessage] = useState<string | null>(null);
+  const [attribution, setAttribution] = useState<{ action: string; name: string } | null>(null);
 
   async function load() {
     const data = await api.get<PendingEntry[]>("/timeclock/pending");
@@ -26,6 +29,7 @@ export function ApprovalQueue() {
     try {
       await api.patch(`/timeclock/${id}/decision`, { status });
       setMessage(`Entry ${id} ${status.toLowerCase()}.`);
+      setAttribution({ action: status === "APPROVED" ? "Approved by" : "Declined by", name: user?.firstName ?? "Supervisor" });
       await load();
     } catch (err) {
       setMessage(err instanceof ApiError ? err.message : "Could not update entry.");
@@ -81,6 +85,7 @@ export function ApprovalQueue() {
       <p role="status" aria-live="polite" className="status-message">
         {message}
       </p>
+      {attribution && <p className="talon-action-attribution">{attribution.action} <span className="talon-action-signature">{attribution.name}</span></p>}
     </section>
   );
 }

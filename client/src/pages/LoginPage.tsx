@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth, ApiError } from "../context/AuthContext";
+import ttuLogo from "../assets/ttu-logo.png";
 
 export function LoginPage() {
   const { user, login } = useAuth();
@@ -29,6 +30,7 @@ export function LoginPage() {
   return (
     <main className="login-page">
       <form onSubmit={handleSubmit} aria-labelledby="login-heading" className="card login-card">
+        <img className="ttu-corner-logo" src={ttuLogo} alt="Tennessee Tech" />
         <h1 id="login-heading">Talon Sign In</h1>
         <p>Tennessee Tech Payroll &amp; Web Clock</p>
         <div className="form-row">
