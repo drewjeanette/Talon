@@ -62,9 +62,9 @@ Demo accounts (change before using real data):
 
 | Role | Email | Password |
 |---|---|---|
-| Admin | admin@tntech.edu | `ChangeMe!Admin1` |
-| Supervisor | supervisor@tntech.edu | `ChangeMe!Super1` |
-| Student | student@tntech.edu | `ChangeMe!Student1` |
+| Admin | admin@tntech.edu | `password123` |
+| Supervisor | supervisor@tntech.edu | `password123` |
+| Student | student@tntech.edu | `password123` |
 
 Passwords are stored as salted scrypt hashes. Talon accepts only normalized addresses ending in
 `@tntech.edu`; this restriction is enforced by both the API and D1 triggers.

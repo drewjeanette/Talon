@@ -8,9 +8,9 @@ type DashboardDesignRole = Exclude<DesignRole, "login">;
 // Dashboard design files sign in automatically using the mock backend. The
 // Login design file deliberately stays signed out.
 export const DESIGN_ACCOUNTS: Record<DashboardDesignRole, { email: string; password: string }> = {
-  student: { email: "student@tntech.edu", password: "ChangeMe!Student1" },
-  supervisor: { email: "supervisor@tntech.edu", password: "ChangeMe!Super1" },
-  admin: { email: "admin@tntech.edu", password: "ChangeMe!Admin1" },
+  student: { email: "student@tntech.edu", password: "password123" },
+  supervisor: { email: "supervisor@tntech.edu", password: "password123" },
+  admin: { email: "admin@tntech.edu", password: "password123" },
 };
 
 /** The view a design file was exported for, read from its <meta> tag. */

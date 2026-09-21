@@ -43,7 +43,7 @@ const now = Math.floor(Date.now() / 1000);
 const demoUsers = [
   {
     email: "admin@tntech.edu",
-    password: "ChangeMe!Admin1",
+    password: "password123",
     firstName: "Renee",
     lastName: "Admin",
     role: "ADMIN",
@@ -53,7 +53,7 @@ const demoUsers = [
   },
   {
     email: "supervisor@tntech.edu",
-    password: "ChangeMe!Super1",
+    password: "password123",
     firstName: "Sabrina",
     lastName: "Supervisor",
     role: "SUPERVISOR",
@@ -63,7 +63,7 @@ const demoUsers = [
   },
   {
     email: "student@tntech.edu",
-    password: "ChangeMe!Student1",
+    password: "password123",
     firstName: "Chris",
     lastName: "Student",
     role: "STUDENT",
