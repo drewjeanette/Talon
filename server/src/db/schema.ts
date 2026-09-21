@@ -121,11 +121,33 @@ export const timeEntries = sqliteTable(
       .notNull()
       .default("PENDING"),
     editedById: integer("edited_by_id").references(() => users.id),
+    rejectionReason: text("rejection_reason"),
     ...timestamps,
   },
   (t) => [
     index("time_entries_user_clockin_idx").on(t.userId, t.clockIn),
     index("time_entries_status_idx").on(t.status),
+  ]
+);
+
+export const timeEntryChangeRequests = sqliteTable(
+  "time_entry_change_requests",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    timeEntryId: integer("time_entry_id").references(() => timeEntries.id, { onDelete: "set null" }),
+    requestedClockIn: integer("requested_clock_in", { mode: "timestamp" }).notNull(),
+    requestedClockOut: integer("requested_clock_out", { mode: "timestamp" }).notNull(),
+    reason: text("reason").notNull(),
+    status: text("status", { enum: ["PENDING", "APPROVED", "REJECTED"] }).notNull().default("PENDING"),
+    reviewerId: integer("reviewer_id").references(() => users.id),
+    reviewerReason: text("reviewer_reason"),
+    reviewedAt: integer("reviewed_at", { mode: "timestamp" }),
+    ...timestamps,
+  },
+  (t) => [
+    index("time_entry_change_requests_user_idx").on(t.userId, t.createdAt),
+    index("time_entry_change_requests_status_idx").on(t.status, t.createdAt),
   ]
 );
 
@@ -252,11 +274,18 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   }),
   reports: many(users, { relationName: "supervisor" }),
   timeEntries: many(timeEntries),
+  timeEntryChangeRequests: many(timeEntryChangeRequests),
   payStubs: many(payStubs),
 }));
 
 export const timeEntriesRelations = relations(timeEntries, ({ one }) => ({
   user: one(users, { fields: [timeEntries.userId], references: [users.id] }),
+}));
+
+export const timeEntryChangeRequestsRelations = relations(timeEntryChangeRequests, ({ one }) => ({
+  user: one(users, { fields: [timeEntryChangeRequests.userId], references: [users.id] }),
+  timeEntry: one(timeEntries, { fields: [timeEntryChangeRequests.timeEntryId], references: [timeEntries.id] }),
+  reviewer: one(users, { fields: [timeEntryChangeRequests.reviewerId], references: [users.id] }),
 }));
 
 export const payPeriodsRelations = relations(payPeriods, ({ many }) => ({

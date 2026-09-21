@@ -237,6 +237,7 @@ body { background: linear-gradient(180deg, #eee8f5 0, var(--bg) 260px); }
 .card h2 { margin: 0 0 1rem; font-size: 1.2rem; }
 .clock-widget { grid-column: span 4; border-top: 5px solid var(--tt-gold); display: flex; flex-direction: column; }
 .timesheet { grid-column: span 8; }
+.student-time-tools { grid-column: 1 / -1; border-top: 5px solid var(--tt-gold); }
 .pay-stubs { grid-column: 1 / -1; }
 .clock-widget__status { display: inline-flex; align-self: flex-start; margin: .15rem 0 1.25rem; padding: .45rem .75rem; border-radius: 999px; background: var(--tt-purple-soft); color: var(--tt-purple-dark); font-weight: 700; }
 .clock-widget__actions { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin-top: auto; }
@@ -268,8 +269,8 @@ th:last-child { border-radius: 0 8px 8px 0; }
 }
 
 /* Keep status values bold and color-coded without a surrounding badge. */
-.timesheet tbody td:last-child,
-.pay-stubs tbody td:last-child {
+.timesheet tbody td:nth-child(4),
+.pay-stubs tbody td:nth-child(6) {
   color: var(--tt-purple-dark);
   font-weight: 800;
   text-transform: capitalize;
@@ -277,7 +278,7 @@ th:last-child { border-radius: 0 8px 8px 0; }
 .app-header__role { font-weight: 800; }
 
 @media (max-width: 800px) {
-  .clock-widget, .timesheet, .pay-stubs { grid-column: 1 / -1; }
+  .clock-widget, .student-time-tools, .timesheet, .pay-stubs { grid-column: 1 / -1; }
 }
 @media (max-width: 560px) {
   .app-header { flex-wrap: wrap; }
@@ -308,7 +309,7 @@ th:last-child { border-radius: 0 8px 8px 0; }
 @media (max-width:900px) {
   .dashboard { padding:1.35rem 1rem 2.25rem; }
   .dashboard-grid { gap:1rem; }
-  .clock-widget,.timesheet,.pay-stubs { grid-column:1 / -1; }
+  .clock-widget,.student-time-tools,.timesheet,.pay-stubs { grid-column:1 / -1; }
 }
 @media (max-width:600px) {
   .app-header { padding:.75rem 1rem; }

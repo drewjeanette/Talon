@@ -5,7 +5,7 @@ import { z } from "zod";
 import { getDb } from "../db/index.js";
 import { departments, refreshTokens, users } from "../db/schema.js";
 import { generateTempPassword, hashPassword } from "../lib/password.js";
-import { dollarsToCents } from "../lib/money.js";
+import { centsToDollarString, dollarsToCents } from "../lib/money.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { writeAuditLog } from "../services/audit.service.js";
 import type { AppEnv } from "../types.js";
@@ -13,6 +13,16 @@ import type { AppEnv } from "../types.js";
 export const userRoutes = new Hono<AppEnv>();
 
 userRoutes.use("*", requireAuth);
+
+userRoutes.get("/me/pay-rate", async (c) => {
+  const db = getDb(c.env.DB);
+  const user = await db.query.users.findFirst({ where: eq(users.id, c.get("user").id) });
+  if (!user) throw new HTTPException(404, { message: "User not found." });
+  return c.json({
+    payType: user.payType,
+    hourlyRate: user.hourlyRateCents === null ? null : centsToDollarString(user.hourlyRateCents),
+  });
+});
 
 userRoutes.get("/", requireRole("SUPERVISOR"), async (c) => {
   const db = getDb(c.env.DB);
@@ -35,6 +45,7 @@ userRoutes.get("/", requireRole("SUPERVISOR"), async (c) => {
       lastName: users.lastName,
       role: users.role,
       payType: users.payType,
+      hourlyRateCents: users.hourlyRateCents,
       isActive: users.isActive,
       departmentId: departments.id,
       departmentName: departments.name,
@@ -52,10 +63,36 @@ userRoutes.get("/", requireRole("SUPERVISOR"), async (c) => {
       lastName: r.lastName,
       role: r.role,
       payType: r.payType,
+      hourlyRate: r.hourlyRateCents === null ? null : centsToDollarString(r.hourlyRateCents),
       isActive: r.isActive,
       department: r.departmentId ? { id: r.departmentId, name: r.departmentName } : null,
     }))
   );
+});
+
+const hourlyRateSchema = z.object({
+  hourlyRate: z.number().positive().max(1000).multipleOf(0.01),
+});
+
+userRoutes.patch("/:id/hourly-rate", requireRole("SUPERVISOR"), async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isInteger(id)) throw new HTTPException(400, { message: "Invalid user id." });
+  const { hourlyRate } = hourlyRateSchema.parse(await c.req.json());
+  const db = getDb(c.env.DB);
+  const me = c.get("user");
+  const target = await db.query.users.findFirst({ where: eq(users.id, id) });
+  if (!target) throw new HTTPException(404, { message: "Student not found." });
+  if (target.role !== "STUDENT" || target.payType !== "BIWEEKLY") {
+    throw new HTTPException(422, { message: "Hourly rates can only be set for biweekly student employees." });
+  }
+  if (me.role === "SUPERVISOR" && target.supervisorId !== me.id) {
+    throw new HTTPException(403, { message: "You do not supervise this student." });
+  }
+
+  const hourlyRateCents = dollarsToCents(hourlyRate);
+  await db.update(users).set({ hourlyRateCents, updatedAt: new Date() }).where(eq(users.id, id));
+  await writeAuditLog(c, "HOURLY_RATE_UPDATE", "User", id, { hourlyRateCents });
+  return c.json({ id, hourlyRate: centsToDollarString(hourlyRateCents) });
 });
 
 const createUserSchema = z

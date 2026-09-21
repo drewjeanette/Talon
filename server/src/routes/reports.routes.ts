@@ -51,6 +51,12 @@ reportRoutes.get("/payroll", async (c) => {
 
   const rows = await buildPayrollReportRows(db, { scope, scopeId, payPeriodId: query.payPeriodId });
 
+  if (rows.length === 0) {
+    throw new HTTPException(422, {
+      message: "No payroll data is available for that pay period. Choose a period marked report-ready or ask an administrator to generate payroll first.",
+    });
+  }
+
   await db.insert(reportRuns).values({
     requestedById: me.id,
     scope,

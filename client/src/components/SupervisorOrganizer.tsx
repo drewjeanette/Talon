@@ -2,9 +2,9 @@ import { useState } from "react";
 import { RoleCalendar } from "./RoleCalendar";
 
 const REMINDERS = [
-  { id: "entries", label: "Review pending time entries" },
-  { id: "report", label: "Confirm payroll report details" },
-  { id: "paystubs", label: "Check employee pay-stub statuses" },
+  { id: "entries", label: "Review pending time entries", target: "#approvals-heading" },
+  { id: "report", label: "Confirm payroll report details", target: "#report-heading" },
+  { id: "paystubs", label: "Check employee pay-stub statuses", target: "#team-paystubs-heading" },
 ];
 
 export function SupervisorOrganizer({ reportSender }: { reportSender?: string | null }) {
@@ -23,6 +23,12 @@ export function SupervisorOrganizer({ reportSender }: { reportSender?: string | 
   const visible = REMINDERS.filter((item) => !completed.includes(item.id));
   const allDone = visible.length === 0;
 
+  function goTo(target: string) {
+    const element = document.querySelector(target) as HTMLElement | null;
+    element?.scrollIntoView({ behavior: "smooth", block: "start" });
+    element?.focus({ preventScroll: true });
+  }
+
   return (
     <div className="supervisor-organizer">
       <section className={`supervisor-todos${allDone ? " supervisor-todos--complete" : ""}`} aria-labelledby="supervisor-reminders-heading">
@@ -34,10 +40,10 @@ export function SupervisorOrganizer({ reportSender }: { reportSender?: string | 
               <p className="supervisor-todo-empty">All Clear For Now! No Pending Tasks.</p>
             </div>
           ) : visible.map((item) => (
-            <label key={item.id} className={`supervisor-todo${removing.includes(item.id) ? " supervisor-todo--removing" : ""}`}>
-              <input type="checkbox" checked={removing.includes(item.id)} onChange={() => finish(item.id)} />
-              <span>{item.id === "report" && reportSender ? `Review payroll report from ${reportSender}` : item.label}</span>
-            </label>
+            <div key={item.id} className={`supervisor-todo${removing.includes(item.id) ? " supervisor-todo--removing" : ""}`}>
+              <input type="checkbox" aria-label={`Mark ${item.label} complete`} checked={removing.includes(item.id)} onChange={() => finish(item.id)} />
+              <button type="button" className="supervisor-todo__link" onClick={() => goTo(item.target)}>{item.id === "report" && reportSender ? `Review payroll report from ${reportSender}` : item.label}</button>
+            </div>
           ))}
         </div>
       </section>

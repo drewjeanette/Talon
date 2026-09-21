@@ -3,7 +3,7 @@ import { HTTPException } from "hono/http-exception";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "../db/index.js";
-import { timeEntries, users } from "../db/schema.js";
+import { timeEntries, timeEntryChangeRequests, users } from "../db/schema.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { writeAuditLog } from "../services/audit.service.js";
 import type { AppEnv } from "../types.js";
@@ -110,18 +110,26 @@ timeclockRoutes.get("/pending", requireRole("SUPERVISOR"), async (c) => {
   );
 });
 
-const decisionSchema = z.object({ status: z.enum(["APPROVED", "REJECTED"]) });
+const decisionSchema = z.object({
+  status: z.enum(["APPROVED", "REJECTED"]),
+  rejectionReason: z.string().trim().min(3).max(500).optional(),
+}).superRefine((value, context) => {
+  if (value.status === "REJECTED" && !value.rejectionReason) {
+    context.addIssue({ code: "custom", path: ["rejectionReason"], message: "A reason is required when rejecting a time entry." });
+  }
+});
 
 timeclockRoutes.patch("/:id/decision", requireRole("SUPERVISOR"), async (c) => {
   const id = Number(c.req.param("id"));
   if (!Number.isInteger(id)) throw new HTTPException(400, { message: "Invalid entry id." });
 
-  const { status } = decisionSchema.parse(await c.req.json());
+  const { status, rejectionReason } = decisionSchema.parse(await c.req.json());
   const db = getDb(c.env.DB);
   const me = c.get("user");
 
   const entry = await db.query.timeEntries.findFirst({ where: eq(timeEntries.id, id) });
   if (!entry) throw new HTTPException(404, { message: "Time entry not found." });
+  if (entry.status !== "PENDING") throw new HTTPException(409, { message: "This time entry has already been reviewed." });
 
   if (me.role === "SUPERVISOR") {
     const owner = await db.query.users.findFirst({ where: eq(users.id, entry.userId) });
@@ -132,7 +140,12 @@ timeclockRoutes.patch("/:id/decision", requireRole("SUPERVISOR"), async (c) => {
 
   const [updated] = await db
     .update(timeEntries)
-    .set({ status, editedById: me.id, updatedAt: new Date() })
+    .set({
+      status,
+      editedById: me.id,
+      rejectionReason: status === "REJECTED" ? rejectionReason : null,
+      updatedAt: new Date(),
+    })
     .where(eq(timeEntries.id, id))
     .returning();
 
@@ -179,6 +192,7 @@ timeclockRoutes.patch("/:id/correct", requireRole("SUPERVISOR"), async (c) => {
       notes: body.notes ?? null,
       status: "PENDING",
       editedById: me.id,
+      rejectionReason: null,
       updatedAt: new Date(),
     })
     .where(eq(timeEntries.id, id))
@@ -188,4 +202,162 @@ timeclockRoutes.patch("/:id/correct", requireRole("SUPERVISOR"), async (c) => {
 
   await writeAuditLog(c, "TIME_ENTRY_CORRECT", "TimeEntry", id);
   return c.json(updated);
+});
+
+const changeRequestSchema = z.object({
+  timeEntryId: z.number().int().positive().nullable().optional(),
+  clockIn: z.string().datetime(),
+  clockOut: z.string().datetime(),
+  reason: z.string().trim().min(3, "Explain why the shift needs to be corrected.").max(500),
+});
+
+timeclockRoutes.post("/correction-requests", async (c) => {
+  const me = c.get("user");
+  if (me.role !== "STUDENT") throw new HTTPException(403, { message: "Only students can request time corrections." });
+
+  const body = changeRequestSchema.parse(await c.req.json());
+  const clockIn = new Date(body.clockIn);
+  const clockOut = new Date(body.clockOut);
+  if (clockOut <= clockIn) throw new HTTPException(400, { message: "Clock-out must be after clock-in." });
+
+  const db = getDb(c.env.DB);
+  if (body.timeEntryId) {
+    const entry = await db.query.timeEntries.findFirst({ where: eq(timeEntries.id, body.timeEntryId) });
+    if (!entry || entry.userId !== me.id) throw new HTTPException(404, { message: "Time entry not found." });
+    const existing = await db.query.timeEntryChangeRequests.findFirst({
+      where: and(
+        eq(timeEntryChangeRequests.timeEntryId, body.timeEntryId),
+        eq(timeEntryChangeRequests.status, "PENDING")
+      ),
+    });
+    if (existing) throw new HTTPException(409, { message: "A correction for this shift is already awaiting review." });
+  }
+
+  const [request] = await db.insert(timeEntryChangeRequests).values({
+    userId: me.id,
+    timeEntryId: body.timeEntryId ?? null,
+    requestedClockIn: clockIn,
+    requestedClockOut: clockOut,
+    reason: body.reason,
+  }).returning();
+
+  await writeAuditLog(c, "TIME_CORRECTION_REQUEST", "TimeEntryChangeRequest", request.id);
+  return c.json(request, 201);
+});
+
+timeclockRoutes.get("/correction-requests/mine", async (c) => {
+  const db = getDb(c.env.DB);
+  const requests = await db.select().from(timeEntryChangeRequests)
+    .where(eq(timeEntryChangeRequests.userId, c.get("user").id))
+    .orderBy(desc(timeEntryChangeRequests.createdAt))
+    .limit(50);
+
+  const reviewerIds = [...new Set(requests.map((request) => request.reviewerId).filter((id): id is number => id !== null))];
+  const reviewers = reviewerIds.length
+    ? await db.select({ id: users.id, firstName: users.firstName }).from(users).where(inArray(users.id, reviewerIds))
+    : [];
+  const reviewerNames = new Map(reviewers.map((reviewer) => [reviewer.id, reviewer.firstName]));
+
+  return c.json(requests.map((request) => ({
+    ...request,
+    reviewerName: request.reviewerId ? reviewerNames.get(request.reviewerId) ?? null : null,
+  })));
+});
+
+timeclockRoutes.get("/correction-requests/pending", requireRole("SUPERVISOR"), async (c) => {
+  const db = getDb(c.env.DB);
+  const me = c.get("user");
+  const conditions = [eq(timeEntryChangeRequests.status, "PENDING" as const)];
+  if (me.role !== "ADMIN") conditions.push(eq(users.supervisorId, me.id));
+
+  const rows = await db.select({
+    id: timeEntryChangeRequests.id,
+    timeEntryId: timeEntryChangeRequests.timeEntryId,
+    requestedClockIn: timeEntryChangeRequests.requestedClockIn,
+    requestedClockOut: timeEntryChangeRequests.requestedClockOut,
+    reason: timeEntryChangeRequests.reason,
+    currentClockIn: timeEntries.clockIn,
+    currentClockOut: timeEntries.clockOut,
+    userId: users.id,
+    firstName: users.firstName,
+    lastName: users.lastName,
+  }).from(timeEntryChangeRequests)
+    .innerJoin(users, eq(timeEntryChangeRequests.userId, users.id))
+    .leftJoin(timeEntries, eq(timeEntryChangeRequests.timeEntryId, timeEntries.id))
+    .where(and(...conditions))
+    .orderBy(timeEntryChangeRequests.createdAt);
+
+  return c.json(rows.map((row) => ({
+    id: row.id,
+    timeEntryId: row.timeEntryId,
+    requestedClockIn: row.requestedClockIn,
+    requestedClockOut: row.requestedClockOut,
+    reason: row.reason,
+    currentClockIn: row.currentClockIn,
+    currentClockOut: row.currentClockOut,
+    user: { id: row.userId, firstName: row.firstName, lastName: row.lastName },
+  })));
+});
+
+const changeRequestDecisionSchema = z.object({
+  status: z.enum(["APPROVED", "REJECTED"]),
+  reviewerReason: z.string().trim().min(3).max(500).optional(),
+}).superRefine((value, context) => {
+  if (value.status === "REJECTED" && !value.reviewerReason) {
+    context.addIssue({ code: "custom", path: ["reviewerReason"], message: "A reason is required when denying a correction." });
+  }
+});
+
+timeclockRoutes.patch("/correction-requests/:id/decision", requireRole("SUPERVISOR"), async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isInteger(id)) throw new HTTPException(400, { message: "Invalid correction request id." });
+  const body = changeRequestDecisionSchema.parse(await c.req.json());
+  const db = getDb(c.env.DB);
+  const me = c.get("user");
+  const request = await db.query.timeEntryChangeRequests.findFirst({ where: eq(timeEntryChangeRequests.id, id) });
+  if (!request) throw new HTTPException(404, { message: "Correction request not found." });
+  if (request.status !== "PENDING") throw new HTTPException(409, { message: "This correction has already been reviewed." });
+
+  const owner = await db.query.users.findFirst({ where: eq(users.id, request.userId) });
+  if (!owner) throw new HTTPException(404, { message: "Student not found." });
+  if (me.role === "SUPERVISOR" && owner.supervisorId !== me.id) {
+    throw new HTTPException(403, { message: "You do not supervise this student." });
+  }
+
+  const review = {
+    status: body.status,
+    reviewerId: me.id,
+    reviewerReason: body.status === "REJECTED" ? body.reviewerReason : null,
+    reviewedAt: new Date(),
+    updatedAt: new Date(),
+  } as const;
+
+  if (body.status === "APPROVED") {
+    const entryValues = {
+      clockIn: request.requestedClockIn,
+      clockOut: request.requestedClockOut,
+      source: "MANUAL" as const,
+      notes: request.reason,
+      status: "APPROVED" as const,
+      editedById: me.id,
+      rejectionReason: null,
+      updatedAt: new Date(),
+    };
+    if (request.timeEntryId) {
+      await db.batch([
+        db.update(timeEntries).set(entryValues).where(and(eq(timeEntries.id, request.timeEntryId), eq(timeEntries.userId, request.userId))),
+        db.update(timeEntryChangeRequests).set(review).where(eq(timeEntryChangeRequests.id, id)),
+      ]);
+    } else {
+      await db.batch([
+        db.insert(timeEntries).values({ userId: request.userId, ...entryValues }),
+        db.update(timeEntryChangeRequests).set(review).where(eq(timeEntryChangeRequests.id, id)),
+      ]);
+    }
+  } else {
+    await db.update(timeEntryChangeRequests).set(review).where(eq(timeEntryChangeRequests.id, id));
+  }
+
+  await writeAuditLog(c, `TIME_CORRECTION_${body.status}`, "TimeEntryChangeRequest", id, { reason: body.reviewerReason ?? null });
+  return c.json({ saved: true });
 });

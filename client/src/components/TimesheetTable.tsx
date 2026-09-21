@@ -4,6 +4,7 @@ interface TimeEntry {
   clockOut: string | null;
   status: "PENDING" | "APPROVED" | "REJECTED";
   reviewedBy?: string | null;
+  rejectionReason?: string | null;
 }
 
 function formatHours(entry: TimeEntry): string {
@@ -24,12 +25,13 @@ export function TimesheetTable({ entries, caption }: { entries: TimeEntry[]; cap
             <th scope="col">Hours</th>
             <th scope="col">Status</th>
             <th scope="col">Reviewed By</th>
+            <th scope="col">Decision Reason</th>
           </tr>
         </thead>
         <tbody>
           {entries.length === 0 && (
             <tr>
-              <td colSpan={5}>No time entries have been recorded yet.</td>
+              <td colSpan={6}>No time entries have been recorded yet.</td>
             </tr>
           )}
           {entries.map((entry) => (
@@ -39,6 +41,7 @@ export function TimesheetTable({ entries, caption }: { entries: TimeEntry[]; cap
               <td>{formatHours(entry)}</td>
               <td>{entry.status}</td>
               <td>{entry.reviewedBy ? <span className="talon-action-signature">{entry.reviewedBy}</span> : "—"}</td>
+              <td>{entry.rejectionReason ?? "—"}</td>
             </tr>
           ))}
         </tbody>

@@ -16,12 +16,37 @@ payrollRoutes.use("*", requireAuth);
 
 payrollRoutes.get("/periods", requireRole("SUPERVISOR"), async (c) => {
   const db = getDb(c.env.DB);
+  const me = c.get("user");
   const periods = await db
     .select()
     .from(payPeriods)
     .orderBy(desc(payPeriods.startDate))
     .limit(50);
-  return c.json(periods);
+
+  let counts: { pay_period_id: number; row_count: number }[];
+  if (me.role === "SUPERVISOR") {
+    const supervisor = await db.query.users.findFirst({ where: eq(users.id, me.id) });
+    if (!supervisor?.departmentId) {
+      counts = [];
+    } else {
+      const result = await c.env.DB.prepare(`
+        SELECT s.pay_period_id, COUNT(*) AS row_count
+        FROM pay_stubs s
+        JOIN users u ON u.id = s.user_id
+        WHERE u.department_id = ?
+        GROUP BY s.pay_period_id
+      `).bind(supervisor.departmentId).all<{ pay_period_id: number; row_count: number }>();
+      counts = result.results;
+    }
+  } else {
+    const result = await c.env.DB.prepare(`
+      SELECT pay_period_id, COUNT(*) AS row_count
+      FROM pay_stubs GROUP BY pay_period_id
+    `).all<{ pay_period_id: number; row_count: number }>();
+    counts = result.results;
+  }
+  const countsByPeriod = new Map(counts.map((row) => [row.pay_period_id, row.row_count]));
+  return c.json(periods.map((period) => ({ ...period, reportRowCount: countsByPeriod.get(period.id) ?? 0 })));
 });
 
 const createPeriodSchema = z.object({
@@ -109,4 +134,35 @@ payrollRoutes.get("/my-stubs", async (c) => {
       payPeriod: { startDate: r.startDate, endDate: r.endDate, payDate: r.payDate },
     }))
   );
+});
+
+payrollRoutes.get("/team-stubs", requireRole("SUPERVISOR"), async (c) => {
+  const db = getDb(c.env.DB);
+  const me = c.get("user");
+  const rows = await db.select({
+    id: payStubs.id,
+    firstName: users.firstName,
+    lastName: users.lastName,
+    regularMinutes: payStubs.regularMinutes,
+    overtimeMinutes: payStubs.overtimeMinutes,
+    grossPayCents: payStubs.grossPayCents,
+    status: payStubs.status,
+    startDate: payPeriods.startDate,
+    endDate: payPeriods.endDate,
+    payDate: payPeriods.payDate,
+  }).from(payStubs)
+    .innerJoin(users, eq(payStubs.userId, users.id))
+    .innerJoin(payPeriods, eq(payStubs.payPeriodId, payPeriods.id))
+    .where(me.role === "ADMIN" ? undefined : eq(users.supervisorId, me.id))
+    .orderBy(desc(payPeriods.startDate), users.lastName);
+
+  return c.json(rows.map((row) => ({
+    id: row.id,
+    employeeName: `${row.firstName} ${row.lastName}`,
+    regularHours: minutesToHourString(row.regularMinutes),
+    overtimeHours: minutesToHourString(row.overtimeMinutes),
+    grossPay: centsToDollarString(row.grossPayCents),
+    status: row.status,
+    payPeriod: { startDate: row.startDate, endDate: row.endDate, payDate: row.payDate },
+  })));
 });

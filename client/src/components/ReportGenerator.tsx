@@ -7,6 +7,7 @@ interface PayPeriod {
   type: "BIWEEKLY" | "MONTHLY";
   startDate: string;
   endDate: string;
+  reportRowCount: number;
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -31,7 +32,12 @@ export function ReportGenerator() {
   const isAdmin = user?.role === "ADMIN";
 
   useEffect(() => {
-    api.get<PayPeriod[]>("/payroll/periods").then(setPeriods).catch(() => setMessage("Could not load pay periods."));
+    api.get<PayPeriod[]>("/payroll/periods").then((data) => {
+      setPeriods(data);
+      const firstReady = data.find((period) => period.reportRowCount > 0);
+      if (firstReady) setPayPeriodId(String(firstReady.id));
+      else setMessage("No report-ready pay periods are available yet.");
+    }).catch(() => setMessage("Could not load pay periods."));
   }, []);
 
   async function handleGenerate() {
@@ -44,6 +50,7 @@ export function ReportGenerator() {
       const params = new URLSearchParams({ payPeriodId, format: "csv" });
       if (isAdmin) params.set("scope", scope);
       const blob = await api.get<Blob>(`/reports/payroll?${params.toString()}`);
+      if (blob.size === 0) throw new Error("The report did not contain any data.");
       downloadBlob(blob, `payroll-report-${payPeriodId}.csv`);
       setMessage("Report downloaded.");
       setGeneratedBy(user?.firstName ?? null);
@@ -60,8 +67,8 @@ export function ReportGenerator() {
         <select id="pay-period-select" value={payPeriodId} onChange={(e) => setPayPeriodId(e.target.value)}>
           <option value="">Select a pay period</option>
           {periods.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.type} · {new Date(p.startDate).toLocaleDateString()} - {new Date(p.endDate).toLocaleDateString()}
+            <option key={p.id} value={p.id} disabled={p.reportRowCount === 0}>
+              {p.type} · {new Date(p.startDate).toLocaleDateString()} - {new Date(p.endDate).toLocaleDateString()} · {p.reportRowCount === 0 ? "No payroll data" : `${p.reportRowCount} employee${p.reportRowCount === 1 ? "" : "s"}`}
             </option>
           ))}
         </select>
@@ -77,7 +84,7 @@ export function ReportGenerator() {
         </div>
       )}
       {!isAdmin && <p className="report-generator__note">Report includes your department automatically.</p>}
-      <button type="button" onClick={handleGenerate} className="report-generator__submit">
+      <button type="button" onClick={handleGenerate} className="report-generator__submit" disabled={!payPeriodId}>
         Generate CSV
       </button>
       <p role="status" aria-live="polite" className="status-message">

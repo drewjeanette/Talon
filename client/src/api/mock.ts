@@ -20,6 +20,7 @@ interface MockUser {
   payType: PayType;
   departmentId: number | null;
   supervisorId: number | null;
+  hourlyRateCents: number | null;
   isActive: boolean;
   mustResetPw: boolean;
 }
@@ -67,6 +68,7 @@ const users: MockUser[] = [
     payType: "MONTHLY",
     departmentId: cscDepartmentId,
     supervisorId: null,
+    hourlyRateCents: null,
     isActive: true,
     mustResetPw: false,
   },
@@ -80,6 +82,7 @@ const users: MockUser[] = [
     payType: "MONTHLY",
     departmentId: cscDepartmentId,
     supervisorId: null,
+    hourlyRateCents: null,
     isActive: true,
     mustResetPw: false,
   },
@@ -93,6 +96,7 @@ const users: MockUser[] = [
     payType: "BIWEEKLY",
     departmentId: cscDepartmentId,
     supervisorId: 2,
+    hourlyRateCents: 1150,
     isActive: true,
     mustResetPw: false,
   },
@@ -112,6 +116,7 @@ interface MockTimeEntry {
   clockOut: string | null;
   status: "PENDING" | "APPROVED" | "REJECTED";
   reviewedBy?: string | null;
+  rejectionReason?: string | null;
 }
 
 const timeEntries: MockTimeEntry[] = [
@@ -140,6 +145,31 @@ const timeEntries: MockTimeEntry[] = [
   },
 ];
 let nextEntryId = 4;
+
+interface MockCorrectionRequest {
+  id: number;
+  userId: number;
+  timeEntryId: number | null;
+  requestedClockIn: string;
+  requestedClockOut: string;
+  reason: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  reviewerName: string | null;
+  reviewerReason: string | null;
+}
+
+const correctionRequests: MockCorrectionRequest[] = [{
+  id: 1,
+  userId: 3,
+  timeEntryId: 2,
+  requestedClockIn: new Date(now - 4 * DAY + 9 * HOUR).toISOString(),
+  requestedClockOut: new Date(now - 4 * DAY + 18 * HOUR).toISOString(),
+  reason: "I forgot to clock out at the end of my shift.",
+  status: "PENDING",
+  reviewerName: null,
+  reviewerReason: null,
+}];
+let nextCorrectionRequestId = 2;
 
 interface MockPayPeriod {
   id: number;
@@ -344,6 +374,63 @@ export async function mockRequest<T>(path: string, options: RequestInit): Promis
       .filter((e) => e.userId === user.id)
       .sort((a, b) => b.clockIn.localeCompare(a.clockIn)) as T;
   }
+  if (path === "/timeclock/correction-requests" && method === "POST") {
+    const user = me();
+    if (user.role !== "STUDENT") throw new ApiError(403, "Only students can request time corrections.");
+    if (!body.reason?.trim()) throw new ApiError(400, "Explain why the shift needs to be corrected.");
+    if (new Date(body.clockOut) <= new Date(body.clockIn)) throw new ApiError(400, "Clock-out must be after clock-in.");
+    if (body.timeEntryId && correctionRequests.some((request) => request.timeEntryId === body.timeEntryId && request.status === "PENDING")) {
+      throw new ApiError(409, "A correction for this shift is already awaiting review.");
+    }
+    const request: MockCorrectionRequest = {
+      id: nextCorrectionRequestId++, userId: user.id, timeEntryId: body.timeEntryId ?? null,
+      requestedClockIn: body.clockIn, requestedClockOut: body.clockOut, reason: body.reason.trim(),
+      status: "PENDING", reviewerName: null, reviewerReason: null,
+    };
+    correctionRequests.unshift(request);
+    return request as T;
+  }
+  if (path === "/timeclock/correction-requests/mine" && method === "GET") {
+    return correctionRequests.filter((request) => request.userId === me().id) as T;
+  }
+  if (path === "/timeclock/correction-requests/pending" && method === "GET") {
+    const reviewer = me();
+    return correctionRequests.filter((request) => {
+      const owner = users.find((user) => user.id === request.userId)!;
+      return request.status === "PENDING" && (reviewer.role === "ADMIN" || owner.supervisorId === reviewer.id);
+    }).map((request) => {
+      const owner = users.find((user) => user.id === request.userId)!;
+      const entry = request.timeEntryId ? timeEntries.find((item) => item.id === request.timeEntryId) : null;
+      return {
+        ...request,
+        currentClockIn: entry?.clockIn ?? null,
+        currentClockOut: entry?.clockOut ?? null,
+        user: { id: owner.id, firstName: owner.firstName, lastName: owner.lastName },
+      };
+    }) as T;
+  }
+  const correctionDecisionMatch = path.match(/^\/timeclock\/correction-requests\/(\d+)\/decision$/);
+  if (correctionDecisionMatch && method === "PATCH") {
+    const request = correctionRequests.find((item) => item.id === Number(correctionDecisionMatch[1]));
+    if (!request) throw new ApiError(404, "Correction request not found.");
+    if (body.status === "REJECTED" && !body.reviewerReason?.trim()) throw new ApiError(400, "A reason is required when denying a correction.");
+    request.status = body.status;
+    request.reviewerName = me().firstName;
+    request.reviewerReason = body.status === "REJECTED" ? body.reviewerReason.trim() : null;
+    if (body.status === "APPROVED") {
+      const existing = request.timeEntryId ? timeEntries.find((entry) => entry.id === request.timeEntryId) : null;
+      if (existing) {
+        existing.clockIn = request.requestedClockIn;
+        existing.clockOut = request.requestedClockOut;
+        existing.status = "APPROVED";
+        existing.reviewedBy = me().firstName;
+        existing.rejectionReason = null;
+      } else {
+        timeEntries.push({ id: nextEntryId++, userId: request.userId, clockIn: request.requestedClockIn, clockOut: request.requestedClockOut, status: "APPROVED", reviewedBy: me().firstName });
+      }
+    }
+    return { saved: true } as T;
+  }
   if (path === "/timeclock/pending" && method === "GET") {
     const user = me();
     const relevant = timeEntries.filter((e) => {
@@ -360,14 +447,25 @@ export async function mockRequest<T>(path: string, options: RequestInit): Promis
   if (decisionMatch && method === "PATCH") {
     const entry = timeEntries.find((e) => e.id === Number(decisionMatch[1]));
     if (!entry) throw new ApiError(404, "Time entry not found.");
+    if (body.status === "REJECTED" && !body.rejectionReason?.trim()) throw new ApiError(400, "A reason is required when rejecting a time entry.");
     entry.status = body.status;
     entry.reviewedBy = me().firstName;
+    entry.rejectionReason = body.status === "REJECTED" ? body.rejectionReason.trim() : null;
     return entry as T;
   }
 
   // --- payroll ---
   if (path === "/payroll/periods" && method === "GET") {
-    return [...payPeriods].sort((a, b) => b.startDate.localeCompare(a.startDate)) as T;
+    const viewer = me();
+    return [...payPeriods].sort((a, b) => b.startDate.localeCompare(a.startDate)).map((period) => ({
+      ...period,
+      reportRowCount: payStubs.filter((stub) => {
+        if (stub.payPeriodId !== period.id) return false;
+        if (viewer.role === "ADMIN") return true;
+        const owner = users.find((user) => user.id === stub.userId);
+        return owner?.departmentId === viewer.departmentId;
+      }).length,
+    })) as T;
   }
   if (path === "/payroll/periods" && method === "POST") {
     const period: MockPayPeriod = { id: nextPeriodId++, status: "OPEN", ...body };
@@ -399,6 +497,19 @@ export async function mockRequest<T>(path: string, options: RequestInit): Promis
     const user = me();
     return payStubs.filter((s) => s.userId === user.id).map(withPayPeriod) as T;
   }
+  if (path === "/payroll/team-stubs" && method === "GET") {
+    const supervisor = me();
+    return payStubs.filter((stub) => {
+      const owner = users.find((user) => user.id === stub.userId);
+      return supervisor.role === "ADMIN" || owner?.supervisorId === supervisor.id;
+    }).map((stub) => {
+      const owner = users.find((user) => user.id === stub.userId)!;
+      return {
+        ...withPayPeriod(stub),
+        employeeName: `${owner.firstName} ${owner.lastName}`,
+      };
+    }) as T;
+  }
 
   // --- reports ---
   if (path.startsWith("/reports/payroll") && method === "GET") {
@@ -423,11 +534,16 @@ export async function mockRequest<T>(path: string, options: RequestInit): Promis
       });
 
     const header = "employeeId,firstName,lastName,role,payType,department,college,regularHours,overtimeHours,grossPay,status";
+    if (rows.length === 0) throw new ApiError(422, "No payroll data is available for that pay period. Choose a period marked report-ready or ask an administrator to generate payroll first.");
     const csv = [header, ...rows].join("\n");
     return new Blob([csv], { type: "text/csv" }) as unknown as T;
   }
 
   // --- users ---
+  if (path === "/users/me/pay-rate" && method === "GET") {
+    const user = me();
+    return { payType: user.payType, hourlyRate: user.hourlyRateCents === null ? null : (user.hourlyRateCents / 100).toFixed(2) } as T;
+  }
   if (path === "/users" && method === "GET") {
     const user = me();
     const visible = user.role === "ADMIN" ? users : users.filter((u) => u.supervisorId === user.id);
@@ -438,6 +554,7 @@ export async function mockRequest<T>(path: string, options: RequestInit): Promis
       lastName: u.lastName,
       role: u.role,
       payType: u.payType,
+      hourlyRate: u.hourlyRateCents === null ? null : (u.hourlyRateCents / 100).toFixed(2),
       isActive: u.isActive,
       department: departmentOf(u.departmentId),
     })) as T;
@@ -453,11 +570,23 @@ export async function mockRequest<T>(path: string, options: RequestInit): Promis
       payType: body.payType,
       departmentId: body.departmentId ?? null,
       supervisorId: body.supervisorId ?? null,
+      hourlyRateCents: body.hourlyRate === undefined ? null : Math.round(Number(body.hourlyRate) * 100),
       isActive: true,
       mustResetPw: true,
     };
     users.push(newUser);
     return { id: newUser.id, email: newUser.email, tempPassword: "Demo-Temp-Pass123" } as T;
+  }
+  const hourlyRateMatch = path.match(/^\/users\/(\d+)\/hourly-rate$/);
+  if (hourlyRateMatch && method === "PATCH") {
+    const reviewer = me();
+    const student = users.find((user) => user.id === Number(hourlyRateMatch[1]));
+    if (!student) throw new ApiError(404, "Student not found.");
+    if (reviewer.role !== "ADMIN" && student.supervisorId !== reviewer.id) throw new ApiError(403, "You do not supervise this student.");
+    const cents = Math.round(Number(body.hourlyRate) * 100);
+    if (!Number.isFinite(cents) || cents <= 0) throw new ApiError(400, "Enter a valid hourly rate.");
+    student.hourlyRateCents = cents;
+    return { id: student.id, hourlyRate: (cents / 100).toFixed(2) } as T;
   }
   const deactivateMatch = path.match(/^\/users\/(\d+)\/deactivate$/);
   if (deactivateMatch && method === "PATCH") {

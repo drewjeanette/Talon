@@ -263,3 +263,24 @@
 .profile-photo-dialog__actions { justify-content:flex-start; margin-top:1rem; }
 .profile-photo-dialog__empty { margin:1.5rem 0; }
 @media (max-width:460px) { .profile-photo-dialog__preview { flex-basis:120px; width:120px; height:120px; } }
+
+/* Time correction and pay-rate workflows are shared application behavior. */
+textarea { width:100%; min-height:84px; padding:.55rem; border:1px solid var(--border); border-radius:4px; font:inherit; resize:vertical; }
+.student-time-tools h3,.approval-queue h3 { margin:.9rem 0 .35rem; color:var(--tt-purple-dark); }
+.student-pay-rate { padding:.7rem .85rem; border-left:4px solid var(--tt-gold); border-radius:4px; background:#f5f0fb; }
+.correction-history ul { display:grid; gap:.65rem; margin:.5rem 0 0; padding:0; list-style:none; }
+.correction-history li { display:grid; gap:.15rem; padding:.7rem .8rem; border:1px solid var(--border); border-radius:6px; }
+.correction-history li span { font-size:.9rem; }
+.approval-rejection-form { display:grid; gap:.45rem; min-width:260px; margin-top:.65rem; padding:.7rem; border:1px solid #d9a9a9; border-radius:6px; background:#fff7f7; }
+.button--secondary { background:#6b6474; }
+.supervisor-todo__link { flex:1; padding:.15rem 0; border:0; background:transparent; color:inherit; font:inherit; font-weight:700; text-align:left; text-decoration:underline; text-underline-offset:3px; }
+.supervisor-todo__link:hover:not(:disabled) { background:transparent; color:var(--tt-purple); }
+.supervisor-pay-rates,.team-pay-stubs { grid-column:1 / -1; }
+.pay-rate-row { display:grid; grid-template-columns:minmax(160px,1fr) minmax(260px,2fr); align-items:center; gap:1rem; padding:.7rem 0; border-bottom:1px solid var(--border); }
+.pay-rate-row__controls { display:flex; align-items:center; gap:.45rem; flex-wrap:wrap; }
+.pay-rate-row__controls input { width:110px; }
+@media (max-width:650px) {
+  .pay-rate-row { grid-template-columns:1fr; gap:.35rem; }
+  .pay-rate-row__controls button { width:100%; }
+  .approval-rejection-form { min-width:220px; }
+}

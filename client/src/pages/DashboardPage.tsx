@@ -12,6 +12,9 @@ import { SupervisorOrganizer } from "../components/SupervisorOrganizer";
 import { AdminLaunchpad } from "../components/AdminLaunchpad";
 import { ProfilePhotoButton } from "../components/ProfilePhotoButton";
 import { NotificationInbox } from "../components/NotificationInbox";
+import { StudentTimeTools } from "../components/StudentTimeTools";
+import { SupervisorPayRateManager } from "../components/SupervisorPayRateManager";
+import { TeamPayStubStatus } from "../components/TeamPayStubStatus";
 import type { AdminToolKey } from "../components/AdminLaunchpad";
 import { api } from "../api/client";
 
@@ -21,6 +24,7 @@ interface TimeEntry {
   clockOut: string | null;
   status: "PENDING" | "APPROVED" | "REJECTED";
   reviewedBy?: string | null;
+  rejectionReason?: string | null;
 }
 
 export function DashboardPage() {
@@ -80,12 +84,15 @@ export function DashboardPage() {
         {user.payType === "BIWEEKLY" && (
           <>
             <ClockWidget onChange={loadEntries} />
+            {user.role === "STUDENT" && <StudentTimeTools entries={entries} onSubmitted={loadEntries} />}
             <TimesheetTable entries={entries} caption="My recent time entries" />
           </>
         )}
 
         {(user.role === "SUPERVISOR" || adminSection === "reports") && <ReportGenerator />}
         {(user.role !== "ADMIN" || adminSection === "stubs") && <PayStubList />}
+        {user.role === "SUPERVISOR" && <TeamPayStubStatus />}
+        {user.role === "SUPERVISOR" && <SupervisorPayRateManager />}
         {(user.role === "SUPERVISOR" || adminSection === "approvals") && <ApprovalQueue />}
 
         {adminSection === "payroll" && <PayPeriodManager />}

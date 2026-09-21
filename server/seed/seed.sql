@@ -5,6 +5,7 @@ DELETE FROM audit_logs;
 DELETE FROM report_runs;
 DELETE FROM pay_stubs;
 DELETE FROM pay_periods;
+DELETE FROM time_entry_change_requests;
 DELETE FROM time_entries;
 DELETE FROM refresh_tokens;
 DELETE FROM users;

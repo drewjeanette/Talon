@@ -23,7 +23,7 @@ export function PayStubList() {
 
   return (
     <section aria-labelledby="paystubs-heading" className="card pay-stubs">
-      <h2 id="paystubs-heading">My Pay Stubs</h2>
+      <h2 id="paystubs-heading" tabIndex={-1}>My Pay Stubs</h2>
       <div className="table-scroll">
         <table>
           <caption className="sr-only">Pay stub history</caption>
