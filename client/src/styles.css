@@ -271,6 +271,15 @@ textarea { width:100%; min-height:84px; padding:.55rem; border:1px solid var(--b
 .correction-history ul { display:grid; gap:.65rem; margin:.5rem 0 0; padding:0; list-style:none; }
 .correction-history li { display:grid; gap:.15rem; padding:.7rem .8rem; border:1px solid var(--border); border-radius:6px; }
 .correction-history li span { font-size:.9rem; }
+.team-pay-stubs { grid-column:1 / -1; }
+.team-pay-stubs table { min-width:980px; }
+.review-status { min-width:190px; }
+.decision { font-weight:900; }
+.approved { color:var(--success,#247a3b); }
+.rejected { color:var(--danger,#9b1c1c); }
+.stub-rejection-form { display:grid; gap:.5rem; margin-top:.65rem; padding:.7rem; border:1px solid var(--border); border-radius:8px; background:var(--surface,#fff); }
+.stub-rejection-form textarea { min-height:78px; resize:vertical; }
+.stub-review-reason { display:block; margin-top:.35rem; color:var(--text-muted,#625c6b); font-weight:500; }
 .approval-rejection-form { display:grid; gap:.45rem; min-width:260px; margin-top:.65rem; padding:.7rem; border:1px solid #d9a9a9; border-radius:6px; background:#fff7f7; }
 .button--secondary { background:#6b6474; }
 .supervisor-todo__link { flex:1; padding:.15rem 0; border:0; background:transparent; color:inherit; font:inherit; font-weight:700; text-align:left; text-decoration:underline; text-underline-offset:3px; }

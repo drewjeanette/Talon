@@ -237,7 +237,6 @@ body { background: linear-gradient(180deg, #eee8f5 0, var(--bg) 260px); }
 .card h2 { margin: 0 0 1rem; font-size: 1.2rem; }
 .clock-widget { grid-column: span 4; border-top: 5px solid var(--tt-gold); display: flex; flex-direction: column; }
 .timesheet { grid-column: span 8; }
-.student-time-tools { grid-column: 1 / -1; border-top: 5px solid var(--tt-gold); }
 .pay-stubs { grid-column: 1 / -1; }
 .clock-widget__status { display: inline-flex; align-self: flex-start; margin: .15rem 0 1.25rem; padding: .45rem .75rem; border-radius: 999px; background: var(--tt-purple-soft); color: var(--tt-purple-dark); font-weight: 700; }
 .clock-widget__actions { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin-top: auto; }
@@ -269,8 +268,8 @@ th:last-child { border-radius: 0 8px 8px 0; }
 }
 
 /* Keep status values bold and color-coded without a surrounding badge. */
-.timesheet tbody td:nth-child(4),
-.pay-stubs tbody td:nth-child(6) {
+.timesheet tbody td:last-child,
+.pay-stubs tbody td:last-child {
   color: var(--tt-purple-dark);
   font-weight: 800;
   text-transform: capitalize;
@@ -278,7 +277,7 @@ th:last-child { border-radius: 0 8px 8px 0; }
 .app-header__role { font-weight: 800; }
 
 @media (max-width: 800px) {
-  .clock-widget, .student-time-tools, .timesheet, .pay-stubs { grid-column: 1 / -1; }
+  .clock-widget, .timesheet, .pay-stubs { grid-column: 1 / -1; }
 }
 @media (max-width: 560px) {
   .app-header { flex-wrap: wrap; }
@@ -309,7 +308,7 @@ th:last-child { border-radius: 0 8px 8px 0; }
 @media (max-width:900px) {
   .dashboard { padding:1.35rem 1rem 2.25rem; }
   .dashboard-grid { gap:1rem; }
-  .clock-widget,.student-time-tools,.timesheet,.pay-stubs { grid-column:1 / -1; }
+  .clock-widget,.timesheet,.pay-stubs { grid-column:1 / -1; }
 }
 @media (max-width:600px) {
   .app-header { padding:.75rem 1rem; }
@@ -329,3 +328,37 @@ th:last-child { border-radius: 0 8px 8px 0; }
 
 .talon-action-signature { color:var(--tt-purple-dark); font-family:"Segoe Script","Brush Script MT",cursive; font-size:1.02rem; font-style:italic; font-weight:650; white-space:nowrap; }
 .timesheet tbody td:nth-child(4),.pay-stubs tbody td:nth-child(6) { color:var(--tt-purple-dark); font-weight:800; text-transform:capitalize; }
+
+
+
+.dashboard--student .timesheet,.dashboard--student .pay-stubs { display:none !important; }
+.dashboard--student .clock-widget { grid-column:span 4; order:1; }
+.dashboard--student .student-time-tools { grid-column:1 / -1; order:5; border-top:5px solid var(--tt-gold); }
+.talon-current-timecard { grid-column:span 8; order:2; }
+.talon-student-paystubs { grid-column:1 / -1; order:3; }
+.talon-past-timecards { grid-column:1 / -1; order:4; }
+.talon-timecards__header { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
+.talon-timecards__header h2 { margin:0; }
+.talon-timecards__total { color:var(--tt-purple-dark); font-weight:800; white-space:nowrap; }
+.talon-timecard { margin:.7rem 0; border:1px solid var(--border); border-radius:11px; background:#fff; overflow:hidden; }
+.talon-timecard summary { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.9rem 1rem; background:var(--tt-purple-soft); color:var(--tt-purple-dark); cursor:pointer; list-style:none; }
+.talon-timecard summary::-webkit-details-marker { display:none; }
+.talon-timecard summary:hover { background:#e8def3; }
+.talon-timecard__label { display:grid; gap:.1rem; }
+.talon-timecard__label strong { font-size:1rem; }
+.talon-timecard__label small { color:var(--text-muted); font-weight:650; }
+.talon-timecard__arrow { font-size:1.25rem; font-weight:900; transition:transform .2s ease; }
+.talon-timecard[open] .talon-timecard__arrow { transform:rotate(180deg); }
+.talon-timecard .table-scroll { margin:0; padding:.25rem 1rem .8rem; }
+.talon-timecard table { min-width:760px; }
+.talon-timecard td:nth-child(3),.talon-timecard th:nth-child(3) { text-align:center; }
+.talon-timecard__status { color:var(--tt-purple-dark); font-weight:850; }
+.talon-timecard__signature { color:var(--tt-purple-dark); font-family:"Segoe Script","Brush Script MT",cursive; font-style:italic; font-weight:700; white-space:nowrap; }
+.talon-live-entry { background:#fbf9fd; animation:talon-row-reveal .34s ease-out both; }
+.talon-live-entry td:first-child { font-weight:750; color:var(--tt-purple-dark); }
+@keyframes talon-row-reveal { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
+@media(prefers-reduced-motion:reduce){.talon-live-entry{animation:none}}
+.talon-student-paystubs table { min-width:790px; }
+.talon-review-reason { display:block; margin-top:.25rem; color:var(--text-muted); font-size:.78rem; }
+@media(max-width:900px){.dashboard--student .clock-widget,.talon-current-timecard,.talon-student-paystubs,.talon-past-timecards{grid-column:1 / -1}}
+@media(max-width:600px){.talon-timecards__header{align-items:flex-start;flex-direction:column}.talon-timecard summary{padding:.8rem}.talon-timecard .table-scroll{padding:.15rem .7rem .65rem}}

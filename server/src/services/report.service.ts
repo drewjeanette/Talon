@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { Db } from "../db/index.js";
 import { colleges, departments, payPeriods, payStubs, users } from "../db/schema.js";
 import { centsToDollarString, minutesToHourString } from "../lib/money.js";
@@ -40,6 +40,9 @@ export async function buildPayrollReportRows(db: Db, filter: ReportFilter) {
       overtimeMinutes: payStubs.overtimeMinutes,
       grossPayCents: payStubs.grossPayCents,
       status: payStubs.status,
+      reviewStatus: payStubs.reviewStatus,
+      reviewedById: payStubs.reviewedById,
+      reviewReason: payStubs.reviewReason,
     })
     .from(payStubs)
     .innerJoin(users, eq(payStubs.userId, users.id))
@@ -48,6 +51,12 @@ export async function buildPayrollReportRows(db: Db, filter: ReportFilter) {
     .leftJoin(colleges, eq(departments.collegeId, colleges.id))
     .where(and(...conditions))
     .orderBy(users.lastName);
+
+  const reviewerIds = [...new Set(rows.map((row) => row.reviewedById).filter((id): id is number => id !== null))];
+  const reviewers = reviewerIds.length
+    ? await db.select({ id: users.id, firstName: users.firstName }).from(users).where(inArray(users.id, reviewerIds))
+    : [];
+  const reviewerNames = new Map(reviewers.map((reviewer) => [reviewer.id, reviewer.firstName]));
 
   return rows.map((row) => ({
     employeeId: row.employeeId,
@@ -63,6 +72,9 @@ export async function buildPayrollReportRows(db: Db, filter: ReportFilter) {
     overtimeHours: minutesToHourString(row.overtimeMinutes),
     grossPay: centsToDollarString(row.grossPayCents),
     status: row.status,
+    reviewStatus: row.reviewStatus,
+    reviewedBy: row.reviewedById ? reviewerNames.get(row.reviewedById) ?? "" : "",
+    reviewReason: row.reviewReason ?? "",
   }));
 }
 

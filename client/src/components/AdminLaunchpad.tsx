@@ -28,6 +28,16 @@ interface PayPeriod { id: number; status: "OPEN" | "PROCESSING" | "CLOSED" }
 export function AdminLaunchpad({ selected, onSelect }: { selected: AdminToolKey | null; onSelect: (key: AdminToolKey) => void }) {
   const [pending, setPending] = useState(0);
   const [openPeriods, setOpenPeriods] = useState(0);
+  const [completed, setCompleted] = useState<string[]>([]);
+  const [removing, setRemoving] = useState<string[]>([]);
+
+  function complete(key: string) {
+    setRemoving((items) => [...items, key]);
+    window.setTimeout(() => {
+      setCompleted((items) => [...items, key]);
+      setRemoving((items) => items.filter((item) => item !== key));
+    }, 220);
+  }
 
   useEffect(() => {
     let active = true;
@@ -46,11 +56,19 @@ export function AdminLaunchpad({ selected, onSelect }: { selected: AdminToolKey 
 
   return (
     <section className="admin-launchpad" aria-label="Admin dashboard tools">
-      <aside className="admin-work-panel">
+      <aside className={`admin-work-panel${completed.length === 2 ? " admin-work-panel--complete" : ""}`}>
         <h2 className="admin-panel-title">Work to Do</h2>
         <div className="admin-work-list">
-          <button type="button" className="admin-work-item" onClick={() => onSelect("approvals")}><span>Pending approvals</span><strong className="admin-work-count">{pending}</strong></button>
-          <button type="button" className="admin-work-item" onClick={() => onSelect("payroll")}><span>Open pay periods</span><strong className="admin-work-count">{openPeriods}</strong></button>
+          {completed.length === 2 ? <div role="status"><span className="admin-success" aria-hidden="true"><svg viewBox="0 0 64 64"><path d="M14 33l12 12 25-28" /></svg></span><p className="admin-work-empty">All Clear For Now! No Pending Tasks.</p></div> : <>
+            {!completed.includes("approvals") && <div className={`admin-work-task${removing.includes("approvals") ? " admin-work-task--removing" : ""}`}>
+              <button type="button" className="admin-work-item" onClick={() => onSelect("approvals")}><span>Pending approvals</span><strong className="admin-work-count">{pending}</strong></button>
+              <div className="admin-work-detail"><p>Open the approval queue to review submitted time and student pay stubs.</p><label className="admin-work-complete"><input type="checkbox" onChange={() => complete("approvals")} /> Mark task complete</label></div>
+            </div>}
+            {!completed.includes("payroll") && <div className={`admin-work-task${removing.includes("payroll") ? " admin-work-task--removing" : ""}`}>
+              <button type="button" className="admin-work-item" onClick={() => onSelect("payroll")}><span>Open pay periods</span><strong className="admin-work-count">{openPeriods}</strong></button>
+              <div className="admin-work-detail"><p>Open Payroll &amp; Pay Periods to manage the periods that still need work.</p><label className="admin-work-complete"><input type="checkbox" onChange={() => complete("payroll")} /> Mark task complete</label></div>
+            </div>}
+          </>}
         </div>
         <RoleCalendar role="admin" />
       </aside>

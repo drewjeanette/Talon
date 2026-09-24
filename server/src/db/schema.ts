@@ -190,10 +190,17 @@ export const payStubs = sqliteTable(
       .notNull()
       .default(sql`(unixepoch())`),
     finalizedById: integer("finalized_by_id").references(() => users.id),
+    reviewStatus: text("review_status", { enum: ["PENDING", "APPROVED", "REJECTED"] })
+      .notNull()
+      .default("PENDING"),
+    reviewedById: integer("reviewed_by_id").references(() => users.id),
+    reviewedAt: integer("reviewed_at", { mode: "timestamp" }),
+    reviewReason: text("review_reason"),
   },
   (t) => [
     uniqueIndex("pay_stubs_user_period_idx").on(t.userId, t.payPeriodId),
     index("pay_stubs_period_idx").on(t.payPeriodId),
+    index("pay_stubs_review_status_idx").on(t.reviewStatus, t.payPeriodId),
   ]
 );
 

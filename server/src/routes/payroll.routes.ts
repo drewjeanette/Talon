@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "../db/index.js";
 import { payPeriods, payStubs, users } from "../db/schema.js";
@@ -99,6 +99,7 @@ payrollRoutes.post("/periods/:id/finalize", requireRole("ADMIN"), async (c) => {
 
 payrollRoutes.get("/my-stubs", async (c) => {
   const db = getDb(c.env.DB);
+  const owner = await db.query.users.findFirst({ where: eq(users.id, c.get("user").id) });
   const rows = await db
     .select({
       id: payStubs.id,
@@ -107,6 +108,9 @@ payrollRoutes.get("/my-stubs", async (c) => {
       grossPayCents: payStubs.grossPayCents,
       status: payStubs.status,
       finalizedById: payStubs.finalizedById,
+      reviewStatus: payStubs.reviewStatus,
+      reviewedById: payStubs.reviewedById,
+      reviewReason: payStubs.reviewReason,
       startDate: payPeriods.startDate,
       endDate: payPeriods.endDate,
       payDate: payPeriods.payDate,
@@ -121,6 +125,11 @@ payrollRoutes.get("/my-stubs", async (c) => {
     ? await db.select({ id: users.id, firstName: users.firstName }).from(users).where(inArray(users.id, processorIds))
     : [];
   const processorNames = new Map(processors.map((processor) => [processor.id, processor.firstName]));
+  const reviewerIds = [...new Set(rows.map((row) => row.reviewedById).filter((id): id is number => id !== null))];
+  const reviewers = reviewerIds.length
+    ? await db.select({ id: users.id, firstName: users.firstName }).from(users).where(inArray(users.id, reviewerIds))
+    : [];
+  const reviewerNames = new Map(reviewers.map((reviewer) => [reviewer.id, reviewer.firstName]));
 
   // Cents/minutes are an internal storage detail; the API speaks dollars and hours.
   return c.json(
@@ -129,8 +138,12 @@ payrollRoutes.get("/my-stubs", async (c) => {
       regularHours: minutesToHourString(r.regularMinutes),
       overtimeHours: minutesToHourString(r.overtimeMinutes),
       grossPay: centsToDollarString(r.grossPayCents),
+      hourlyRate: owner?.hourlyRateCents === null || owner?.hourlyRateCents === undefined ? null : centsToDollarString(owner.hourlyRateCents),
       status: r.status,
       processedBy: r.finalizedById ? processorNames.get(r.finalizedById) ?? null : null,
+      reviewStatus: r.reviewStatus,
+      reviewedBy: r.reviewedById ? reviewerNames.get(r.reviewedById) ?? null : null,
+      reviewReason: r.reviewReason,
       payPeriod: { startDate: r.startDate, endDate: r.endDate, payDate: r.payDate },
     }))
   );
@@ -147,6 +160,10 @@ payrollRoutes.get("/team-stubs", requireRole("SUPERVISOR"), async (c) => {
     overtimeMinutes: payStubs.overtimeMinutes,
     grossPayCents: payStubs.grossPayCents,
     status: payStubs.status,
+    reviewStatus: payStubs.reviewStatus,
+    reviewedById: payStubs.reviewedById,
+    reviewReason: payStubs.reviewReason,
+    hourlyRateCents: users.hourlyRateCents,
     startDate: payPeriods.startDate,
     endDate: payPeriods.endDate,
     payDate: payPeriods.payDate,
@@ -156,6 +173,12 @@ payrollRoutes.get("/team-stubs", requireRole("SUPERVISOR"), async (c) => {
     .where(me.role === "ADMIN" ? undefined : eq(users.supervisorId, me.id))
     .orderBy(desc(payPeriods.startDate), users.lastName);
 
+  const reviewerIds = [...new Set(rows.map((row) => row.reviewedById).filter((id): id is number => id !== null))];
+  const reviewers = reviewerIds.length
+    ? await db.select({ id: users.id, firstName: users.firstName }).from(users).where(inArray(users.id, reviewerIds))
+    : [];
+  const reviewerNames = new Map(reviewers.map((reviewer) => [reviewer.id, reviewer.firstName]));
+
   return c.json(rows.map((row) => ({
     id: row.id,
     employeeName: `${row.firstName} ${row.lastName}`,
@@ -163,6 +186,47 @@ payrollRoutes.get("/team-stubs", requireRole("SUPERVISOR"), async (c) => {
     overtimeHours: minutesToHourString(row.overtimeMinutes),
     grossPay: centsToDollarString(row.grossPayCents),
     status: row.status,
+    hourlyRate: row.hourlyRateCents === null ? null : centsToDollarString(row.hourlyRateCents),
+    reviewStatus: row.reviewStatus,
+    reviewedBy: row.reviewedById ? reviewerNames.get(row.reviewedById) ?? null : null,
+    reviewReason: row.reviewReason,
     payPeriod: { startDate: row.startDate, endDate: row.endDate, payDate: row.payDate },
   })));
+});
+
+const stubReviewSchema = z.object({
+  status: z.enum(["APPROVED", "REJECTED"]),
+  reason: z.string().trim().min(3).max(500).optional(),
+}).superRefine((value, context) => {
+  if (value.status === "REJECTED" && !value.reason) {
+    context.addIssue({ code: "custom", path: ["reason"], message: "A reason is required when rejecting a pay stub." });
+  }
+});
+
+payrollRoutes.patch("/team-stubs/:id/review", requireRole("SUPERVISOR"), async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isInteger(id)) throw new HTTPException(400, { message: "Invalid pay stub id." });
+
+  const body = stubReviewSchema.parse(await c.req.json());
+  const db = getDb(c.env.DB);
+  const me = c.get("user");
+  const row = await db.select({ id: payStubs.id, userId: payStubs.userId, supervisorId: users.supervisorId })
+    .from(payStubs)
+    .innerJoin(users, eq(payStubs.userId, users.id))
+    .where(eq(payStubs.id, id))
+    .get();
+  if (!row) throw new HTTPException(404, { message: "Pay stub not found." });
+  if (me.role === "SUPERVISOR" && row.supervisorId !== me.id) {
+    throw new HTTPException(403, { message: "You do not supervise this student." });
+  }
+
+  const [updated] = await db.update(payStubs).set({
+    reviewStatus: body.status,
+    reviewedById: me.id,
+    reviewedAt: new Date(),
+    reviewReason: body.status === "REJECTED" ? body.reason : null,
+  }).where(and(eq(payStubs.id, id), eq(payStubs.userId, row.userId))).returning();
+
+  await writeAuditLog(c, `PAY_STUB_${body.status}`, "PayStub", id, { reason: body.reason ?? null });
+  return c.json({ ...updated, reviewedBy: (await db.query.users.findFirst({ where: eq(users.id, me.id) }))?.firstName ?? null });
 });

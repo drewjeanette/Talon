@@ -15,6 +15,7 @@ import { NotificationInbox } from "../components/NotificationInbox";
 import { StudentTimeTools } from "../components/StudentTimeTools";
 import { SupervisorPayRateManager } from "../components/SupervisorPayRateManager";
 import { TeamPayStubStatus } from "../components/TeamPayStubStatus";
+import { StudentTimecards } from "../components/StudentTimecards";
 import type { AdminToolKey } from "../components/AdminLaunchpad";
 import { api } from "../api/client";
 
@@ -86,12 +87,14 @@ export function DashboardPage() {
             <ClockWidget onChange={loadEntries} />
             {user.role === "STUDENT" && <StudentTimeTools entries={entries} onSubmitted={loadEntries} />}
             <TimesheetTable entries={entries} caption="My recent time entries" />
+            {user.role === "STUDENT" && <StudentTimecards entries={entries} />}
           </>
         )}
 
         {(user.role === "SUPERVISOR" || adminSection === "reports") && <ReportGenerator />}
         {(user.role !== "ADMIN" || adminSection === "stubs") && <PayStubList />}
         {user.role === "SUPERVISOR" && <TeamPayStubStatus />}
+        {adminSection === "approvals" && <TeamPayStubStatus />}
         {user.role === "SUPERVISOR" && <SupervisorPayRateManager />}
         {(user.role === "SUPERVISOR" || adminSection === "approvals") && <ApprovalQueue />}
 

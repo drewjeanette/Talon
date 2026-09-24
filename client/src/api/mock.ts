@@ -209,12 +209,15 @@ interface MockPayStub {
   grossPay: string;
   status: "DRAFT" | "FINALIZED" | "PAID";
   processedBy?: string | null;
+  reviewStatus: "PENDING" | "APPROVED" | "REJECTED";
+  reviewedBy?: string | null;
+  reviewReason?: string | null;
 }
 
 const payStubs: MockPayStub[] = [
-  { id: 1, userId: 3, payPeriodId: 1, regularHours: "32.00", overtimeHours: "0.00", grossPay: "368.00", status: "FINALIZED", processedBy: "Renee" },
-  { id: 2, userId: 1, payPeriodId: 2, regularHours: "0.00", overtimeHours: "0.00", grossPay: "5416.67", status: "DRAFT" },
-  { id: 3, userId: 2, payPeriodId: 2, regularHours: "0.00", overtimeHours: "0.00", grossPay: "4833.33", status: "DRAFT" },
+  { id: 1, userId: 3, payPeriodId: 1, regularHours: "32.00", overtimeHours: "0.00", grossPay: "368.00", status: "FINALIZED", processedBy: "Renee", reviewStatus: "PENDING" },
+  { id: 2, userId: 1, payPeriodId: 2, regularHours: "0.00", overtimeHours: "0.00", grossPay: "5416.67", status: "DRAFT", reviewStatus: "PENDING" },
+  { id: 3, userId: 2, payPeriodId: 2, regularHours: "0.00", overtimeHours: "0.00", grossPay: "4833.33", status: "DRAFT", reviewStatus: "PENDING" },
 ];
 let nextStubId = 4;
 
@@ -269,7 +272,8 @@ function publicUser(u: MockUser) {
 
 function withPayPeriod(stub: MockPayStub) {
   const period = payPeriods.find((p) => p.id === stub.payPeriodId)!;
-  return { ...stub, payPeriod: period };
+  const owner = users.find((user) => user.id === stub.userId);
+  return { ...stub, hourlyRate: owner?.hourlyRateCents === null || owner?.hourlyRateCents === undefined ? null : (owner.hourlyRateCents / 100).toFixed(2), payPeriod: period };
 }
 
 async function delay() {
@@ -480,7 +484,7 @@ export async function mockRequest<T>(path: string, options: RequestInit): Promis
     const eligible = users.filter((u) => u.payType === period.type && u.isActive);
     for (const u of eligible) {
       if (!payStubs.some((s) => s.userId === u.id && s.payPeriodId === period.id)) {
-        payStubs.push({ id: nextStubId++, userId: u.id, payPeriodId: period.id, regularHours: "0.00", overtimeHours: "0.00", grossPay: "0.00", status: "DRAFT", processedBy: null });
+        payStubs.push({ id: nextStubId++, userId: u.id, payPeriodId: period.id, regularHours: "0.00", overtimeHours: "0.00", grossPay: "0.00", status: "DRAFT", processedBy: null, reviewStatus: "PENDING" });
       }
     }
     return { generated: eligible.length } as T;
@@ -507,8 +511,18 @@ export async function mockRequest<T>(path: string, options: RequestInit): Promis
       return {
         ...withPayPeriod(stub),
         employeeName: `${owner.firstName} ${owner.lastName}`,
+        hourlyRate: owner.hourlyRateCents === null ? null : (owner.hourlyRateCents / 100).toFixed(2),
       };
     }) as T;
+  }
+  const stubReviewMatch = path.match(/^\/payroll\/team-stubs\/(\d+)\/review$/);
+  if (stubReviewMatch && method === "PATCH") {
+    const stub = payStubs.find((item) => item.id === Number(stubReviewMatch[1]));
+    if (!stub) throw new ApiError(404, "Pay stub not found.");
+    stub.reviewStatus = body.status;
+    stub.reviewedBy = me().firstName;
+    stub.reviewReason = body.status === "REJECTED" ? body.reason : null;
+    return stub as T;
   }
 
   // --- reports ---
