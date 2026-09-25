@@ -72,7 +72,7 @@ export function AdminLaunchpad({ selected, onSelect }: { selected: AdminToolKey 
         <h2 className="admin-panel-title">Admin Tools</h2>
         <div className="admin-tile-grid">
           {TOOLS.map((tool) => (
-            <button key={tool.key} type="button" className="admin-tile" aria-selected={selected === tool.key} onClick={() => onSelect(tool.key)}>
+            <button key={tool.key} type="button" className="admin-tile" aria-pressed={selected === tool.key} onClick={() => onSelect(tool.key)}>
               <span className="admin-tile__icon">{ICONS[tool.icon]}</span>
               <span className="admin-tile__title">{tool.title}</span>
               <span className="admin-tile__description">{tool.description}</span>

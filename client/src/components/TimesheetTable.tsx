@@ -15,7 +15,7 @@ function formatHours(entry: TimeEntry): string {
 
 export function TimesheetTable({ entries, caption }: { entries: TimeEntry[]; caption: string }) {
   return (
-    <div className="timesheet table-scroll">
+    <div className="timesheet table-scroll" role="region" aria-label={caption} tabIndex={0}>
       <table>
         <caption>{caption}</caption>
         <thead>

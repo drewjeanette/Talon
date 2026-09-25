@@ -25,7 +25,8 @@ export function SupervisorOrganizer({ reportSender }: { reportSender?: string | 
 
   function goTo(target: string) {
     const element = document.querySelector(target) as HTMLElement | null;
-    element?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    element?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
     element?.focus({ preventScroll: true });
   }
 

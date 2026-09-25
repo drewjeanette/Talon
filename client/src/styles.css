@@ -27,6 +27,15 @@
     line-height: 1.5;
   }
 
+  a {
+    color: #3f1f78;
+    text-underline-offset: 0.15em;
+  }
+
+  a:hover {
+    text-decoration-thickness: 2px;
+  }
+
   /* Accessibility: always show a clear focus ring, never suppress it */
   :focus-visible {
     outline: 3px solid var(--focus);
@@ -57,6 +66,11 @@
     white-space: nowrap;
   }
 
+  .form-help {
+    color: #514a5b;
+    font-size: 0.85rem;
+  }
+
   .app-header {
     display: flex;
     align-items: center;
@@ -65,6 +79,19 @@
     padding: 0.75rem 1.5rem;
     background: var(--tt-purple);
     color: #fff;
+  }
+
+  .app-header--loading {
+    min-height: 68px;
+  }
+
+  .app-loading {
+    position: fixed;
+    inset: 68px 0 0;
+    display: grid;
+    place-items: center;
+    max-width: none;
+    background: var(--bg);
   }
 
   .app-header a {
@@ -211,6 +238,66 @@
     text-align: left;
     font-weight: 600;
     margin-bottom: 0.5rem;
+  }
+
+  .site-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.25rem;
+    padding: 1rem 1.5rem;
+    color: #3f3849;
+    font-size: 0.9rem;
+  }
+
+  .site-footer nav {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .site-footer p {
+    margin: 0;
+  }
+
+  .policy-page {
+    max-width: 840px;
+  }
+
+  .policy-card {
+    margin: 1rem 0;
+  }
+
+  .policy-card h2 {
+    margin-top: 1.75rem;
+  }
+
+  .policy-card li + li {
+    margin-top: 0.4rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+html[data-role="login"] .site-footer {
+  background: #24173d;
+  color: #fff;
+}
+
+html[data-role="login"] .site-footer a {
+  color: #fff;
+}
+
+@media (max-width: 520px) {
+  .site-footer {
+    flex-direction: column;
+    gap: 0.5rem;
   }
 }
 

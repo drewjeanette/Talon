@@ -56,7 +56,8 @@ export function DashboardPage() {
   function selectAdminSection(section: AdminToolKey | null) {
     setAdminSection(section);
     window.requestAnimationFrame(() => {
-      document.querySelector(section ? ".admin-section-bar" : ".admin-launchpad")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      document.querySelector(section ? ".admin-section-bar" : ".admin-launchpad")?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
     });
   }
 

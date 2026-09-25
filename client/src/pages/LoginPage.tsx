@@ -28,9 +28,9 @@ export function LoginPage() {
   }
 
   return (
-    <main className="login-page">
+    <main id="main-content" className="login-page">
       <form onSubmit={handleSubmit} aria-labelledby="login-heading" className="card login-card">
-        <img className="ttu-corner-logo" src={ttuLogo} alt="Tennessee Tech" />
+        <img className="ttu-corner-logo" src={ttuLogo} alt="Tennessee Tech" fetchPriority="high" />
         <h1 id="login-heading">Talon Sign In</h1>
         <p>Tennessee Tech Payroll &amp; Web Clock</p>
         <div className="form-row">
@@ -45,7 +45,9 @@ export function LoginPage() {
             pattern="[^@ ]+@tntech[.]edu"
             title="Use your @tntech.edu email address"
             required
+            aria-describedby="email-help"
           />
+          <span id="email-help" className="form-help">Use your @tntech.edu email address.</span>
         </div>
         <div className="form-row">
           <label htmlFor="password">Password</label>

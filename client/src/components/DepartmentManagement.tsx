@@ -253,7 +253,7 @@ export function DepartmentManagement() {
                       <td>{dept.college?.name ?? "Unassigned"}</td>
                       <td>{dept.isActive ? "Yes" : "No"}</td>
                       <td>
-                        <button type="button" onClick={() => startEdit(dept)}>
+                        <button type="button" onClick={() => startEdit(dept)} aria-label={`Edit ${dept.name}`}>
                           Edit
                         </button>
                       </td>

@@ -2,8 +2,18 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export function NavBar() {
-  const { user, logout } = useAuth();
+  const { user, loading, logout } = useAuth();
   const navigate = useNavigate();
+
+  if (!user && !loading) return null;
+
+  if (loading) {
+    return (
+      <header className="app-header app-header--loading" aria-hidden="true">
+        <div className="app-header__brand"><span>🦅</span> Talon</div>
+      </header>
+    );
+  }
 
   if (!user) return null;
 

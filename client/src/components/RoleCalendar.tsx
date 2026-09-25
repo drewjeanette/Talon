@@ -18,10 +18,10 @@ export function RoleCalendar({ role }: { role: "admin" | "supervisor" }) {
   }
 
   return (
-    <div className={role === "admin" ? "admin-calendar" : undefined} aria-label="Calendar">
+    <div className={role === "admin" ? "admin-calendar" : undefined} role="group" aria-labelledby={`${role}-calendar-heading`}>
       <div className={`${role}-calendar__header`}>
         <button type="button" className={`${role}-calendar__nav`} onClick={() => changeMonth(-1)} aria-label="Previous month">‹</button>
-        <h3 className={`${role}-calendar__title`} aria-live="polite">
+        <h3 id={`${role}-calendar-heading`} className={`${role}-calendar__title`} aria-live="polite">
           {new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" }).format(month)}
         </h3>
         <button type="button" className={`${role}-calendar__nav`} onClick={() => changeMonth(1)} aria-label="Next month">›</button>
@@ -29,10 +29,11 @@ export function RoleCalendar({ role }: { role: "admin" | "supervisor" }) {
       <div className={`${role}-calendar__weekdays`} aria-hidden="true">
         {WEEKDAYS.map((day) => <span key={day}>{day}</span>)}
       </div>
-      <div className={`${role}-calendar__days`} aria-label={`Days in ${new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" }).format(month)}`}>
+      <div className={`${role}-calendar__days`} role="list" aria-label={`Days in ${new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" }).format(month)}`}>
         {cells.map((day, index) => {
           const isToday = day !== null && year === today.getFullYear() && monthIndex === today.getMonth() && day === today.getDate();
-          return <span key={index} className={`${role}-calendar__day${isToday ? ` ${role}-calendar__day--today` : ""}`} aria-current={isToday ? "date" : undefined}>{day}</span>;
+          const fullDate = day === null ? undefined : new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date(year, monthIndex, day));
+          return <span key={index} role={day === null ? undefined : "listitem"} aria-hidden={day === null ? "true" : undefined} aria-label={fullDate} className={`${role}-calendar__day${isToday ? ` ${role}-calendar__day--today` : ""}`} aria-current={isToday ? "date" : undefined}>{day}</span>;
         })}
       </div>
     </div>

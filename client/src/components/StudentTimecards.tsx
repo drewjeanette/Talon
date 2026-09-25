@@ -33,7 +33,7 @@ function date(value: string): string {
 }
 
 function TimecardTable({ entries, caption }: { entries: TimeEntry[]; caption: string }) {
-  return <div className="table-scroll"><table>
+  return <div className="table-scroll" role="region" aria-label={caption} tabIndex={0}><table>
     <caption className="sr-only">{caption}</caption>
     <thead><tr><th scope="col">Clock In</th><th scope="col">Clock Out</th><th scope="col">Hrs Worked</th><th scope="col">Status</th><th scope="col">Reviewed By</th></tr></thead>
     <tbody>
@@ -83,7 +83,7 @@ export function StudentTimecards({ entries }: { entries: TimeEntry[] }) {
 
     <section className="card talon-student-paystubs" aria-labelledby="talon-student-paystubs-heading">
       <h2 id="talon-student-paystubs-heading">My Pay Stubs</h2>
-      <div className="table-scroll"><table>
+      <div className="table-scroll" role="region" aria-label="Biweekly pay stubs" tabIndex={0}><table>
         <caption className="sr-only">Biweekly pay stubs</caption>
         <thead><tr><th scope="col">Pay Period</th><th scope="col">Pay</th><th scope="col">Pay Date</th><th scope="col">Hrs Worked</th><th scope="col">Gross Pay</th><th scope="col">Payroll Status</th><th scope="col">Review Status</th><th scope="col">Reviewed By</th></tr></thead>
         <tbody>

@@ -59,6 +59,7 @@ async function tryRefresh(): Promise<boolean> {
   try {
     const res = await fetch(`${API_BASE_URL}/auth/refresh`, { method: "POST", credentials: "include" });
     if (!res.ok) return false;
+    if (res.status === 204) return false;
     const data = await res.json();
     setAccessToken(data.accessToken);
     return true;
@@ -73,7 +74,7 @@ export const api = {
     request<T>(path, { method: "POST", body: body !== undefined ? JSON.stringify(body) : undefined }),
   patch: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PATCH", body: body !== undefined ? JSON.stringify(body) : undefined }),
-  getPhoto: () => request<Blob>("/auth/profile-photo"),
+  getPhoto: () => request<Blob | undefined>("/auth/profile-photo"),
   getPhotoView: () => request<ProfilePhotoView>("/auth/profile-photo/view"),
   savePhotoView: (view: ProfilePhotoView) => request<ProfilePhotoView>("/auth/profile-photo/view", {
     method: "PATCH", body: JSON.stringify(view),

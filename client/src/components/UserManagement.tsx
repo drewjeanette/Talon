@@ -132,7 +132,7 @@ export function UserManagement() {
         <button type="submit">Create user</button>
       </form>
 
-      <div className="table-scroll">
+      <div className="table-scroll" role="region" aria-label="All users" tabIndex={0}>
         <table>
           <caption className="sr-only">All users</caption>
           <thead>
@@ -160,7 +160,7 @@ export function UserManagement() {
                 <td>{u.department?.name ?? "—"}</td>
                 <td>{u.isActive ? "Yes" : "No"}</td>
                 <td>
-                  <button type="button" onClick={() => handleDeactivate(u.id)} disabled={!u.isActive} className="button--danger">
+                  <button type="button" onClick={() => handleDeactivate(u.id)} disabled={!u.isActive} className="button--danger" aria-label={`Deactivate ${u.firstName} ${u.lastName}`}>
                     Deactivate
                   </button>
                 </td>

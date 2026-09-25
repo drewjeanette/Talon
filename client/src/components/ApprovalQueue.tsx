@@ -104,7 +104,7 @@ export function ApprovalQueue() {
     <section aria-labelledby="approvals-heading" className="card approval-queue">
       <h2 id="approvals-heading" tabIndex={-1}>Pending Time Approvals</h2>
       <h3>Clock entries</h3>
-      <div className="table-scroll">
+      <div className="table-scroll" role="region" aria-label="Time entries awaiting approval" tabIndex={0}>
         <table>
           <caption className="sr-only">Time entries awaiting approval</caption>
           <thead><tr><th scope="col">Employee</th><th scope="col">Clock In</th><th scope="col">Clock Out</th><th scope="col">Actions</th></tr></thead>
@@ -116,8 +116,8 @@ export function ApprovalQueue() {
               <td>{entry.clockOut ? new Date(entry.clockOut).toLocaleString() : "In progress"}</td>
               <td>
                 <div className="button-row">
-                  <button type="button" onClick={() => decideEntry(entry.id, "APPROVED")} className="approval-queue__approve">Approve</button>
-                  <button type="button" onClick={() => openReject("entry", entry.id)} className="button--danger approval-queue__reject">Reject</button>
+                  <button type="button" onClick={() => decideEntry(entry.id, "APPROVED")} className="approval-queue__approve" aria-label={`Approve time entry for ${entry.user.firstName} ${entry.user.lastName}`}>Approve</button>
+                  <button type="button" onClick={() => openReject("entry", entry.id)} className="button--danger approval-queue__reject" aria-label={`Reject time entry for ${entry.user.firstName} ${entry.user.lastName}`}>Reject</button>
                 </div>
                 {rejectionForm("entry", entry.id)}
               </td>
@@ -127,7 +127,7 @@ export function ApprovalQueue() {
       </div>
 
       <h3>Missed punches &amp; correction requests</h3>
-      <div className="table-scroll">
+      <div className="table-scroll" role="region" aria-label="Time correction requests awaiting approval" tabIndex={0}>
         <table>
           <caption className="sr-only">Student time correction requests awaiting approval</caption>
           <thead><tr><th scope="col">Employee</th><th scope="col">Current shift</th><th scope="col">Requested shift</th><th scope="col">Student reason</th><th scope="col">Actions</th></tr></thead>
@@ -140,8 +140,8 @@ export function ApprovalQueue() {
               <td>{request.reason}</td>
               <td>
                 <div className="button-row">
-                  <button type="button" onClick={() => decideCorrection(request.id, "APPROVED")} className="approval-queue__approve">Approve change</button>
-                  <button type="button" onClick={() => openReject("correction", request.id)} className="button--danger approval-queue__reject">Deny</button>
+                  <button type="button" onClick={() => decideCorrection(request.id, "APPROVED")} className="approval-queue__approve" aria-label={`Approve time correction for ${request.user.firstName} ${request.user.lastName}`}>Approve change</button>
+                  <button type="button" onClick={() => openReject("correction", request.id)} className="button--danger approval-queue__reject" aria-label={`Deny time correction for ${request.user.firstName} ${request.user.lastName}`}>Deny</button>
                 </div>
                 {rejectionForm("correction", request.id)}
               </td>

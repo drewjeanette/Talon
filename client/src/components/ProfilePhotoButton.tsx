@@ -76,7 +76,7 @@ export function ProfilePhotoButton({ userId, onStatus }: { userId: number; onSta
     setLoading(true);
     setSavedView(DEFAULT_VIEW);
     setDraftView(DEFAULT_VIEW);
-    Promise.all([api.getPhoto().then(asDataUrl), api.getPhotoView()]).then(([url, view]) => {
+    Promise.all([api.getPhoto().then((photo) => photo ? asDataUrl(photo) : null), api.getPhotoView()]).then(([url, view]) => {
       if (!cancelled) {
         setPhotoUrl(url);
         setSavedView(view);
@@ -160,16 +160,16 @@ export function ProfilePhotoButton({ userId, onStatus }: { userId: number; onSta
         <span className="dashboard__photo-camera" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h4l2-2h4l2 2h4v12H4z" /><circle cx="12" cy="13" r="3" /></svg></span>
       </button>
       {createPortal(
-        <dialog ref={dialog} className="profile-photo-dialog" onClose={() => setDraftView(savedView)}>
+        <dialog ref={dialog} className="profile-photo-dialog" aria-labelledby="profile-photo-heading" onClose={() => setDraftView(savedView)}>
           <div className="profile-photo-dialog__header">
-            <h2>Your profile photo</h2>
+            <h2 id="profile-photo-heading">Your profile photo</h2>
             <button type="button" onClick={() => dialog.current?.close()} aria-label="Close profile photo viewer">Close</button>
           </div>
           {photoUrl ? <>
             <div className="profile-photo-dialog__full"><img src={photoUrl} alt="Your full profile photo" /></div>
             <p className="profile-photo-dialog__hint">Your full photo stays intact. Adjust only the square shown on your dashboard.</p>
             <div className="profile-photo-dialog__editor">
-              <div className="profile-photo-dialog__preview" aria-label="Dashboard closeup preview"><img src={photoUrl} alt="" style={framing(draftView)} /></div>
+              <div className="profile-photo-dialog__preview" role="img" aria-label="Dashboard closeup preview"><img src={photoUrl} alt="" style={framing(draftView)} /></div>
               <div className="profile-photo-dialog__sliders">
                 <label>Zoom <input type="range" min="1" max="3" step="0.05" value={draftView.zoom} onChange={(e) => setDraftView({ ...draftView, zoom: Number(e.target.value) })} /></label>
                 <label>Move left or right <input type="range" min="-1" max="1" step="0.02" value={draftView.x} onChange={(e) => setDraftView({ ...draftView, x: Number(e.target.value) })} /></label>

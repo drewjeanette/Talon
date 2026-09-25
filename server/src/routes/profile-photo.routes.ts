@@ -25,7 +25,7 @@ profilePhotoRoutes.get("/profile-photo", requireAuth, async (c) => {
   const row = await c.env.DB.prepare("SELECT mime_type, photo FROM user_profile_photos WHERE user_id = ?")
     .bind(c.get("user").id)
     .first<{ mime_type: "image/jpeg" | "image/png" | "image/webp"; photo: number[] }>();
-  if (!row) throw new HTTPException(404, { message: "No profile photo uploaded." });
+  if (!row) return c.body(null, 204);
 
   return new Response(new Blob([Uint8Array.from(row.photo)], { type: row.mime_type }), {
     headers: {
@@ -40,7 +40,7 @@ profilePhotoRoutes.get("/profile-photo/view", requireAuth, async (c) => {
   const row = await c.env.DB.prepare("SELECT view_zoom, view_x, view_y FROM user_profile_photos WHERE user_id = ?")
     .bind(c.get("user").id)
     .first<{ view_zoom: number; view_x: number; view_y: number }>();
-  if (!row) throw new HTTPException(404, { message: "No profile photo uploaded." });
+  if (!row) return c.json({ zoom: 1, x: 0, y: 0 });
   return c.json({ zoom: row.view_zoom, x: row.view_x, y: row.view_y });
 });
 

@@ -52,7 +52,7 @@ export function TeamPayStubStatus() {
   return (
     <section className="card team-pay-stubs" aria-labelledby="team-paystubs-heading">
       <h2 id="team-paystubs-heading" tabIndex={-1}>Student Pay Stub Review</h2>
-      <div className="table-scroll">
+      <div className="table-scroll" role="region" aria-label="Student pay stub review" tabIndex={0}>
         <table>
           <thead><tr><th scope="col">Student</th><th scope="col">Pay</th><th scope="col">Gross Pay</th><th scope="col">Pay Period</th><th scope="col">Pay Date</th><th scope="col">Hrs Worked</th><th scope="col">Status</th><th scope="col">Reviewed By</th></tr></thead>
           <tbody>
@@ -67,8 +67,8 @@ export function TeamPayStubStatus() {
               <td className="review-status">
                 {stub.reviewStatus === "PENDING" ? <>
                   <div className="button-row">
-                    <button type="button" className="approval-queue__approve" disabled={busy === stub.id} onClick={() => decide(stub.id, "APPROVED")}>Approve</button>
-                    <button type="button" className="button--danger" disabled={busy === stub.id} onClick={() => { setRejecting(stub.id); setReason(""); }}>Reject</button>
+                    <button type="button" className="approval-queue__approve" disabled={busy === stub.id} onClick={() => decide(stub.id, "APPROVED")} aria-label={`Approve pay stub for ${stub.employeeName}`}>Approve</button>
+                    <button type="button" className="button--danger" disabled={busy === stub.id} onClick={() => { setRejecting(stub.id); setReason(""); }} aria-label={`Reject pay stub for ${stub.employeeName}`}>Reject</button>
                   </div>
                   {rejecting === stub.id && <div className="stub-rejection-form">
                     <label htmlFor={`stub-reason-${stub.id}`}>Reason for rejection</label>

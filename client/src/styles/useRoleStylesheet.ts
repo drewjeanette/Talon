@@ -13,9 +13,10 @@ const stylesByRole: Record<Role, string> = {
 
 const styleElementId = "talon-role-styles";
 
-export function useRoleStylesheet(role?: Role): void {
+export function useRoleStylesheet(role?: Role, pathname = "/"): void {
   useLayoutEffect(() => {
-    document.documentElement.dataset.role = role?.toLowerCase() ?? "login";
+    const isPolicyPage = pathname === "/privacy" || pathname === "/accessibility";
+    document.documentElement.dataset.role = role?.toLowerCase() ?? (isPolicyPage ? "public" : "login");
 
     let element = document.getElementById(styleElementId);
     if (!element) {
@@ -24,6 +25,6 @@ export function useRoleStylesheet(role?: Role): void {
       document.head.appendChild(element);
     }
 
-    element.textContent = role ? stylesByRole[role] : loginCss;
-  }, [role]);
+    element.textContent = role ? stylesByRole[role] : (isPolicyPage ? "" : loginCss);
+  }, [role, pathname]);
 }

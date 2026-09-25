@@ -95,7 +95,7 @@ export function PayPeriodManager() {
 
       <ReportGenerator embedded />
 
-      <div className="table-scroll">
+      <div className="table-scroll" role="region" aria-label="Existing pay periods" tabIndex={0}>
         <table>
           <caption className="sr-only">Existing pay periods</caption>
           <thead>
@@ -117,10 +117,10 @@ export function PayPeriodManager() {
                 <td>{new Date(p.payDate).toLocaleDateString()}</td>
                 <td>{p.status}</td>
                 <td className="button-row">
-                  <button type="button" onClick={() => handleGenerate(p.id)} disabled={p.status === "CLOSED"}>
+                  <button type="button" onClick={() => handleGenerate(p.id)} disabled={p.status === "CLOSED"} aria-label={`Generate pay stubs for ${new Date(p.startDate).toLocaleDateString()} through ${new Date(p.endDate).toLocaleDateString()}`}>
                     Generate stubs
                   </button>
-                  <button type="button" onClick={() => handleFinalize(p.id)} disabled={p.status !== "PROCESSING"}>
+                  <button type="button" onClick={() => handleFinalize(p.id)} disabled={p.status !== "PROCESSING"} aria-label={`Finalize pay period ${new Date(p.startDate).toLocaleDateString()} through ${new Date(p.endDate).toLocaleDateString()}`}>
                     Finalize
                   </button>
                 </td>

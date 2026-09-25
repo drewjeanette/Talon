@@ -144,7 +144,7 @@ authRoutes.post("/login", async (c) => {
 
 authRoutes.post("/refresh", async (c) => {
   const token = getCookie(c, REFRESH_COOKIE);
-  if (!token) throw new HTTPException(401, { message: "Missing refresh token." });
+  if (!token) return c.body(null, 204);
 
   let userId: number;
   try {

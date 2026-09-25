@@ -10,6 +10,7 @@ a React frontend published as Worker static assets. No servers, no VMs, no open 
 - [docs/DATABASE.md](docs/DATABASE.md) — ER diagram, schema decisions, migrations
 - [docs/SECURITY.md](docs/SECURITY.md) — threat model, auth design, verified RBAC tests
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — **sharing D1 with your team**, deploying, plan limits
+- [docs/PRIVACY-ACCESSIBILITY.md](docs/PRIVACY-ACCESSIBILITY.md) — production privacy and accessibility release checklist
 - [docs/GANTT.md](docs/GANTT.md) — project timeline
 
 ## Features
@@ -22,7 +23,8 @@ a React frontend published as Worker static assets. No servers, no VMs, no open 
 - Admin user management and pay-period lifecycle (create → generate stubs → finalize)
 - Admin department/college management — all 104 registrar codes seeded but fully editable
 - Audit logging of every significant action, with the true client IP
-- Accessible UI: labeled controls, visible focus, `aria-live` status regions, skip link
+- Accessible UI: labeled controls, visible focus, `aria-live` status regions, skip link, reduced-motion support, and a public accessibility statement
+- Public privacy notice describing the data Talon processes, its security controls, and production-review requirements
 
 ## Quick start — full stack, locally
 
