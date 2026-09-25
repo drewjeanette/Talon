@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../api/client";
+import { ReportGenerator } from "./ReportGenerator";
 
 interface PayPeriod {
   id: number;
@@ -68,7 +69,7 @@ export function PayPeriodManager() {
 
   return (
     <section aria-labelledby="pay-period-heading" className="card pay-period-manager">
-      <h2 id="pay-period-heading">Pay Periods</h2>
+      <h2 id="pay-period-heading">Generate Payroll and Pay Periods</h2>
       <form onSubmit={handleCreate} className="form-row-group pay-period-manager__form">
         <div className="form-row">
           <label htmlFor="period-type">Type</label>
@@ -91,6 +92,8 @@ export function PayPeriodManager() {
         </div>
         <button type="submit">Create pay period</button>
       </form>
+
+      <ReportGenerator embedded />
 
       <div className="table-scroll">
         <table>

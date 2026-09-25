@@ -74,7 +74,7 @@ export function DashboardPage() {
           <AdminLaunchpad selected={adminSection} onSelect={selectAdminSection} />
           {adminSection && (
             <div className="admin-section-bar">
-              <h2 className="admin-section-bar__title">{adminSection === "approvals" ? "Time Entry Approvals" : adminSection === "payroll" ? "Payroll & Pay Periods" : adminSection === "reports" ? "Payroll Reports" : adminSection === "users" ? "User Management" : adminSection === "departments" ? "Departments & Colleges" : "My Pay Stubs"}</h2>
+              <h2 className="admin-section-bar__title">{adminSection === "approvals" ? "Time Entry Approvals" : adminSection === "payroll" ? "Generate Payroll and Pay Periods" : adminSection === "users" ? "User Management" : "Departments & Colleges"}</h2>
               <button type="button" className="admin-section-bar__back" onClick={() => selectAdminSection(null)}>Back to Overview</button>
             </div>
           )}
@@ -91,8 +91,8 @@ export function DashboardPage() {
           </>
         )}
 
-        {(user.role === "SUPERVISOR" || adminSection === "reports") && <ReportGenerator />}
-        {(user.role !== "ADMIN" || adminSection === "stubs") && <PayStubList />}
+        {user.role === "SUPERVISOR" && <ReportGenerator />}
+        {user.role !== "ADMIN" && <PayStubList />}
         {user.role === "SUPERVISOR" && <TeamPayStubStatus />}
         {adminSection === "approvals" && <TeamPayStubStatus />}
         {user.role === "SUPERVISOR" && <SupervisorPayRateManager />}
