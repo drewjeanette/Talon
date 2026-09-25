@@ -173,7 +173,7 @@ export function DepartmentManagement() {
         </button>
       )}
 
-      <div className="table-scroll">
+      <div className="table-scroll department-management__table" role="region" aria-label="Department list" tabIndex={0}>
         <table>
           <caption className="sr-only">All departments</caption>
           <thead>

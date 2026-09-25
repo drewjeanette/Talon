@@ -257,6 +257,8 @@ body { background:linear-gradient(180deg,#eee8f5 0,var(--bg) 260px); }
 .pay-stubs,.user-management,.department-management { grid-column:1 / -1; }
 .report-generator__submit { width:100%; margin-top:auto; }
 .department-management__intro { max-width:78ch; color:var(--text-muted); }
+.department-management__table { max-height:min(55vh,34rem); overflow:auto; scrollbar-gutter:stable; border:1px solid var(--border); border-radius:10px; }
+.department-management__table th { position:sticky; top:0; z-index:1; background:var(--tt-purple-soft); }
 button { min-height:44px; border-radius:8px; padding:.7rem 1.15rem; transition:background .15s ease,transform .15s ease,box-shadow .15s ease; }
 button:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 4px 10px #33205a26; }
 .approval-queue__approve { background:var(--success); }
