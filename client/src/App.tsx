@@ -5,7 +5,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { useAuth } from "./context/AuthContext";
-import { useRoleStylesheet } from "./design/roleStyles";
+import { useRoleStylesheet } from "./styles/useRoleStylesheet";
 
 export default function App() {
   const { user } = useAuth();

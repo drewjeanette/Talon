@@ -12,7 +12,7 @@ gantt
 
     section Planning & Design
     Requirements gathering            :done,    des1, 2026-08-24, 7d
-    Architecture & DB design          :active,  des2, 2026-08-31, 10d
+    Architecture & DB design          :done,    des2, 2026-08-31, 10d
 
     section Core Backend
     Auth & RBAC                       :         be1, after des2, 10d
@@ -25,7 +25,7 @@ gantt
 
     section Security & Infrastructure
     Security review & pen-test pass   :         sec1, after fe2, 10d
-    GCP + Cloudflare deployment        :crit,    infra1, after sec1, 10d
+    Cloudflare deployment              :crit,    infra1, after sec1, 10d
 
     section QA & Delivery
     Accessibility audit               :         qa1, after fe2, 7d
@@ -47,6 +47,6 @@ gantt
 | Cloudflare deployment (Worker assets/API + D1) | Deployed | [DEPLOYMENT.md](DEPLOYMENT.md) |
 | SSO via Cloudflare Access | Optional; local passwords selected | [SECURITY.md](SECURITY.md#known-gaps) |
 | Accessibility audit | Baseline in place, needs a real screen-reader pass | `client/src/components` |
-| Responsive (tablet/mobile) work | Not started | `client/src/styles.css` |
-| Testing & QA | Not started | add `server`/`client` test suites |
+| Responsive (tablet/mobile) work | Baseline complete; real-device review remains | `client/src/styles.css` |
+| Testing & QA | Manual verification complete; automated suites remain | add `server`/`client` test suites |
 | Documentation & presentation | Ongoing | this `docs/` folder |

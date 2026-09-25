@@ -2,7 +2,8 @@
 
 Talon's schema is defined in [`server/src/db/schema.ts`](../server/src/db/schema.ts) using **Drizzle
 ORM**, and targets **Cloudflare D1** (SQLite). The schema file is the single source of truth;
-migrations are generated from it and committed to git. Never hand-edit the database.
+migrations are committed to git and applied in order. Make schema changes through a migration
+instead of editing the remote database directly.
 
 ## Entity-relationship diagram
 
@@ -12,7 +13,10 @@ erDiagram
     DEPARTMENTS ||--o{ USERS : employs
     USERS ||--o{ USERS : supervises
     USERS ||--o{ TIME_ENTRIES : logs
+    USERS ||--o{ TIME_ENTRY_CHANGE_REQUESTS : submits
     USERS ||--o{ PAY_STUBS : receives
+    USERS ||--o| USER_PROFILE_PHOTOS : has
+    USERS ||--o{ NOTIFICATIONS : receives
     USERS ||--o{ REFRESH_TOKENS : holds
     USERS ||--o{ AUDIT_LOGS : performs
     USERS ||--o{ REPORT_RUNS : requests
@@ -53,6 +57,19 @@ erDiagram
         text source "WEB | KIOSK | MANUAL"
         text status "PENDING | APPROVED | REJECTED"
         int edited_by_id FK "nullable"
+        text rejection_reason "nullable"
+    }
+    TIME_ENTRY_CHANGE_REQUESTS {
+        int id PK
+        int user_id FK
+        int time_entry_id FK "nullable for a missed shift"
+        int requested_clock_in
+        int requested_clock_out
+        text reason
+        text status "PENDING | APPROVED | REJECTED"
+        int reviewer_id FK "nullable"
+        text reviewer_reason "nullable"
+        int reviewed_at "nullable"
     }
     PAY_PERIODS {
         int id PK
@@ -70,6 +87,31 @@ erDiagram
         int overtime_minutes
         int gross_pay_cents
         text status "DRAFT | FINALIZED | PAID"
+        int finalized_by_id FK "nullable"
+        text review_status "PENDING | APPROVED | REJECTED"
+        int reviewed_by_id FK "nullable"
+        int reviewed_at "nullable"
+        text review_reason "nullable"
+    }
+    USER_PROFILE_PHOTOS {
+        int user_id PK,FK
+        text mime_type "JPEG | PNG | WebP"
+        blob photo
+        real view_zoom
+        real view_x
+        real view_y
+    }
+    NOTIFICATIONS {
+        int id PK
+        int recipient_user_id FK
+        int sender_user_id FK "nullable"
+        text type
+        text title
+        text body
+        text action "nullable"
+        int requires_action "boolean"
+        int read_at "nullable"
+        int dismissed_at "nullable"
     }
     REPORT_RUNS {
         int id PK
@@ -127,17 +169,17 @@ Migrations live in `server/migrations/` and are committed to git. **This folder,
 database, is how the team shares schema changes.**
 
 ```bash
-# after editing src/db/schema.ts
-npm run db:generate --workspace=server        # write a new migration file
-npm run db:migrate:local --workspace=server   # apply to your own local D1
-npm run db:migrate:remote --workspace=server  # apply to the shared database
+# after editing server/src/db/schema.ts
+npm run db:generate         # write a new migration file
+npm run db:migrate:local    # apply to your own local D1
+npm run db:migrate:remote   # apply to the shared database
 ```
 
 Seed data is generated rather than hand-written, because the demo accounts need real salted scrypt hashes:
 
 ```bash
-npm run db:seed:generate --workspace=server   # writes seed/seed.sql
-npm run db:seed:local --workspace=server
+npm run db:seed:generate   # writes server/seed/seed.sql
+npm run db:seed:local
 ```
 
 The seed creates 2 colleges, all 104 registrar department codes, 3 demo users, sample time entries,

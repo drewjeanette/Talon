@@ -1,5 +1,5 @@
 // Generates seed/seed.sql, including real scrypt password hashes for the demo
-// accounts. Run with:  npm run db:seed:generate --workspace=server
+// accounts. Run with: npm run db:seed:generate
 //
 // Hashes are produced here with the same Web Crypto algorithm and the same
 // self-describing format the Worker verifies against, so they interoperate.

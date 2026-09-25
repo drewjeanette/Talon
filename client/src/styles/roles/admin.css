@@ -1,44 +1,6 @@
-/*
-  TALON DESIGN - ADMIN VIEW
+/* Admin dashboard */
 
-  Everything in this stylesheet controls how the Admin screens look.
-  An AI coding tool may change the CSS in this stylesheet. Open the returned
-  design file in a browser to review the result.
-
-  What is on the Admin screen, and the names used to style each part:
-
-    .app-header ........................ purple bar across the top
-      .app-header__brand ............... the "Talon" logo text
-      .app-header__nav ................. the Dashboard link
-      .app-header__name ................ the signed-in name and role
-      .app-header__logout .............. the Log out button
-    .dashboard ......................... the page under the header
-      .dashboard__title ................ the "Welcome" heading
-      .dashboard-grid .................. holds every card; try display: grid to put cards side by side
-    .pay-stubs ......................... the My Pay Stubs card
-    .approval-queue .................... the Pending Time Entry Approvals card
-      .approval-queue__approve ......... the Approve buttons
-      .approval-queue__reject .......... the Reject buttons
-    .report-generator .................. the Auto-Generate Payroll Report card
-      .report-generator__submit ........ the Generate CSV button
-    .pay-period-manager ................ the Pay Periods card
-      .pay-period-manager__form ........ the create-a-pay-period form
-    .user-management ................... the User Management card
-      .user-management__form ........... the create-a-user form
-    .department-management ............. the Department Management card
-      .department-management__intro .... the explanation paragraph
-      .department-management__form .... the add-a-department form
-
-  Shared pieces used across the screen:
-    .card, button, .button--danger, table, th, td, caption, .button-row,
-    .table-scroll, .form-row, .form-row-group, label, input, select, .status-message
-
-  Before you send this back:
-    - Keep text readable against its background (strong contrast).
-    - Keep the :focus-visible outline so keyboard users can see where they are.
-*/
-
-/* ---------- Theme colors: the easiest place to start ---------- */
+/* ---------- Theme ---------- */
 :root {
   --tt-purple: #4b2e83;
   --tt-purple-dark: #33205a;
@@ -68,7 +30,7 @@ h2 {
   color: var(--tt-purple-dark);
 }
 
-/* Keyboard focus ring. Keep it clearly visible for accessibility. */
+/* Keyboard focus */
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
@@ -310,7 +272,7 @@ th:last-child { border-radius:0 8px 8px 0; }
 .pay-stubs tbody td:last-child,.pay-period-manager tbody td:nth-child(4) { color:var(--tt-purple-dark); font-weight:800; text-transform:capitalize; }
 .app-header__role { font-weight:800; }
 
-/* ---------- iLearn-inspired Admin launchpad ---------- */
+/* ---------- Admin dashboard ---------- */
 .admin-launchpad { display:grid; grid-template-columns:270px minmax(0,1fr); gap:1.35rem; margin-bottom:1.35rem; }
 .admin-work-panel,.admin-tools-panel { background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:0 6px 18px #33205a12; }
 .admin-work-panel { padding:1.35rem; border-top:5px solid var(--tt-gold); }

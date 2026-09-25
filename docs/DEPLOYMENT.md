@@ -38,10 +38,10 @@ developer a **local** D1 instance, and local and remote data are separated by de
 artifact is `server/migrations/`, committed to git:
 
 ```bash
-git pull                                  # get the latest migrations
-npm run db:migrate:local --workspace=server   # apply them to your own local D1
-npm run db:seed:local --workspace=server      # load demo data locally
-npm run dev --workspace=server                # work against your local copy
+git pull                    # get the latest migrations
+npm run db:migrate:local   # apply them to your own local D1
+npm run db:seed:local      # load demo data locally
+npm run dev                # work against your local copy
 ```
 
 The remote database is for the deployed app and shared demos only. Changes made against remote D1
@@ -49,7 +49,7 @@ cannot be undone, so a careless `DELETE` there destroys everyone's data; the sam
 costs one reseed.
 
 When someone changes the schema, they edit `server/src/db/schema.ts`, run
-`npm run db:generate --workspace=server` to produce a new migration file, and commit it. Everyone
+`npm run db:generate` to produce a new migration file, and commit it. Everyone
 else pulls and applies it. That keeps the schema in version control rather than in one person's
 dashboard.
 
@@ -66,12 +66,12 @@ npx wrangler d1 create talon-db
 #    (the id is NOT a secret - it is safe to commit and teammates need it)
 
 # 4. Create the schema, remotely and locally
-npm run db:migrate:remote --workspace=server
-npm run db:migrate:local --workspace=server
+npm run db:migrate:remote
+npm run db:migrate:local
 
 # 5. Seed demo data
-npm run db:seed:generate --workspace=server   # regenerates seed.sql with fresh password hashes
-npm run db:seed:local --workspace=server
+npm run db:seed:generate   # regenerates seed.sql with fresh password hashes
+npm run db:seed:local
 ```
 
 ## Secrets
@@ -92,7 +92,7 @@ For local development, copy `server/.dev.vars.example` to `server/.dev.vars` (gi
 ## Deploying
 
 ```bash
-npm run deploy:server    # builds and publishes the API and React frontend
+npm run deploy    # builds and publishes the API and React frontend
 ```
 
 The frontend calls `/api` on the same domain. Attach a custom domain to this Worker in the

@@ -1,10 +1,4 @@
-/*
-  Base styles shared by every screen, including the login page.
-
-  Wrapped in a cascade layer on purpose. The login and role design stylesheets
-  are unlayered, and unlayered rules always win over layered ones no matter
-  which loads first. That makes a standalone design match the real app.
-*/
+/* Shared application styles. */
 @layer talon-base {
   :root {
     --tt-purple: #4b2e83;

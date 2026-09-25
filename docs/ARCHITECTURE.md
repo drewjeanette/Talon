@@ -34,9 +34,10 @@ Talon/
 │     └─ services/            payroll calculation, CSV reports, audit log
 ├─ client/                    React SPA -> Worker static assets
 │  └─ src/
-│     ├─ api/                 fetch wrapper, mock backend for demos
+│     ├─ api/                 API client and error handling
 │     ├─ context/             AuthContext
 │     ├─ components/          ClockWidget, ApprovalQueue, ReportGenerator, ...
+│     ├─ styles/              shared and role-specific styles
 │     └─ pages/               Login, Dashboard (role-adaptive), NotFound
 └─ docs/                      this folder
 ```
@@ -70,8 +71,8 @@ sequenceDiagram
 
 | Feature | Student | Supervisor | Admin |
 |---|:---:|:---:|:---:|
-| Clock in/out, view own timesheet | ✅ | ✅ | ✅ |
-| View own pay stubs | ✅ | ✅ | ✅ |
+| Clock in/out and view own timesheet | ✅ | When paid biweekly | — |
+| View own pay stubs | ✅ | ✅ | — |
 | Approve/reject direct reports' time entries | — | ✅ (own reports only) | ✅ (all) |
 | Correct a time entry | — | ✅ (own reports only) | ✅ (all) |
 | Generate payroll report | — | ✅ (own department, server-enforced) | ✅ (any scope) |
@@ -112,5 +113,5 @@ Verified against a running Worker and D1: login and JWT refresh, RBAC denial and
 scoping, clock in/out through the UI, approval workflow, biweekly and monthly payroll math including
 overtime, CSV report generation, and department/college management.
 
-Not yet done: deployment to the Cloudflare edge, SSO integration, an automated test suite, and
-responsive/accessibility verification on real devices. See [GANTT.md](GANTT.md).
+The application is deployed to Cloudflare Workers with D1. SSO integration and an automated test
+suite remain future work. See [GANTT.md](GANTT.md).

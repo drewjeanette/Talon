@@ -7,10 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "design:export": "node scripts/design-export.mjs",
-    "design:import": "node scripts/design-import.mjs",
-    "design:check": "node scripts/design-import.mjs --dry-run",
-    "design:import:force": "node scripts/design-import.mjs --force"
+    "typecheck": "tsc -b"
   },
   "dependencies": {
     "react": "^18.3.1",

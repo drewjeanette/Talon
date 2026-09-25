@@ -1,37 +1,6 @@
-/*
-  TALON DESIGN - STUDENT VIEW
+/* Student dashboard */
 
-  Everything in this stylesheet controls how the Student screens look.
-  An AI coding tool may change the CSS in this stylesheet. Open the returned
-  design file in a browser to review the result.
-
-  What is on the Student screen, and the names used to style each part:
-
-    .app-header ................ purple bar across the top
-      .app-header__brand ....... the "Talon" logo text
-      .app-header__nav ......... the Dashboard link
-      .app-header__name ........ the signed-in name and role
-      .app-header__logout ...... the Log out button
-    .dashboard ................. the page under the header
-      .dashboard__title ........ the "Welcome" heading
-      .dashboard-grid .......... holds every card; try display: grid to put cards side by side
-    .clock-widget .............. the Web Clock card
-      .clock-widget__status .... the "Status: Clocked out" line
-      .clock-widget__actions ... the row holding both clock buttons
-      .clock-widget__in ........ the Clock In button
-      .clock-widget__out ....... the Clock Out button
-    .timesheet ................. the "My recent time entries" table
-    .pay-stubs ................. the My Pay Stubs card
-
-  Shared pieces used across the screen:
-    .card, button, table, th, td, caption, .button-row, .table-scroll, .status-message
-
-  Before you send this back:
-    - Keep text readable against its background (strong contrast).
-    - Keep the :focus-visible outline so keyboard users can see where they are.
-*/
-
-/* ---------- Theme colors: the easiest place to start ---------- */
+/* ---------- Theme ---------- */
 :root {
   --tt-purple: #4b2e83;
   --tt-purple-dark: #33205a;
@@ -59,7 +28,7 @@ h2 {
   color: var(--tt-purple-dark);
 }
 
-/* Keyboard focus ring. Keep it clearly visible for accessibility. */
+/* Keyboard focus */
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;

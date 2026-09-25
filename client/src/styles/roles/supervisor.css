@@ -1,38 +1,6 @@
-/*
-  TALON DESIGN - SUPERVISOR VIEW
+/* Supervisor dashboard */
 
-  Everything in this stylesheet controls how the Supervisor screens look.
-  An AI coding tool may change the CSS in this stylesheet. Open the returned
-  design file in a browser to review the result.
-
-  What is on the Supervisor screen, and the names used to style each part:
-
-    .app-header .................... purple bar across the top
-      .app-header__brand ........... the "Talon" logo text
-      .app-header__nav ............. the Dashboard link
-      .app-header__name ............ the signed-in name and role
-      .app-header__logout .......... the Log out button
-    .dashboard ..................... the page under the header
-      .dashboard__title ............ the "Welcome" heading
-      .dashboard-grid .............. holds every card; try display: grid to put cards side by side
-    .pay-stubs ..................... the My Pay Stubs card
-    .approval-queue ................ the Pending Time Entry Approvals card
-      .approval-queue__approve ..... the Approve buttons
-      .approval-queue__reject ...... the Reject buttons
-    .report-generator .............. the Auto-Generate Payroll Report card
-      .report-generator__note ...... the "Scoped automatically" line
-      .report-generator__submit .... the Generate CSV button
-
-  Shared pieces used across the screen:
-    .card, button, .button--danger, table, th, td, caption, .button-row,
-    .table-scroll, .form-row, label, select, .status-message
-
-  Before you send this back:
-    - Keep text readable against its background (strong contrast).
-    - Keep the :focus-visible outline so keyboard users can see where they are.
-*/
-
-/* ---------- Theme colors: the easiest place to start ---------- */
+/* ---------- Theme ---------- */
 :root {
   --tt-purple: #4b2e83;
   --tt-purple-dark: #33205a;
@@ -62,7 +30,7 @@ h2 {
   color: var(--tt-purple-dark);
 }
 
-/* Keyboard focus ring. Keep it clearly visible for accessibility. */
+/* Keyboard focus */
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
@@ -359,12 +327,12 @@ th:last-child { border-radius:0 8px 8px 0; }
 
 
 
-.talon-inbox { width:min(100%,760px); margin:0 0 1rem auto; padding:.65rem .75rem; border:1px solid var(--border); border-radius:12px; box-shadow:0 5px 16px #32165312; }
+.talon-notifications { width:min(100%,760px); margin:0 0 1rem auto; padding:.65rem .75rem; border:1px solid var(--border); border-radius:12px; box-shadow:0 5px 16px #32165312; }
 .talon-notification__summary { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:.7rem; }
 .talon-notification__bell { position:relative; display:grid; place-items:center; width:42px; height:42px; padding:0; border-radius:50%; background:var(--tt-purple-soft); color:var(--tt-purple-dark); }
 .talon-notification__bell:hover:not(:disabled) { background:#e3d7f2; }
 .talon-notification__bell svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
-.talon-inbox__badge { position:absolute; top:-5px; right:-5px; display:grid; place-items:center; min-width:19px; height:19px; padding:0 4px; border:2px solid #fff; border-radius:999px; background:var(--tt-purple); color:#fff; font-size:.68rem; font-weight:800; line-height:1; }
+.talon-notifications__badge { position:absolute; top:-5px; right:-5px; display:grid; place-items:center; min-width:19px; height:19px; padding:0 4px; border:2px solid #fff; border-radius:999px; background:var(--tt-purple); color:#fff; font-size:.68rem; font-weight:800; line-height:1; }
 .talon-notification__line { min-width:0; margin:0; color:var(--tt-purple-dark); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .talon-notification__view { min-height:38px; padding:.45rem .85rem; }
 .talon-notification__detail { margin-top:.65rem; padding:.75rem .8rem .2rem; border-top:1px solid var(--border); }
@@ -379,7 +347,7 @@ th:last-child { border-radius:0 8px 8px 0; }
 .talon-send-report { background:var(--success,#247a3b); }
 .talon-send-report:hover:not(:disabled) { background:var(--success-dark,#195d2c); }
 @media (max-width:600px) {
-  .talon-inbox { width:100%; padding:.6rem; }
+  .talon-notifications { width:100%; padding:.6rem; }
   .talon-notification__summary { grid-template-columns:auto minmax(0,1fr); }
   .talon-notification__view { grid-column:1 / -1; width:100%; }
   .talon-notification__actions,.talon-notification__actions button { width:100%; }

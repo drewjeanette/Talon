@@ -13,7 +13,7 @@ export interface NotificationItem {
   senderName: string;
 }
 
-export function NotificationInbox({ onReportSender }: { onReportSender?: (name: string | null) => void }) {
+export function NotificationPanel({ onReportSender }: { onReportSender?: (name: string | null) => void }) {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
@@ -57,11 +57,11 @@ export function NotificationInbox({ onReportSender }: { onReportSender?: (name: 
   }
 
   return (
-    <section className="card talon-inbox" aria-label="Report notifications">
+    <section className="card talon-notifications" aria-label="Report notifications">
       <div className="talon-notification__summary">
         <button type="button" className="talon-notification__bell" aria-label="View report notification" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>
-          {unread > 0 && <span className="talon-inbox__badge" aria-label={`${unread} unread notification${unread === 1 ? "" : "s"}`}>{unread}</span>}
+          {unread > 0 && <span className="talon-notifications__badge" aria-label={`${unread} unread notification${unread === 1 ? "" : "s"}`}>{unread}</span>}
         </button>
         <p className="talon-notification__line"><strong>From {item.senderName}</strong> — {item.title}</p>
         <button type="button" className="talon-notification__view" aria-expanded={open} onClick={() => setOpen((value) => !value)}>{open ? "Hide" : "View"}</button>

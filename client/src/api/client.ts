@@ -1,5 +1,4 @@
 import { ApiError } from "./errors";
-import { MOCK_MODE, mockRequest } from "./mock";
 
 // Production serves the React app and API from the same Worker/domain. Vite's
 // development proxy sends this path to the local Worker during development.
@@ -25,8 +24,6 @@ async function parseErrorBody(res: Response): Promise<string> {
 }
 
 async function request<T>(path: string, options: RequestInit = {}, retry = true): Promise<T> {
-  if (MOCK_MODE) return mockRequest<T>(path, options);
-
   const headers = new Headers(options.headers);
   if (!headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
@@ -59,7 +56,6 @@ async function request<T>(path: string, options: RequestInit = {}, retry = true)
 }
 
 async function tryRefresh(): Promise<boolean> {
-  if (MOCK_MODE) return false;
   try {
     const res = await fetch(`${API_BASE_URL}/auth/refresh`, { method: "POST", credentials: "include" });
     if (!res.ok) return false;

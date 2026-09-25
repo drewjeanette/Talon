@@ -11,7 +11,7 @@ import { PayStubList } from "../components/PayStubList";
 import { SupervisorOrganizer } from "../components/SupervisorOrganizer";
 import { AdminLaunchpad } from "../components/AdminLaunchpad";
 import { ProfilePhotoButton } from "../components/ProfilePhotoButton";
-import { NotificationInbox } from "../components/NotificationInbox";
+import { NotificationPanel } from "../components/NotificationPanel";
 import { StudentTimeTools } from "../components/StudentTimeTools";
 import { SupervisorPayRateManager } from "../components/SupervisorPayRateManager";
 import { TeamPayStubStatus } from "../components/TeamPayStubStatus";
@@ -60,14 +60,12 @@ export function DashboardPage() {
     });
   }
 
-  // The class hooks here (dashboard, dashboard-grid) let each role's designer
-  // rearrange the cards with CSS alone, since design files cannot change markup.
   return (
     <main id="main-content" className={`dashboard dashboard--${user.role.toLowerCase()}`} data-admin-view={user.role === "ADMIN" && adminSection ? adminSection : undefined}>
       <h1 className="dashboard__title"><ProfilePhotoButton userId={user.id} onStatus={setPhotoStatus} /><span>{greeting}, {user.firstName}</span></h1>
       {photoStatus && <p className="dashboard__photo-message" role="status">{photoStatus}</p>}
 
-      {user.role === "SUPERVISOR" && <NotificationInbox onReportSender={setReportSender} />}
+      {user.role === "SUPERVISOR" && <NotificationPanel onReportSender={setReportSender} />}
       {user.role === "SUPERVISOR" && <SupervisorOrganizer reportSender={reportSender} />}
       {user.role === "ADMIN" && (
         <>
