@@ -4,6 +4,7 @@ A redesign of Tennessee Tech's payroll and web-clock system, replacing the Oracl
 with a modern, secure web app running entirely on **Cloudflare** — a Workers API, a D1 database, and
 a React frontend published as Worker static assets. No servers, no VMs, no open database ports.
 
+LINE & TEST
 ## Docs
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — stack, layout, request flow, role/feature matrix
