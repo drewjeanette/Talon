@@ -9,6 +9,7 @@ Talon: Tennessee Tech payroll + web-clock. Cloudflare Workers (Hono) API + D1 (D
 - `npm run test:e2e` — Playwright suite (`e2e/`) on an isolated, freshly seeded server at :8788
 - `npm run db:migrate:local` / `db:seed:generate` / `db:seed:local`
 - Never run `db:*:remote` or `deploy` unless explicitly asked.
+- Pushing to `main` deploys: `.github/workflows/ci-deploy.yml` runs typecheck + Playwright, then remote migrations and deploy to talontime.org. Pull requests run tests only.
 
 ## Layout
 - `server/src/routes/*.routes.ts` — Hono routers, mounted under `/api/*` in `server/src/index.ts`
