@@ -1,6 +1,9 @@
 name = "talon-api"
 main = "src/index.ts"
 compatibility_date = "2026-09-01"
+# Shared Talon Cloudflare account (admin@talontime.org). Not a secret; it pins
+# every wrangler command and deploy to this account.
+account_id = "7fb2c0784ed069a2a238ee33cec0a381"
 
 # ---------------------------------------------------------------------------
 # D1 binding
@@ -11,7 +14,7 @@ compatibility_date = "2026-09-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "talon-db"
-database_id = "69e5b518-4f96-410e-b13c-ac27e9ac618b"
+database_id = "0dd511e2-3f7c-4b1b-a7d7-1b5badcd51e4"
 migrations_dir = "migrations"
 
 [vars]
