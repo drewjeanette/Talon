@@ -20,5 +20,9 @@
     "typecheck": "npm run typecheck --workspace=server && npm run typecheck --workspace=client",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0"
   }
 }
