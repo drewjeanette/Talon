@@ -9,6 +9,14 @@ export interface Bindings {
   JWT_REFRESH_EXPIRY: string;
   CORS_ORIGIN: string;
   ENVIRONMENT?: string;
+  /** Public site URL for links in emails, e.g. https://talontime.org */
+  APP_URL?: string;
+  /** Secret. When set, email is sent through Resend. */
+  RESEND_API_KEY?: string;
+  /** Sender address on a Resend-verified domain, e.g. "Talon <no-reply@talontime.org>" */
+  EMAIL_FROM?: string;
+  /** "true" prints emails to the console instead of sending (local dev only). */
+  EMAIL_DEV_LOG?: string;
 }
 
 /** Values attached to the request context by middleware. */

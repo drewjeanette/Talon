@@ -1,10 +1,10 @@
 import { Hono, type Context } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, count, eq, gt, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "../db/index.js";
-import { refreshTokens, users } from "../db/schema.js";
+import { passwordResetTokens, refreshTokens, users } from "../db/schema.js";
 import { hashPassword, verifyPassword } from "../lib/password.js";
 import {
   sha256Hex,
@@ -14,6 +14,12 @@ import {
 } from "../lib/jwt.js";
 import { requireAuth } from "../middleware/auth.js";
 import { writeAuditLog } from "../services/audit.service.js";
+import {
+  appUrl,
+  passwordChangedEmail,
+  passwordResetEmail,
+  sendEmailInBackground,
+} from "../services/email.service.js";
 import type { AppEnv } from "../types.js";
 
 export const authRoutes = new Hono<AppEnv>();
@@ -36,13 +42,27 @@ const loginSchema = z.object({
   password: z.string().min(1).max(128),
 });
 
+const newPassword = z
+  .string()
+  .min(12, "New password must be at least 12 characters.")
+  .max(128, "New password must be no more than 128 characters.");
+
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1).max(128),
-  newPassword: z
-    .string()
-    .min(12, "New password must be at least 12 characters.")
-    .max(128, "New password must be no more than 128 characters."),
+  newPassword,
 });
+
+const forgotPasswordSchema = z.object({ email: tntechEmail });
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1).max(200),
+  newPassword,
+});
+
+const RESET_TOKEN_MINUTES = 30;
+// Requests beyond these limits are silently ignored (the response never changes).
+const RESET_LIMIT_PER_USER_PER_HOUR = 3;
+const RESET_LIMIT_PER_IP_PER_HOUR = 10;
 
 interface UserWithDepartment {
   id: number;
@@ -227,5 +247,87 @@ authRoutes.post("/change-password", requireAuth, async (c) => {
   ]);
 
   await writeAuditLog(c, "PASSWORD_CHANGE", "User", user.id);
+  sendEmailInBackground(c, passwordChangedEmail(user.email, user.firstName));
+  return c.body(null, 204);
+});
+
+function randomToken(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+authRoutes.post("/forgot-password", async (c) => {
+  const { email } = forgotPasswordSchema.parse(await c.req.json());
+  // Identical response whether or not the account exists, so this endpoint
+  // cannot be used to discover valid addresses.
+  const response = c.json({
+    message: "If that email belongs to a Talon account, a link to reset the password is on its way.",
+  });
+
+  const db = getDb(c.env.DB);
+  const user = await db.query.users.findFirst({ where: eq(users.email, email) });
+  if (!user || !user.isActive) return response;
+
+  const ip = c.req.header("CF-Connecting-IP") ?? null;
+  const hourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  const [[byUser], [byIp]] = await Promise.all([
+    db.select({ n: count() }).from(passwordResetTokens)
+      .where(and(eq(passwordResetTokens.userId, user.id), gt(passwordResetTokens.createdAt, hourAgo))),
+    ip
+      ? db.select({ n: count() }).from(passwordResetTokens)
+          .where(and(eq(passwordResetTokens.requestedIp, ip), gt(passwordResetTokens.createdAt, hourAgo)))
+      : Promise.resolve([{ n: 0 }]),
+  ]);
+  if (byUser.n >= RESET_LIMIT_PER_USER_PER_HOUR || byIp.n >= RESET_LIMIT_PER_IP_PER_HOUR) return response;
+
+  const token = randomToken();
+  const now = new Date();
+  await db.batch([
+    // Only the newest link works.
+    db.update(passwordResetTokens)
+      .set({ usedAt: now })
+      .where(and(eq(passwordResetTokens.userId, user.id), isNull(passwordResetTokens.usedAt))),
+    db.insert(passwordResetTokens).values({
+      userId: user.id,
+      tokenHash: await sha256Hex(token),
+      expiresAt: new Date(now.getTime() + RESET_TOKEN_MINUTES * 60 * 1000),
+      requestedIp: ip,
+    }),
+  ]);
+
+  await writeAuditLog(c, "PASSWORD_RESET_REQUEST", "User", user.id);
+  const link = `${appUrl(c)}/reset-password?token=${encodeURIComponent(token)}`;
+  sendEmailInBackground(c, passwordResetEmail(user.email, user.firstName, link, RESET_TOKEN_MINUTES));
+  return response;
+});
+
+authRoutes.post("/reset-password", async (c) => {
+  const { token, newPassword } = resetPasswordSchema.parse(await c.req.json());
+  const db = getDb(c.env.DB);
+
+  const stored = await db.query.passwordResetTokens.findFirst({
+    where: and(eq(passwordResetTokens.tokenHash, await sha256Hex(token)), isNull(passwordResetTokens.usedAt)),
+  });
+  const user = stored && stored.expiresAt > new Date()
+    ? await db.query.users.findFirst({ where: eq(users.id, stored.userId) })
+    : undefined;
+  if (!stored || !user || !user.isActive) {
+    throw new HTTPException(400, { message: "This reset link is invalid or has expired. Request a new one." });
+  }
+
+  const passwordHash = await hashPassword(newPassword);
+  const now = new Date();
+  await db.batch([
+    db.update(users).set({ passwordHash, mustResetPw: false }).where(eq(users.id, user.id)),
+    db.update(passwordResetTokens)
+      .set({ usedAt: now })
+      .where(and(eq(passwordResetTokens.userId, user.id), isNull(passwordResetTokens.usedAt))),
+    db.update(refreshTokens)
+      .set({ revokedAt: now })
+      .where(and(eq(refreshTokens.userId, user.id), isNull(refreshTokens.revokedAt))),
+  ]);
+
+  await writeAuditLog(c, "PASSWORD_RESET", "User", user.id);
+  sendEmailInBackground(c, passwordChangedEmail(user.email, user.firstName));
   return c.body(null, 204);
 });

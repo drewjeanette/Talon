@@ -8,3 +8,9 @@ JWT_REFRESH_SECRET=local_dev_refresh_secret_replace_me_with_different_value
 # noticeable when logging in repeatedly against a local dev server. Deployed
 # environments should use the default in wrangler.toml.
 PBKDF2_ITERATIONS=600000
+
+# Links in emails point here. Until RESEND_API_KEY is set, EMAIL_DEV_LOG=true
+# prints every email (including password reset links) to the wrangler console.
+APP_URL=http://localhost:8787
+EMAIL_DEV_LOG=true
+# RESEND_API_KEY=re_...

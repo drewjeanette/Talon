@@ -11,6 +11,7 @@ import { timeclockRoutes } from "./routes/timeclock.routes.js";
 import { payrollRoutes } from "./routes/payroll.routes.js";
 import { reportRoutes } from "./routes/reports.routes.js";
 import { notificationRoutes } from "./routes/notifications.routes.js";
+import { settingsRoutes } from "./routes/settings.routes.js";
 import type { AppEnv } from "./types.js";
 
 const app = new Hono<AppEnv>();
@@ -38,6 +39,7 @@ app.route("/api/timeclock", timeclockRoutes);
 app.route("/api/payroll", payrollRoutes);
 app.route("/api/reports", reportRoutes);
 app.route("/api/notifications", notificationRoutes);
+app.route("/api/settings", settingsRoutes);
 
 app.notFound((c) => c.json({ error: "Not found." }, 404));
 

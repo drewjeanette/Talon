@@ -11,6 +11,7 @@ LINE & TEST
 - [docs/DATABASE.md](docs/DATABASE.md) — ER diagram, schema decisions, migrations
 - [docs/SECURITY.md](docs/SECURITY.md) — threat model, auth design, verified RBAC tests
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — **sharing D1 with your team**, deploying, plan limits
+- [docs/EMAIL.md](docs/EMAIL.md) — Resend setup, password reset, notification emails
 - [docs/PRIVACY-ACCESSIBILITY.md](docs/PRIVACY-ACCESSIBILITY.md) — production privacy and accessibility release checklist
 - [docs/GANTT.md](docs/GANTT.md) — project timeline
 

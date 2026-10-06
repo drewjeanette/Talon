@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, blob, index, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, blob, index, uniqueIndex, primaryKey } from "drizzle-orm/sqlite-core";
 import { relations, sql } from "drizzle-orm";
 
 // Talon schema for Cloudflare D1 (SQLite).
@@ -102,6 +102,46 @@ export const refreshTokens = sqliteTable(
     index("refresh_tokens_user_idx").on(t.userId),
     index("refresh_tokens_hash_idx").on(t.tokenHash),
   ]
+);
+
+// Forgot-password links. Only the SHA-256 of the emailed token is stored, and
+// each token works once before expiresAt.
+export const passwordResetTokens = sqliteTable(
+  "password_reset_tokens",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+    usedAt: integer("used_at", { mode: "timestamp" }),
+    requestedIp: text("requested_ip"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    index("password_reset_tokens_user_idx").on(t.userId, t.createdAt),
+    index("password_reset_tokens_ip_idx").on(t.requestedIp, t.createdAt),
+  ]
+);
+
+// Email notification choices from the Settings page. A missing row means the
+// type's default (on); see lib/notification-types.ts for the catalog.
+export const notificationPreferences = sqliteTable(
+  "notification_preferences",
+  {
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    emailEnabled: integer("email_enabled", { mode: "boolean" }).notNull().default(true),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.type] })]
 );
 
 export const timeEntries = sqliteTable(
