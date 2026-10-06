@@ -91,7 +91,7 @@ export function DashboardPage() {
         )}
 
         {user.role === "SUPERVISOR" && <ReportGenerator />}
-        {user.role !== "ADMIN" && <PayStubList />}
+        {user.role === "STUDENT" && <PayStubList />}
         {user.role === "SUPERVISOR" && <TeamPayStubStatus />}
         {adminSection === "approvals" && <TeamPayStubStatus />}
         {user.role === "SUPERVISOR" && <SupervisorPayRateManager />}
