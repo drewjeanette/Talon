@@ -111,3 +111,26 @@ button:hover:not(:disabled) {
   color: var(--danger);
   font-weight: 600;
 }
+
+.login-card__links {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 1rem 0 0;
+  font-size: 0.9rem;
+}
+
+.login-card__links a {
+  color: var(--tt-purple-dark);
+  font-weight: 600;
+}
+
+.form-notice {
+  padding: 0.6rem 0.75rem;
+  border-left: 4px solid var(--tt-gold);
+  border-radius: 4px;
+  background: #f5f0fb;
+  color: var(--tt-purple-dark);
+  font-weight: 600;
+}

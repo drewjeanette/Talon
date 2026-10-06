@@ -256,7 +256,6 @@ th:last-child { border-radius: 0 8px 8px 0; }
 }
 
 
-.app-header__dashboard-label { color:#fff; font-weight:600; text-decoration:none; cursor:default; }
 .app-header { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; }
 .app-header__brand { justify-self:start; }
 .app-header__nav { justify-self:center; }

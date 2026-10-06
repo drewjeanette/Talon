@@ -374,3 +374,46 @@ textarea { width:100%; min-height:84px; padding:.55rem; border:1px solid var(--b
   .pay-rate-row__controls button { width:100%; }
   .approval-rejection-form { min-width:220px; }
 }
+
+/* Primary nav links (all roles). */
+.app-header__nav { display:flex; align-items:center; gap:1.25rem; }
+.app-header__nav a { display:inline-flex; align-items:center; min-height:24px; padding:.15rem 0; text-decoration:none; border-bottom:2px solid transparent; }
+.app-header__nav a:hover { border-bottom-color:#ffffff99; }
+.app-header__nav a[aria-current="page"] { border-bottom-color:var(--tt-gold); }
+
+/* Settings page, shared by every role. */
+.settings-page { width:100%; max-width:1080px; margin-inline:auto; padding:2rem clamp(1rem,3vw,2rem) 3rem; }
+.settings-page__title { margin:0 0 1.25rem; }
+.settings-layout { display:grid; grid-template-columns:200px minmax(0,1fr); gap:1.5rem; align-items:start; }
+.settings-tabs { display:flex; flex-direction:column; gap:.25rem; position:sticky; top:1rem; }
+.settings-tabs__tab { min-height:44px; padding:.6rem .9rem; border-left:4px solid transparent; border-radius:6px; background:transparent; color:var(--tt-purple-dark); text-align:left; }
+.settings-tabs__tab:hover:not(:disabled) { background:#ece6f5; }
+.settings-tabs__tab[aria-selected="true"] { border-left-color:var(--tt-gold); background:var(--surface); box-shadow:0 2px 8px #33205a14; }
+.settings-panel { display:grid; gap:1.5rem; }
+.settings-card { margin:0; }
+.settings-card h2 { margin:0 0 .35rem; }
+.settings-card__bulk { margin:1rem 0 .25rem; }
+.settings-card__status:empty { display:none; }
+.settings-card__status { color:var(--tt-purple-dark); font-weight:600; }
+.settings-list { margin:0 0 1rem; padding:0; list-style:none; }
+.settings-list__item { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.85rem 0; border-bottom:1px solid var(--border); }
+.settings-list__item > div { display:grid; gap:.1rem; }
+.settings-list__label { font-weight:700; font-size:.95rem; }
+.settings-list__item--locked .settings-list__label { color:#514a5b; }
+.settings-list__always { flex:none; font-size:.85rem; font-weight:700; color:#514a5b; }
+.settings-details { display:grid; grid-template-columns:max-content 1fr; gap:.4rem 1.25rem; margin:1rem 0; }
+.settings-details dt { font-weight:700; color:#514a5b; }
+.settings-details dd { margin:0; overflow-wrap:anywhere; }
+
+/* On/off switch built from a native checkbox (role="switch"), so it keeps native keyboard and screen reader behavior. */
+.settings-list .settings-switch { appearance:none; flex:none; position:relative; width:48px; height:28px; min-height:0; min-width:0; margin:0; padding:0; border:2px solid #6b6474; border-radius:999px; background:#e7e3ed; cursor:pointer; transition:background .15s; }
+.settings-list .settings-switch::after { content:""; position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:50%; background:#6b6474; transition:transform .15s; }
+.settings-list .settings-switch:checked { border-color:var(--tt-purple); background:var(--tt-purple); }
+.settings-list .settings-switch:checked::after { transform:translateX(20px); background:#fff; }
+
+@media (max-width:700px) {
+  .settings-layout { grid-template-columns:1fr; }
+  .settings-tabs { position:static; flex-direction:row; overflow-x:auto; }
+  .settings-tabs__tab { flex:1; text-align:center; border-left:0; border-bottom:4px solid transparent; }
+  .settings-tabs__tab[aria-selected="true"] { border-bottom-color:var(--tt-gold); }
+}

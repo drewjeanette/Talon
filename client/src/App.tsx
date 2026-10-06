@@ -10,6 +10,9 @@ import { useRoleStylesheet } from "./styles/useRoleStylesheet";
 
 const DashboardPage = lazy(() => import("./pages/DashboardPage").then((module) => ({ default: module.DashboardPage })));
 const PrivacyPage = lazy(() => import("./pages/PrivacyPage").then((module) => ({ default: module.PrivacyPage })));
+const SettingsPage = lazy(() => import("./pages/SettingsPage").then((module) => ({ default: module.SettingsPage })));
+const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage").then((module) => ({ default: module.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage").then((module) => ({ default: module.ResetPasswordPage })));
 const AccessibilityPage = lazy(() => import("./pages/AccessibilityPage").then((module) => ({ default: module.AccessibilityPage })));
 
 export default function App() {
@@ -21,6 +24,9 @@ export default function App() {
     const titles: Record<string, string> = {
       "/": "Dashboard | Talon",
       "/login": "Sign In | Talon",
+      "/settings": "Settings | Talon",
+      "/forgot-password": "Forgot Password | Talon",
+      "/reset-password": "Reset Password | Talon",
       "/privacy": "Privacy Notice | Talon",
       "/accessibility": "Accessibility Statement | Talon",
     };
@@ -38,8 +44,11 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/accessibility" element={<AccessibilityPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<DashboardPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

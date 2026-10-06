@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export function NavBar() {
@@ -28,9 +28,8 @@ export function NavBar() {
         <span aria-hidden="true">🦅</span> Talon
       </div>
       <nav aria-label="Primary" className="app-header__nav">
-        {user.role === "ADMIN"
-          ? <Link to="/">Dashboard</Link>
-          : <span className="app-header__dashboard-label" aria-current="page">Dashboard</span>}
+        <NavLink to="/" end>Dashboard</NavLink>
+        <NavLink to="/settings">Settings</NavLink>
       </nav>
       <div className="app-header__user">
         <span className="app-header__name">

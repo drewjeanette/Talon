@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth, ApiError } from "../context/AuthContext";
 import ttuLogo from "../assets/ttu-logo.png";
 
 export function LoginPage() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
+  const notice = (useLocation().state as { notice?: string } | null)?.notice;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +34,7 @@ export function LoginPage() {
         <img className="ttu-corner-logo" src={ttuLogo} alt="Tennessee Tech" fetchPriority="high" />
         <h1 id="login-heading">Talon Sign In</h1>
         <p>Tennessee Tech Payroll &amp; Web Clock</p>
+        {notice && <p role="status" className="form-notice">{notice}</p>}
         <div className="form-row">
           <label htmlFor="email">TN Tech email</label>
           <input
@@ -68,6 +70,7 @@ export function LoginPage() {
         <button type="submit" disabled={busy}>
           {busy ? "Signing in..." : "Sign in"}
         </button>
+        <p className="login-card__links"><Link to="/forgot-password">Forgot password?</Link></p>
       </form>
     </main>
   );
