@@ -12,12 +12,14 @@ for (const role of Object.keys(ACCOUNTS) as Role[]) {
     test.beforeEach(async ({ page }) => {
       await signIn(page, ACCOUNTS[role]);
       await expect(page).toHaveURL(/\/$/);
-      await page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Settings" }).click();
+      await page.getByRole("banner").getByRole("link", { name: "Settings" }).click();
       await expect(page.getByRole("heading", { name: "Settings", level: 1 })).toBeVisible();
     });
 
     test("shows only this role's email notifications and saves changes", async ({ page }) => {
-      await expect(page.getByRole("link", { name: "Settings" })).toHaveAttribute("aria-current", "page");
+      await expect(page.getByRole("banner").getByRole("link", { name: "Settings" })).toHaveAttribute("aria-current", "page");
+      // Dashboard stays in the top-center nav and leads back to the dashboard.
+      await expect(page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Dashboard" })).toBeVisible();
       const switches = page.getByRole("switch");
       await expect(switches).toHaveCount(EXPECTED_TYPES[role].length);
       for (const label of EXPECTED_TYPES[role]) await expect(page.getByRole("switch", { name: label })).toBeVisible();

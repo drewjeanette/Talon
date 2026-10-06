@@ -375,11 +375,11 @@ textarea { width:100%; min-height:84px; padding:.55rem; border:1px solid var(--b
   .approval-rejection-form { min-width:220px; }
 }
 
-/* Primary nav links (all roles). */
-.app-header__nav { display:flex; align-items:center; gap:1.25rem; }
-.app-header__nav a { display:inline-flex; align-items:center; min-height:24px; padding:.15rem 0; text-decoration:none; border-bottom:2px solid transparent; }
-.app-header__nav a:hover { border-bottom-color:#ffffff99; }
-.app-header__nav a[aria-current="page"] { border-bottom-color:var(--tt-gold); }
+/* Settings gear beside the account name (all roles). */
+.app-header__settings { display:inline-grid; place-items:center; width:40px; height:40px; border-radius:50%; color:#fff; }
+.app-header__settings:hover { background:#ffffff26; }
+.app-header__settings[aria-current="page"] { box-shadow:inset 0 0 0 2px var(--tt-gold); }
+.app-header__settings svg { width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 
 /* Settings page, shared by every role. */
 .settings-page { width:100%; max-width:1080px; margin-inline:auto; padding:2rem clamp(1rem,3vw,2rem) 3rem; }
