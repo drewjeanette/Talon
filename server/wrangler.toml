@@ -5,6 +5,9 @@ compatibility_date = "2026-09-01"
 # every wrangler command and deploy to this account.
 account_id = "7fb2c0784ed069a2a238ee33cec0a381"
 
+# Serve the app at https://talontime.org. Cloudflare creates the DNS record.
+routes = [{ pattern = "talontime.org", custom_domain = true }]
+
 # ---------------------------------------------------------------------------
 # D1 binding
 #
