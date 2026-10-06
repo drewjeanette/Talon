@@ -6,6 +6,7 @@ Talon: Tennessee Tech payroll + web-clock. Cloudflare Workers (Hono) API + D1 (D
 - `npm run dev` — full stack at http://localhost:8787 (local D1)
 - `npm run typecheck` — must pass before committing
 - `npm run build` — server typecheck + client build
+- `npm run test:e2e` — Playwright suite (`e2e/`) on an isolated, freshly seeded server at :8788
 - `npm run db:migrate:local` / `db:seed:generate` / `db:seed:local`
 - Never run `db:*:remote` or `deploy` unless explicitly asked.
 
@@ -44,7 +45,9 @@ Talon: Tennessee Tech payroll + web-clock. Cloudflare Workers (Hono) API + D1 (D
 - Custom widgets follow WAI-ARIA patterns (keyboard support included), e.g. Settings tabs and switches.
 
 ## Testing (Playwright)
-- End-to-end tests use Playwright against `npm run dev` (http://localhost:8787) with a local seeded D1.
+- Tests live in `e2e/`. `e2e/start-server.mjs` runs wrangler on :8788 with a fresh D1 in `e2e/.state` on every run.
+- Read emailed links with `latestEmailLink()`; use `expectAccessible()` for the axe scan (both in `e2e/helpers.ts`).
+- Tests that change a password use the per-project `e2e.reset.*` accounts, never the shared demo logins.
 - New features and bug fixes need a Playwright test covering the user flow for every affected role.
-- Include an automated accessibility check (`@axe-core/playwright`, WCAG 2.2 AA tags) on every page a test visits.
+- Run `expectAccessible(page)` (axe, WCAG 2.2 AA tags) on every page a test visits.
 - Tests must never touch the remote database. Use seed accounts or create test data in the test.

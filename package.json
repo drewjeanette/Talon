@@ -17,6 +17,8 @@
     "db:seed:generate": "npm run db:seed:generate --workspace=server",
     "db:seed:local": "npm run db:seed:local --workspace=server",
     "db:seed:remote": "npm run db:seed:remote --workspace=server",
-    "typecheck": "npm run typecheck --workspace=server && npm run typecheck --workspace=client"
+    "typecheck": "npm run typecheck --workspace=server && npm run typecheck --workspace=client",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   }
 }

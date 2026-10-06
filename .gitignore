@@ -15,3 +15,15 @@ client/vite.config.d.ts
 .wrangler/
 server/.dev.vars
 .dev.vars
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+e2e/.state/
+e2e/.server.log
+
+# Local scratch output
+/output/
+/tmp/
