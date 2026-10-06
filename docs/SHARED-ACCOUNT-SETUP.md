@@ -9,7 +9,7 @@ This is the full checklist for:
 Everything here works on the **Free** plan.
 
 **Who does what**
-- 🔒 **Owner only**: needs the owner's personal Cloudflare login, or the place where `talontime.org` was bought.
+- 🔒 **Owner only**: needs the owner's personal Cloudflare login, where `talontime.org` is registered today.
 - 👥 **Anyone with the shared login**: can be handed to a teammate once Part 2 is done.
 
 **Rough time:** about 2 hours of work. The switchover in Part 4 also needs a quiet window of a few hours when nobody is clocking in.
@@ -87,22 +87,31 @@ Tell users ahead of time: *"Talon is down for maintenance from X to Y. Don't clo
    npm run deploy
    ```
    The site is now live at a temporary `talon-api.<something>.workers.dev` address. Open it and sign in with a real account to check that the data is there.
-5. 🔒 **Move the domain.** This depends on where `talontime.org` was bought:
-   - **Somewhere else (Namecheap, GoDaddy, Porkbun, ...):**
-     1. In the shared account, click **Add a domain**, enter `talontime.org` and pick the **Free** plan.
-     2. Import the DNS file from step 2, and remove any record that pointed at the old Worker.
-     3. Cloudflare shows two nameservers. At the registrar, replace the old nameservers with these.
-     4. Wait until the domain shows **Active** in the shared account. That's usually under an hour, at most 24.
-   - **At Cloudflare (Cloudflare Registrar):** moving a registered domain between Cloudflare accounts goes through Cloudflare's "move domain" steps or support. Search the Cloudflare docs for *"move a domain between Cloudflare accounts"* and follow the current steps.
+5. **Move the domain.** `talontime.org` was bought through Cloudflare Registrar, so it moves with Cloudflare's built-in account-to-account move ([Cloudflare docs](https://developers.cloudflare.com/registrar/account-options/inter-account-transfer/)). The move copies only the registration. DNS records, email forwarding and the Worker connection are **all deleted** from the old account, which is why the DNS export in step 2 matters.
+
+   Before you start, check that:
+   - the domain was registered more than 10 days ago
+   - the registrant email is verified (Cloudflare shows a warning on the domain page if it isn't)
+   - **DNSSEC is off** for `talontime.org` in the personal account (DNS → Settings). You can turn it back on in the shared account afterwards.
+
+   Then:
+   1. 👥 In the **shared** account, click **Add a domain**, enter `talontime.org` and pick the **Free** plan. It will show as "Pending". That's expected; don't change anything at the registrar.
+   2. 👥 In the shared account, go to **DNS → Records → Import and Export → Import** and upload the file from step 2. Delete any imported record that pointed at the old Worker; step 6 re-creates it.
+   3. 👥 Copy the shared account's **Account ID** from the right sidebar of its dashboard home page and send it to the owner.
+   4. 🔒 In the **personal** account, go to **Domain Registration → Manage Domains → talontime.org → Configuration**. Under the move-to-another-account section, click **Start**, paste the shared Account ID and submit.
+   5. 👥 Cloudflare emails `admin@talontime.org`, which is still forwarded by the old account at this point. In the **shared** account, go to **Domain Registration → Manage Domains → View Actions** and **Accept** the move. This must happen **within 5 days** or the request is canceled.
+   6. 👥 Wait until `talontime.org` shows **Active** in the shared account. This usually takes minutes to an hour. If it still says "Pending" after a few hours, contact Cloudflare support from the shared account.
+
+   After the move, the domain can't be moved again for 30 days, and renewals are billed to the shared account. Add a payment method there before the renewal date; the domain fee is the only cost.
 6. 👥 **Connect the domain to the Worker.** In the shared account, go to **Workers & Pages → talon-api → Settings → Domains & Routes → Add → Custom domain** and enter `talontime.org`.
 7. 👥 **Test** `https://talontime.org`: sign in, clock in and out with a test account, and open Settings.
-8. 🔒 **Turn off the old site.** In the personal account, delete the `talontime.org` domain, then the old `talon-api` Worker.
+8. 🔒 **Turn off the old site.** The domain is already gone from the personal account after the move. Delete the old `talon-api` Worker there.
    - Keep the old `talon-db` database for **one week** as a backup, then delete it.
    - Delete `talon-backup.sql` from your computer.
 
 ## Part 5: Email forwarding in the shared account (👥 anyone, 5 min)
 
-The DNS file copies the email records, but not the forwarding rules. Set them up again:
+The domain move deletes the forwarding rules, and the DNS file doesn't include them. Until you do this, mail to `admin@talontime.org` is lost. Set them up again right away:
 
 1. In the shared account, go to `talontime.org` → **Email → Email Routing**.
 2. Re-add `admin@talontime.org` with your Gmail (or the Google Group) as the destination, and confirm the email Cloudflare sends.
@@ -157,7 +166,7 @@ The local database is tied to the database ID, so it starts empty after the chan
 
 | Task | Who |
 |---|---|
-| Part 1, Part 2, Part 4 steps 1, 2, 5 and 8 | 🔒 Owner (personal account or the registrar) |
+| Part 1, Part 2, Part 4 steps 1, 2, 5.4 and 8 | 🔒 Owner (personal Cloudflare account) |
 | Deploying, database migrations, secrets | 👥 Anyone in the shared account |
 | DNS records, email forwarding, Resend | 👥 Anyone in the shared account (and on Resend) |
 | Inviting or removing teammates | 👥 Shared account Super Administrator |
