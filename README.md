@@ -4,7 +4,23 @@ A redesign of Tennessee Tech's payroll and web-clock system, replacing the Oracl
 with a modern, secure web app running entirely on **Cloudflare** — a Workers API, a D1 database, and
 a React frontend published as Worker static assets. No servers, no VMs, no open database ports.
 
-LINE & TEST
+**Live:** [talontime.org](https://talontime.org) · Every push to `main` is typechecked, run through
+Playwright end-to-end and accessibility tests in GitHub Actions, and deployed only if they pass.
+
+| Student web clock | Admin tools |
+|---|---|
+| ![Student dashboard with web clock, current timecard and pay stubs](docs/screenshots/student-dashboard.png) | ![Admin dashboard with approvals, payroll, user and department tools](docs/screenshots/admin-dashboard.png) |
+
+More: [login](docs/screenshots/login.png) · [supervisor dashboard](docs/screenshots/supervisor-dashboard.png)
+(all screenshots use the local demo seed data).
+
+## My role
+
+Talon is a Tennessee Tech capstone project. I designed and built it end to end: the Workers API and
+D1 schema, auth and role-based access control, the payroll engine, the React frontend, the
+Playwright test suite, and the CI/CD pipeline that deploys to talontime.org. I wrote 33 of the
+project's 35 commits.
+
 ## Docs
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — stack, layout, request flow, role/feature matrix
