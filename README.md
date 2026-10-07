@@ -16,10 +16,9 @@ More: [login](docs/screenshots/login.png) · [supervisor dashboard](docs/screens
 
 ## My role
 
-Talon is a Tennessee Tech capstone project. I designed and built it end to end: the Workers API and
+Talon is a Tennessee Tech capstone project. We designed and built it end to end: the Workers API and
 D1 schema, auth and role-based access control, the payroll engine, the React frontend, the
-Playwright test suite, and the CI/CD pipeline that deploys to talontime.org. I wrote 33 of the
-project's 35 commits.
+Playwright test suite, and the CI/CD pipeline that deploys to talontime.org.
 
 ## Docs
 
