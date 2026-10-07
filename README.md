@@ -14,7 +14,6 @@ Playwright end-to-end and accessibility tests in GitHub Actions, and deployed on
 More: [login](docs/screenshots/login.png) · [supervisor dashboard](docs/screenshots/supervisor-dashboard.png)
 (all screenshots use the local demo seed data).
 
-## My role
 
 Talon is a Tennessee Tech capstone project. We designed and built it end to end: the Workers API and
 D1 schema, auth and role-based access control, the payroll engine, the React frontend, the
