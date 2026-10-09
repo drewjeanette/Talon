@@ -271,7 +271,7 @@ th,td { padding:.75rem; }
 th:first-child { border-radius:8px 0 0 8px; }
 th:last-child { border-radius:0 8px 8px 0; }
 .status-message:not(:empty) { margin:1rem 0 0; padding:.7rem .85rem; border-left:4px solid var(--tt-purple); border-radius:6px; background:var(--tt-purple-soft); color:var(--tt-purple-dark); font-weight:650; }
-.pay-stubs tbody td:last-child,.pay-period-manager tbody td:nth-child(4) { color:var(--tt-purple-dark); font-weight:800; text-transform:capitalize; }
+.pay-stubs tbody td:last-child,.pay-period-manager > .table-scroll tbody td:nth-child(4) { color:var(--tt-purple-dark); font-weight:800; text-transform:capitalize; }
 .app-header__role { font-weight:800; }
 
 /* ---------- Admin dashboard ---------- */
@@ -447,3 +447,6 @@ th:last-child { border-radius:0 8px 8px 0; }
   .talon-report-controls { grid-template-columns:1fr; }
   .talon-report-actions button { flex:1 1 100%; width:100%; }
 }
+
+/* A lone last tile (odd count) spans the row instead of leaving a gap. */
+.admin-tile:last-child:nth-child(odd) { grid-column:1 / -1; min-height:0; }

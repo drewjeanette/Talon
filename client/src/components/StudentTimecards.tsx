@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
+import { waitingFor } from "../lib/work";
 
 interface TimeEntry {
   id: number;
@@ -9,17 +10,9 @@ interface TimeEntry {
   reviewedBy?: string | null;
 }
 
+/** Only the dates are needed here: stubs mark where past timecards begin and end. */
 interface PayStub {
   id: number;
-  regularHours: string;
-  overtimeHours: string;
-  grossPay: string;
-  hourlyRate: string | null;
-  status: "DRAFT" | "FINALIZED" | "PAID";
-  reviewStatus: "PENDING" | "APPROVED" | "REJECTED";
-  reviewedBy?: string | null;
-  reviewReason?: string | null;
-  processedBy?: string | null;
   payPeriod: { startDate: string; endDate: string; payDate: string };
 }
 
@@ -32,10 +25,11 @@ function date(value: string): string {
   return new Date(value).toLocaleDateString();
 }
 
-function TimecardTable({ entries, caption }: { entries: TimeEntry[]; caption: string }) {
+/** `waitingOn` names who can approve pending shifts; shown with how long each has waited. */
+function TimecardTable({ entries, caption, waitingOn }: { entries: TimeEntry[]; caption: string; waitingOn?: string }) {
   return <div className="table-scroll" role="region" aria-label={caption} tabIndex={0}><table>
     <caption className="sr-only">{caption}</caption>
-    <thead><tr><th scope="col">Clock In</th><th scope="col">Clock Out</th><th scope="col">Hrs Worked</th><th scope="col">Status</th><th scope="col">Reviewed By</th></tr></thead>
+    <thead><tr><th scope="col">Clock In</th><th scope="col">Clock Out</th><th scope="col">Hrs Worked</th><th scope="col">Status</th><th scope="col">{waitingOn ? "Reviewed By / Waiting On" : "Reviewed By"}</th></tr></thead>
     <tbody>
       {entries.length === 0 && <tr><td colSpan={5}>No time entries were recorded for this period.</td></tr>}
       {entries.map((entry) => <tr key={entry.id} className={entry.clockOut ? undefined : "talon-live-entry"}>
@@ -43,13 +37,19 @@ function TimecardTable({ entries, caption }: { entries: TimeEntry[]; caption: st
         <td>{entry.clockOut ? new Date(entry.clockOut).toLocaleString() : "In progress"}</td>
         <td>{entry.clockOut ? hours(entry).toFixed(2) : "—"}</td>
         <td className="talon-timecard__status">{entry.clockOut ? entry.status : "CLOCKED IN"}</td>
-        <td>{entry.reviewedBy ? <span className="talon-timecard__signature">{entry.reviewedBy}</span> : "—"}</td>
+        <td>
+          {entry.reviewedBy
+            ? <span className="talon-timecard__signature">{entry.reviewedBy}</span>
+            : waitingOn && entry.status === "PENDING" && entry.clockOut
+              ? <span className="timecard-waiting">Waiting on {waitingOn} · {waitingFor(entry.clockOut)}</span>
+              : "—"}
+        </td>
       </tr>)}
     </tbody>
   </table></div>;
 }
 
-export function StudentTimecards({ entries }: { entries: TimeEntry[] }) {
+export function StudentTimecards({ entries, waitingOn }: { entries: TimeEntry[]; waitingOn: string }) {
   const [stubs, setStubs] = useState<PayStub[]>([]);
 
   useEffect(() => {
@@ -58,7 +58,8 @@ export function StudentTimecards({ entries }: { entries: TimeEntry[] }) {
 
   const groups = useMemo(() => stubs.map((stub) => {
     const start = new Date(stub.payPeriod.startDate).getTime();
-    const end = new Date(stub.payPeriod.endDate).getTime() + 86_400_000 - 1;
+    // Through the end of the period's last day, whether endDate is midnight or 23:59.
+    const end = Math.floor(new Date(stub.payPeriod.endDate).getTime() / 86_400_000) * 86_400_000 + 86_400_000 - 1;
     return { stub, entries: entries.filter((entry) => {
       const clockIn = new Date(entry.clockIn).getTime();
       return clockIn >= start && clockIn <= end;
@@ -78,28 +79,7 @@ export function StudentTimecards({ entries }: { entries: TimeEntry[] }) {
         <h2 id="talon-current-timecard-heading">Current Timecard</h2>
         <span className="talon-timecards__total">{date(currentStart.toISOString())} – {date(currentEnd.toISOString())} · {currentHours.toFixed(2)} hrs</span>
       </div>
-      <TimecardTable entries={currentEntries} caption="Current timecard" />
-    </section>
-
-    <section className="card talon-student-paystubs" aria-labelledby="talon-student-paystubs-heading">
-      <h2 id="talon-student-paystubs-heading">My Pay Stubs</h2>
-      <div className="table-scroll" role="region" aria-label="Biweekly pay stubs" tabIndex={0}><table>
-        <caption className="sr-only">Biweekly pay stubs</caption>
-        <thead><tr><th scope="col">Pay Period</th><th scope="col">Pay</th><th scope="col">Pay Date</th><th scope="col">Hrs Worked</th><th scope="col">Gross Pay</th><th scope="col">Payroll Status</th><th scope="col">Review Status</th><th scope="col">Reviewed By</th></tr></thead>
-        <tbody>
-          {stubs.length === 0 && <tr><td colSpan={8}>No pay stubs are available yet.</td></tr>}
-          {stubs.map((stub) => <tr key={stub.id}>
-            <td>{date(stub.payPeriod.startDate)} – {date(stub.payPeriod.endDate)}</td>
-            <td>{stub.hourlyRate === null ? "—" : `$${stub.hourlyRate}`}</td>
-            <td>{date(stub.payPeriod.payDate)}</td>
-            <td>{(Number(stub.regularHours) + Number(stub.overtimeHours)).toFixed(2)}</td>
-            <td>${stub.grossPay}</td>
-            <td className="talon-timecard__status">{stub.status}</td>
-            <td className="talon-timecard__status">{stub.reviewStatus}</td>
-            <td>{stub.reviewedBy ? <span className="talon-timecard__signature">{stub.reviewedBy}</span> : "—"}{stub.reviewReason && <small className="talon-review-reason">{stub.reviewReason}</small>}</td>
-          </tr>)}
-        </tbody>
-      </table></div>
+      <TimecardTable entries={currentEntries} caption="Current timecard" waitingOn={waitingOn} />
     </section>
 
     <section className="card talon-past-timecards" aria-labelledby="talon-past-timecards-heading">

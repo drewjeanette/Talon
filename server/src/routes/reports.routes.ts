@@ -1,8 +1,7 @@
 import { Hono } from "hono";
-import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "../db/index.js";
-import { notifications, reportRuns } from "../db/schema.js";
+import { reportRuns } from "../db/schema.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { buildPayrollReportRows, rowsToCsv, type ReportScope } from "../services/report.service.js";
 import { supervisedStudentIds } from "../services/access.service.js";
@@ -71,9 +70,6 @@ reportRoutes.get("/payroll", async (c) => {
     format: query.format,
     rowCount: rows.length,
   });
-  // Opening the report is the action a "report ready" to-do asks for.
-  await db.update(notifications).set({ readAt: new Date(), dismissedAt: new Date() })
-    .where(and(eq(notifications.recipientUserId, me.id), eq(notifications.type, "REPORT_READY"), isNull(notifications.dismissedAt)));
 
   if (query.format === "json") return c.json(rows);
 

@@ -35,7 +35,7 @@ export function NavBar() {
       </nav>
       <div className="app-header__user">
         <span className="app-header__name">
-          {user.firstName} &middot; {user.role === "ADMIN"
+          {user.preferredName || user.firstName} &middot; {user.role === "ADMIN"
             ? user.role
             : <strong className="app-header__role">{user.role}</strong>}
         </span>

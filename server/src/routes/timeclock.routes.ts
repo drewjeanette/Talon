@@ -197,26 +197,6 @@ timeclockRoutes.patch("/:id/correct", requireRole("SUPERVISOR"), async (c) => {
   return c.json(updated);
 });
 
-const chargeAccountChangeSchema = z.object({ chargeAccountId: z.number().int().nullable() });
-
-/** Moves a shift to another charge account, e.g. a student who also works a grant job. */
-timeclockRoutes.patch("/:id/charge-account", requireRole("SUPERVISOR"), async (c) => {
-  const id = Number(c.req.param("id"));
-  if (!Number.isInteger(id)) throw new HTTPException(400, { message: "Invalid entry id." });
-  const { chargeAccountId } = chargeAccountChangeSchema.parse(await c.req.json());
-  const db = getDb(c.env.DB);
-  const entry = await db.query.timeEntries.findFirst({ where: eq(timeEntries.id, id) });
-  if (!entry) throw new HTTPException(404, { message: "Time entry not found." });
-  await assertCanManageStudent(db, c.get("user"), entry.userId);
-  if (chargeAccountId !== null) {
-    const account = await db.query.chargeAccounts.findFirst({ where: eq(chargeAccounts.id, chargeAccountId) });
-    if (!account?.isActive) throw new HTTPException(422, { message: "Choose an active charge account." });
-  }
-  await db.update(timeEntries).set({ chargeAccountId, updatedAt: new Date() }).where(eq(timeEntries.id, id));
-  await writeAuditLog(c, "TIME_ENTRY_CHARGE_ACCOUNT", "TimeEntry", id, { from: entry.chargeAccountId, to: chargeAccountId });
-  return c.json({ saved: true });
-});
-
 const changeRequestSchema = z.object({
   timeEntryId: z.number().int().positive().nullable().optional(),
   clockIn: z.string().datetime(),

@@ -13,18 +13,22 @@ Talon: Tennessee Tech payroll + web-clock. Cloudflare Workers (Hono) API + D1 (D
 
 ## Layout
 - `server/src/routes/*.routes.ts` — Hono routers, mounted under `/api/*` in `server/src/index.ts`
-- `server/src/services/` — payroll, reports, audit logic
+- `server/src/services/` — payroll, reports, audit, access (who may act on a student), reminder (payroll deadline emails) logic
+- `server/src/lib/payroll-math.ts` — overtime split and charge-account attribution shared by stubs and reports
 - `server/src/middleware/auth.ts` — `requireAuth`, `requireRole`
 - `server/src/db/schema.ts` — Drizzle schema; `server/migrations/` — committed SQL migrations
 - `client/src/pages`, `components`, `api/client.ts`, `context/AuthContext.tsx`
 - `server/src/lib/email.ts`, `services/email.service.ts` — all outbound email (Resend); see `docs/EMAIL.md`
 - `server/src/lib/notification-types.ts` — email notification catalog shown in Settings
 - `client/src/pages/SettingsPage.tsx` — add Settings tabs via its `SECTIONS` array
+- `client/src/components/PersonSearch.tsx` + `lib/nameSearch.ts` — the one person search (nicknames, typos); use it for every name search
+- `client/src/components/DateField.tsx` — the one date/time picker; values commit only via the form's button
+- `client/src/components/WorkQueue.tsx` — the one to-do list, fed by `GET /api/notifications/todos`; items clear only when the work is done
 - `docs/` — architecture, database, security, deployment, email, privacy/accessibility
 
 ## Rules
 - Roles: `STUDENT` < `SUPERVISOR` < `ADMIN`. `requireRole(...)` always lets `ADMIN` through.
-- Enforce authorization server-side; client role checks are UI only. Supervisors are scoped to their own department.
+- Enforce authorization server-side; client role checks are UI only. Supervisors are scoped to the students assigned to them (`student_supervisors`; a student can have several). Use `services/access.service.ts` (`assertCanManageStudent`, `supervisedStudentIds`) rather than writing the check again.
 - Validate request bodies with zod (`schema.parse(await c.req.json())`).
 - Money is integer cents, time is integer minutes. Use `server/src/lib/money.ts`; convert only at the API boundary. No float dollars.
 - Call `writeAuditLog` for every significant mutation.
@@ -32,6 +36,7 @@ Talon: Tennessee Tech payroll + web-clock. Cloudflare Workers (Hono) API + D1 (D
 - Emails must be normalized `@tntech.edu` (enforced in API and D1 triggers).
 - Never commit secrets (`server/.dev.vars`, JWT secrets). Passwords are scrypt hashes only.
 - Send email only through `getEmailSender()`/`emailNotification()`. Never log reset tokens or links outside `EMAIL_DEV_LOG`.
+- Email only when someone must act (reminders, escalations, summaries). No confirmations like "you submitted X" or "X was approved".
 - Auth endpoints that take an email must not reveal whether the account exists.
 - Don't commit `output/`, `tmp/`, `dist/`, or `.wrangler/`.
 - Free Workers plan's 10ms CPU limit breaks password hashing in production; local dev is unaffected.

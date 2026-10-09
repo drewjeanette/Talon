@@ -8,6 +8,7 @@ export interface CurrentUser {
   email: string;
   firstName: string;
   lastName: string;
+  preferredName: string | null;
   role: Role;
   payType: "BIWEEKLY" | "MONTHLY";
   mustResetPw: boolean;

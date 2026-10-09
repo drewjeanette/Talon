@@ -72,13 +72,15 @@ sequenceDiagram
 | Feature | Student | Supervisor | Admin |
 |---|:---:|:---:|:---:|
 | Clock in/out and view own timesheet | ✅ | When paid biweekly | — |
-| View own pay stubs | ✅ | ✅ | — |
-| Approve/reject direct reports' time entries | — | ✅ (own reports only) | ✅ (all) |
-| Correct a time entry | — | ✅ (own reports only) | ✅ (all) |
-| Generate payroll report | — | ✅ (own department, server-enforced) | ✅ (any scope) |
+| View/download own pay stubs (PDF) | ✅ | ✅ | ✅ |
+| Approve/reject time entries and corrections | — | ✅ (assigned students) | ✅ (all) |
+| Correct a time entry | — | ✅ (assigned students) | ✅ (all) |
+| Review student pay stubs (single or batch), ask/answer questions | — | ✅ (assigned students) | ✅ (all) |
+| Change a student's hourly rate | — | ✅ (assigned students) | ✅ (all) |
+| Payroll report, comparison, CSV | — | ✅ (assigned students, server-enforced) | ✅ (any filter) |
 | Create/deactivate users | — | — | ✅ |
 | Create/generate/finalize pay periods | — | — | ✅ |
-| Manage department/college codes | — | — | ✅ |
+| Manage department/college codes and charge accounts | — | — | ✅ |
 
 Pay **cycle** is independent of role: it is a property of `payType`, so the schema does not assume
 every student is hourly.

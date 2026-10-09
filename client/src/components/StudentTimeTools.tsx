@@ -1,5 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api, ApiError } from "../api/client";
+import { notifyWorkChanged, waitingFor } from "../lib/work";
+import { DateField } from "./DateField";
 
 interface TimeEntryOption {
   id: number;
@@ -16,6 +18,14 @@ interface CorrectionRequest {
   status: "PENDING" | "APPROVED" | "REJECTED";
   reviewerName: string | null;
   reviewerReason: string | null;
+  waitingOn: string[];
+  createdAt: string;
+}
+
+/** "Sabrina Supervisor or Marcus Reyes" (any of them can approve). */
+export function approverList(names: string[]): string {
+  if (names.length === 0) return "a payroll administrator";
+  return names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}`;
 }
 
 function toLocalInput(value: string): string {
@@ -73,10 +83,11 @@ export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryO
         clockOut: new Date(clockOut).toISOString(),
         reason: reason.trim(),
       });
-      setMessage("Correction sent to your supervisor for approval.");
+      setMessage("Correction sent for approval. Any of your supervisors can approve it.");
       setReason("");
       await loadRequests();
       onSubmitted();
+      notifyWorkChanged();
     } catch (error) {
       setMessage(error instanceof ApiError ? error.message : "Could not submit the correction.");
     } finally {
@@ -90,7 +101,7 @@ export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryO
       <p className="student-pay-rate">Your hourly pay rate: <strong>{hourlyRate === null ? "Not set" : `$${hourlyRate} per hour`}</strong></p>
       <form onSubmit={submit}>
         <h3>Missed a clock-in or clock-out?</h3>
-        <p>Choose a shift to edit, or request a completely missed shift. Your supervisor must approve every change.</p>
+        <p>Choose a shift to edit, or request a completely missed shift. One of your supervisors must approve every change.</p>
         <div className="form-row">
           <label htmlFor="correction-shift">Shift to correct</label>
           <select id="correction-shift" value={target} onChange={(event) => chooseShift(event.target.value)}>
@@ -99,14 +110,8 @@ export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryO
           </select>
         </div>
         <div className="form-row-group">
-          <div className="form-row">
-            <label htmlFor="requested-clock-in">Correct clock-in</label>
-            <input id="requested-clock-in" type="datetime-local" value={clockIn} onChange={(event) => setClockIn(event.target.value)} required />
-          </div>
-          <div className="form-row">
-            <label htmlFor="requested-clock-out">Correct clock-out</label>
-            <input id="requested-clock-out" type="datetime-local" value={clockOut} onChange={(event) => setClockOut(event.target.value)} required />
-          </div>
+          <DateField id="requested-clock-in" label="Correct clock-in" type="datetime-local" value={clockIn} onChange={setClockIn} commitLabel="Send for approval" required />
+          <DateField id="requested-clock-out" label="Correct clock-out" type="datetime-local" value={clockOut} onChange={setClockOut} commitLabel="Send for approval" required />
         </div>
         <div className="form-row">
           <label htmlFor="correction-reason">Reason for the correction</label>
@@ -122,6 +127,7 @@ export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryO
             <strong>{request.timeEntryId ? "Shift correction" : "Missed shift"}: {request.status}</strong>
             <span>{new Date(request.requestedClockIn).toLocaleString()} – {new Date(request.requestedClockOut).toLocaleString()}</span>
             <span>Reason: {request.reason}</span>
+            {request.status === "PENDING" && <span className="correction-history__waiting">Waiting on {approverList(request.waitingOn)} · pending {waitingFor(request.createdAt)}</span>}
             {request.reviewerName && <span>Reviewed by {request.reviewerName}</span>}
             {request.reviewerReason && <span>Supervisor response: {request.reviewerReason}</span>}
           </li>)}

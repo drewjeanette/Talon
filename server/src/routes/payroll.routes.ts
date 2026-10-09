@@ -311,18 +311,16 @@ payrollRoutes.post("/team-stubs/approve", requireRole("SUPERVISOR"), async (c) =
 const flagSchema = z.object({ note: z.string().trim().min(3, "Describe the question.").max(500) });
 
 /**
- * Raises a question on a stub so it can be discussed in Talon instead of by
- * email. The student, an assigned supervisor, or an admin can ask.
+ * Raises a question on a student's stub so it can be discussed in Talon
+ * instead of by email. Any admin or assigned supervisor can ask or answer.
  */
-payrollRoutes.post("/stubs/:id/flag", async (c) => {
+payrollRoutes.post("/stubs/:id/flag", requireRole("SUPERVISOR"), async (c) => {
   const id = Number(c.req.param("id"));
   if (!Number.isInteger(id)) throw new HTTPException(400, { message: "Invalid pay stub id." });
   const { note } = flagSchema.parse(await c.req.json());
   const db = getDb(c.env.DB);
   const me = c.get("user");
-  const stub = await db.query.payStubs.findFirst({ where: eq(payStubs.id, id) });
-  if (!stub) throw new HTTPException(404, { message: "Pay stub not found." });
-  if (stub.userId !== me.id) await assertCanManageStudent(db, me, stub.userId);
+  await reviewableStub(db, me, id);
 
   await db.update(payStubs).set({
     flagNote: note,
