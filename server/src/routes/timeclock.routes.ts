@@ -3,9 +3,10 @@ import { HTTPException } from "hono/http-exception";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "../db/index.js";
-import { timeEntries, timeEntryChangeRequests, users } from "../db/schema.js";
+import { chargeAccounts, timeEntries, timeEntryChangeRequests, users } from "../db/schema.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { writeAuditLog } from "../services/audit.service.js";
+import { assertCanManageStudent, fullName, supervisedStudentIds, supervisorsByStudent } from "../services/access.service.js";
 import type { AppEnv } from "../types.js";
 
 export const timeclockRoutes = new Hono<AppEnv>();
@@ -21,9 +22,11 @@ timeclockRoutes.post("/clock-in", async (c) => {
   });
   if (open) throw new HTTPException(409, { message: "Already clocked in." });
 
+  // The shift is charged to the job's account as of clock-in.
+  const owner = await db.query.users.findFirst({ where: eq(users.id, me.id), columns: { chargeAccountId: true } });
   const [entry] = await db
     .insert(timeEntries)
-    .values({ userId: me.id, clockIn: new Date(), source: "WEB" })
+    .values({ userId: me.id, clockIn: new Date(), source: "WEB", chargeAccountId: owner?.chargeAccountId ?? null })
     .returning();
 
   await writeAuditLog(c, "CLOCK_IN", "TimeEntry", entry.id);
@@ -46,13 +49,6 @@ timeclockRoutes.post("/clock-out", async (c) => {
     .returning();
 
   await writeAuditLog(c, "CLOCK_OUT", "TimeEntry", entry.id);
-  await c.env.DB.prepare(`
-    INSERT INTO notifications (recipient_user_id, sender_user_id, type, title, body, action, requires_action)
-    SELECT id, ?, 'CLOCK_OUT', 'Biweekly pay ready',
-           (SELECT first_name FROM users WHERE id = ?) || ' clocked out. Review and finalize pay for the current biweekly period.',
-           'FINALIZE_PAY', 1
-    FROM users WHERE role = 'ADMIN' AND is_active = 1
-  `).bind(me.id, me.id).run();
   return c.json(entry);
 });
 
@@ -79,10 +75,10 @@ timeclockRoutes.get("/pending", requireRole("SUPERVISOR"), async (c) => {
   const db = getDb(c.env.DB);
   const me = c.get("user");
 
-  // Supervisors see only their own direct reports. Enforced in the query, not
+  // Supervisors see only students assigned to them. Enforced in the query, not
   // just hidden in the UI.
   const conditions = [eq(timeEntries.status, "PENDING" as const)];
-  if (me.role !== "ADMIN") conditions.push(eq(users.supervisorId, me.id));
+  if (me.role !== "ADMIN") conditions.push(inArray(users.id, supervisedStudentIds(db, me.id)));
 
   const rows = await db
     .select({
@@ -93,9 +89,14 @@ timeclockRoutes.get("/pending", requireRole("SUPERVISOR"), async (c) => {
       userId: users.id,
       firstName: users.firstName,
       lastName: users.lastName,
+      preferredName: users.preferredName,
+      chargeAccountId: chargeAccounts.id,
+      chargeAccountCode: chargeAccounts.code,
+      chargeAccountName: chargeAccounts.name,
     })
     .from(timeEntries)
     .innerJoin(users, eq(timeEntries.userId, users.id))
+    .leftJoin(chargeAccounts, eq(timeEntries.chargeAccountId, chargeAccounts.id))
     .where(and(...conditions))
     .orderBy(timeEntries.clockIn);
 
@@ -104,8 +105,11 @@ timeclockRoutes.get("/pending", requireRole("SUPERVISOR"), async (c) => {
       id: r.id,
       clockIn: r.clockIn,
       clockOut: r.clockOut,
+      // A shift is submitted for approval when the student clocks out.
+      submittedAt: r.clockOut,
       status: r.status,
-      user: { id: r.userId, firstName: r.firstName, lastName: r.lastName },
+      chargeAccount: r.chargeAccountId ? { id: r.chargeAccountId, code: r.chargeAccountCode, name: r.chargeAccountName } : null,
+      user: { id: r.userId, firstName: r.firstName, lastName: r.lastName, preferredName: r.preferredName, fullName: fullName(r) },
     }))
   );
 });
@@ -130,13 +134,7 @@ timeclockRoutes.patch("/:id/decision", requireRole("SUPERVISOR"), async (c) => {
   const entry = await db.query.timeEntries.findFirst({ where: eq(timeEntries.id, id) });
   if (!entry) throw new HTTPException(404, { message: "Time entry not found." });
   if (entry.status !== "PENDING") throw new HTTPException(409, { message: "This time entry has already been reviewed." });
-
-  if (me.role === "SUPERVISOR") {
-    const owner = await db.query.users.findFirst({ where: eq(users.id, entry.userId) });
-    if (owner?.supervisorId !== me.id) {
-      throw new HTTPException(403, { message: "You do not supervise this employee." });
-    }
-  }
+  await assertCanManageStudent(db, me, entry.userId);
 
   const [updated] = await db
     .update(timeEntries)
@@ -173,14 +171,9 @@ timeclockRoutes.patch("/:id/correct", requireRole("SUPERVISOR"), async (c) => {
   const db = getDb(c.env.DB);
   const me = c.get("user");
 
-  if (me.role === "SUPERVISOR") {
-    const entry = await db.query.timeEntries.findFirst({ where: eq(timeEntries.id, id) });
-    if (!entry) throw new HTTPException(404, { message: "Time entry not found." });
-    const owner = await db.query.users.findFirst({ where: eq(users.id, entry.userId) });
-    if (owner?.supervisorId !== me.id) {
-      throw new HTTPException(403, { message: "You do not supervise this employee." });
-    }
-  }
+  const entry = await db.query.timeEntries.findFirst({ where: eq(timeEntries.id, id) });
+  if (!entry) throw new HTTPException(404, { message: "Time entry not found." });
+  await assertCanManageStudent(db, me, entry.userId);
 
   // A correction re-enters the approval queue rather than silently taking
   // effect, and records who made it.
@@ -202,6 +195,26 @@ timeclockRoutes.patch("/:id/correct", requireRole("SUPERVISOR"), async (c) => {
 
   await writeAuditLog(c, "TIME_ENTRY_CORRECT", "TimeEntry", id);
   return c.json(updated);
+});
+
+const chargeAccountChangeSchema = z.object({ chargeAccountId: z.number().int().nullable() });
+
+/** Moves a shift to another charge account, e.g. a student who also works a grant job. */
+timeclockRoutes.patch("/:id/charge-account", requireRole("SUPERVISOR"), async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isInteger(id)) throw new HTTPException(400, { message: "Invalid entry id." });
+  const { chargeAccountId } = chargeAccountChangeSchema.parse(await c.req.json());
+  const db = getDb(c.env.DB);
+  const entry = await db.query.timeEntries.findFirst({ where: eq(timeEntries.id, id) });
+  if (!entry) throw new HTTPException(404, { message: "Time entry not found." });
+  await assertCanManageStudent(db, c.get("user"), entry.userId);
+  if (chargeAccountId !== null) {
+    const account = await db.query.chargeAccounts.findFirst({ where: eq(chargeAccounts.id, chargeAccountId) });
+    if (!account?.isActive) throw new HTTPException(422, { message: "Choose an active charge account." });
+  }
+  await db.update(timeEntries).set({ chargeAccountId, updatedAt: new Date() }).where(eq(timeEntries.id, id));
+  await writeAuditLog(c, "TIME_ENTRY_CHARGE_ACCOUNT", "TimeEntry", id, { from: entry.chargeAccountId, to: chargeAccountId });
+  return c.json({ saved: true });
 });
 
 const changeRequestSchema = z.object({
@@ -257,10 +270,13 @@ timeclockRoutes.get("/correction-requests/mine", async (c) => {
     ? await db.select({ id: users.id, firstName: users.firstName }).from(users).where(inArray(users.id, reviewerIds))
     : [];
   const reviewerNames = new Map(reviewers.map((reviewer) => [reviewer.id, reviewer.firstName]));
+  // Pending requests can be approved by any assigned supervisor or any admin.
+  const approvers = (await supervisorsByStudent(db, [c.get("user").id])).get(c.get("user").id) ?? [];
 
   return c.json(requests.map((request) => ({
     ...request,
     reviewerName: request.reviewerId ? reviewerNames.get(request.reviewerId) ?? null : null,
+    waitingOn: request.status === "PENDING" ? approvers.map((approver) => approver.name) : [],
   })));
 });
 
@@ -268,7 +284,7 @@ timeclockRoutes.get("/correction-requests/pending", requireRole("SUPERVISOR"), a
   const db = getDb(c.env.DB);
   const me = c.get("user");
   const conditions = [eq(timeEntryChangeRequests.status, "PENDING" as const)];
-  if (me.role !== "ADMIN") conditions.push(eq(users.supervisorId, me.id));
+  if (me.role !== "ADMIN") conditions.push(inArray(users.id, supervisedStudentIds(db, me.id)));
 
   const rows = await db.select({
     id: timeEntryChangeRequests.id,
@@ -276,11 +292,13 @@ timeclockRoutes.get("/correction-requests/pending", requireRole("SUPERVISOR"), a
     requestedClockIn: timeEntryChangeRequests.requestedClockIn,
     requestedClockOut: timeEntryChangeRequests.requestedClockOut,
     reason: timeEntryChangeRequests.reason,
+    createdAt: timeEntryChangeRequests.createdAt,
     currentClockIn: timeEntries.clockIn,
     currentClockOut: timeEntries.clockOut,
     userId: users.id,
     firstName: users.firstName,
     lastName: users.lastName,
+    preferredName: users.preferredName,
   }).from(timeEntryChangeRequests)
     .innerJoin(users, eq(timeEntryChangeRequests.userId, users.id))
     .leftJoin(timeEntries, eq(timeEntryChangeRequests.timeEntryId, timeEntries.id))
@@ -293,9 +311,10 @@ timeclockRoutes.get("/correction-requests/pending", requireRole("SUPERVISOR"), a
     requestedClockIn: row.requestedClockIn,
     requestedClockOut: row.requestedClockOut,
     reason: row.reason,
+    submittedAt: row.createdAt,
     currentClockIn: row.currentClockIn,
     currentClockOut: row.currentClockOut,
-    user: { id: row.userId, firstName: row.firstName, lastName: row.lastName },
+    user: { id: row.userId, firstName: row.firstName, lastName: row.lastName, preferredName: row.preferredName, fullName: fullName(row) },
   })));
 });
 
@@ -320,9 +339,8 @@ timeclockRoutes.patch("/correction-requests/:id/decision", requireRole("SUPERVIS
 
   const owner = await db.query.users.findFirst({ where: eq(users.id, request.userId) });
   if (!owner) throw new HTTPException(404, { message: "Student not found." });
-  if (me.role === "SUPERVISOR" && owner.supervisorId !== me.id) {
-    throw new HTTPException(403, { message: "You do not supervise this student." });
-  }
+  // Any assigned supervisor or any admin, not one primary approver.
+  await assertCanManageStudent(db, me, owner.id);
 
   const review = {
     status: body.status,
@@ -350,7 +368,7 @@ timeclockRoutes.patch("/correction-requests/:id/decision", requireRole("SUPERVIS
       ]);
     } else {
       await db.batch([
-        db.insert(timeEntries).values({ userId: request.userId, ...entryValues }),
+        db.insert(timeEntries).values({ userId: request.userId, chargeAccountId: owner.chargeAccountId, ...entryValues }),
         db.update(timeEntryChangeRequests).set(review).where(eq(timeEntryChangeRequests.id, id)),
       ]);
     }
