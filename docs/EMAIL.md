@@ -34,4 +34,29 @@ Free tier: 3,000 emails/month, 100/day.
 - Preferences are stored in `notification_preferences`; a missing row means on.
 - To send one, call `emailNotification(c, userId, "TYPE", {...})` from `server/src/services/email.service.ts`
   where the event happens. It checks the user's preference and sends in the background.
-- Not wired to any events yet. Dashboard notifications and to-do items are unchanged.
+- Only send email when someone has to act. No confirmations ("you submitted X", "X was approved").
+- Wired today: `PAY_STUB_REJECTED` (to admins) and the payroll deadline reminders below.
+
+## Payroll deadline reminders
+
+An hourly cron trigger (`[triggers]` in `server/wrangler.toml`) runs `runScheduledReminders()` in
+`server/src/services/reminder.service.ts`. It works in US Central time and sends each stage once per
+pay period (recorded in `reminder_runs`), and only to people with something waiting.
+
+Admins set these times in **Settings → Payroll Calendar** (stored in `app_settings`; defaults below),
+and can turn scheduled reminders off there. The tab previews the next send times.
+
+| Pay cycle | Approvals due | Reminder | Deadline morning | Escalation |
+|---|---|---|---|---|
+| Bi-weekly (period closes Sunday) | Monday 12:00 | Friday 9:00 | Monday 8:00 | Monday 10:00 |
+| Monthly | 25th 12:00 (Friday before if a weekend) | 2 business days before, 9:00 | 25th 8:00 | 25th 10:00 |
+
+- **Supervisors** get one summary per stage listing every assigned student with shifts or
+  corrections waiting, formatted as a printable checklist (`APPROVAL_REMINDER`, `APPROVAL_ESCALATION`).
+  Escalations go to every supervisor assigned to a still-pending student.
+- **Admins** get one summary at the escalation, listing everyone still waiting and their supervisors
+  (`PAYROLL_SUMMARY`).
+- **Students** get one email at the first stage only if a shift was rejected or they are still
+  clocked in (`TIME_FIX_REMINDER`).
+- Admins can send the supervisor summaries on demand: Time Entry Approvals → Approval Reminders.
+- Defaults live in `server/src/lib/payroll-calendar.ts`.

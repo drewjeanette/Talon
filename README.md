@@ -33,10 +33,15 @@ Playwright test suite, and the CI/CD pipeline that deploys to talontime.org.
 ## Features
 
 - JWT auth with rotating refresh tokens; role hierarchy student < supervisor < admin
-- Web clock with a supervisor approval queue and an auditable correction workflow
-- Payroll engine: biweekly hourly pay with per-week FLSA overtime, monthly salary for faculty/staff
-- Auto-generated CSV payroll reports scoped by department or college, with supervisors pinned
-  server-side to their own department
+- Web clock with an approval queue and an auditable correction workflow; any of a student's
+  supervisors (or any admin) can approve
+- Payroll engine: hourly pay with per-week FLSA overtime (bi-weekly or monthly), monthly salary for
+  faculty/staff; regular and overtime hours and pay stored on every stub
+- Payroll report in the page: hours and pay per person and charge account (index), filter by
+  people/department/account, group, sort, compare people side by side, download CSV; supervisors are
+  limited server-side to their own students
+- Student pay stub review with batch approval and in-app questions; PDF pay stubs for everyone
+- One to-do list per role that clears only when the work is done, plus payroll-deadline reminder emails
 - Admin user management and pay-period lifecycle (create → generate stubs → finalize)
 - Admin department/college management — all 104 registrar codes seeded but fully editable
 - Audit logging of every significant action, with the true client IP
@@ -69,8 +74,14 @@ Demo accounts (change before using real data):
 | Role | Email | Password |
 |---|---|---|
 | Admin | admin@tntech.edu | `password123` |
-| Supervisor | supervisor@tntech.edu | `password123` |
+| Supervisor (Computer Science) | supervisor@tntech.edu | `password123` |
+| Supervisor (Mathematics) | supervisor2@tntech.edu | `password123` |
 | Student | student@tntech.edu | `password123` |
+
+More demo students (same password): `sophia.wells@` (preferred name Sophie, charged to a grant),
+`elizabeth.park@` (supervised by both supervisors, two jobs), `robert.hale@`, `christopher.lane@`,
+`william.turner@` (monthly, hourly), `katherine.diaz@`, `richard.moss@`. Run `npm run db:seed:generate`
+before a demo: pay periods and shifts are relative to the day the seed is generated.
 
 Passwords are stored as salted scrypt hashes. Talon accepts only normalized addresses ending in
 `@tntech.edu`; this restriction is enforced by both the API and D1 triggers.

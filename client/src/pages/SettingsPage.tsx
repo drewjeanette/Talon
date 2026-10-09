@@ -2,15 +2,21 @@ import { useRef, type KeyboardEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import { NotificationSettings } from "../components/settings/NotificationSettings";
 import { AccountSettings } from "../components/settings/AccountSettings";
+import { PayrollCalendarSettings } from "../components/settings/PayrollCalendarSettings";
+import { useAuth, type Role } from "../context/AuthContext";
 
 // Each entry is one Settings tab. To add a section, add an entry here; the
 // tab list, keyboard navigation and ?tab= deep links pick it up automatically.
-const SECTIONS = [
+// `roles` limits a tab to those roles (the API enforces the same).
+const ALL_SECTIONS: { id: string; label: string; Component: () => JSX.Element | null; roles?: Role[] }[] = [
   { id: "notifications", label: "Notifications", Component: NotificationSettings },
   { id: "account", label: "Account", Component: AccountSettings },
-] as const;
+  { id: "payroll-calendar", label: "Payroll Calendar", Component: PayrollCalendarSettings, roles: ["ADMIN"] },
+];
 
 export function SettingsPage() {
+  const { user } = useAuth();
+  const SECTIONS = ALL_SECTIONS.filter((section) => !section.roles || (user && section.roles.includes(user.role)));
   const [searchParams, setSearchParams] = useSearchParams();
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const activeIndex = Math.max(0, SECTIONS.findIndex((s) => s.id === searchParams.get("tab")));

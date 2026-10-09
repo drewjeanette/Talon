@@ -300,11 +300,11 @@ th:last-child { border-radius: 0 8px 8px 0; }
 
 
 
-.dashboard--student .timesheet,.dashboard--student .pay-stubs { display:none !important; }
+.dashboard--student .timesheet { display:none !important; }
+.dashboard--student .pay-stubs { grid-column:1 / -1; order:3; }
 .dashboard--student .clock-widget { grid-column:span 4; order:1; }
 .dashboard--student .student-time-tools { grid-column:1 / -1; order:5; border-top:5px solid var(--tt-gold); }
 .talon-current-timecard { grid-column:span 8; order:2; }
-.talon-student-paystubs { grid-column:1 / -1; order:3; }
 .talon-past-timecards { grid-column:1 / -1; order:4; }
 .talon-timecards__header { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
 .talon-timecards__header h2 { margin:0; }
@@ -329,5 +329,5 @@ th:last-child { border-radius: 0 8px 8px 0; }
 @media(prefers-reduced-motion:reduce){.talon-live-entry{animation:none}}
 .talon-student-paystubs table { min-width:790px; }
 .talon-review-reason { display:block; margin-top:.25rem; color:var(--text-muted); font-size:.78rem; }
-@media(max-width:900px){.dashboard--student .clock-widget,.talon-current-timecard,.talon-student-paystubs,.talon-past-timecards{grid-column:1 / -1}}
+@media(max-width:900px){.dashboard--student .clock-widget,.talon-current-timecard,.talon-past-timecards{grid-column:1 / -1}}
 @media(max-width:600px){.talon-timecards__header{align-items:flex-start;flex-direction:column}.talon-timecard summary{padding:.8rem}.talon-timecard .table-scroll{padding:.15rem .7rem .65rem}}

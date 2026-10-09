@@ -363,8 +363,6 @@ textarea { width:100%; min-height:84px; padding:.55rem; border:1px solid var(--b
 .stub-review-reason { display:block; margin-top:.35rem; color:var(--text-muted,#625c6b); font-weight:500; }
 .approval-rejection-form { display:grid; gap:.45rem; min-width:260px; margin-top:.65rem; padding:.7rem; border:1px solid #d9a9a9; border-radius:6px; background:#fff7f7; }
 .button--secondary { background:#6b6474; }
-.supervisor-todo__link { flex:1; padding:.15rem 0; border:0; background:transparent; color:inherit; font:inherit; font-weight:700; text-align:left; text-decoration:underline; text-underline-offset:3px; }
-.supervisor-todo__link:hover:not(:disabled) { background:transparent; color:var(--tt-purple); }
 .supervisor-pay-rates,.team-pay-stubs { grid-column:1 / -1; }
 .pay-rate-row { display:grid; grid-template-columns:minmax(160px,1fr) minmax(260px,2fr); align-items:center; gap:1rem; padding:.7rem 0; border-bottom:1px solid var(--border); }
 .pay-rate-row__controls { display:flex; align-items:center; gap:.45rem; flex-wrap:wrap; }
@@ -417,3 +415,138 @@ textarea { width:100%; min-height:84px; padding:.55rem; border:1px solid var(--b
   .settings-tabs__tab { flex:1; text-align:center; border-left:0; border-bottom:4px solid transparent; }
   .settings-tabs__tab[aria-selected="true"] { border-bottom-color:var(--tt-gold); }
 }
+
+/* ---------- Shared person search (one behavior everywhere) ---------- */
+.person-search { position:relative; display:flex; flex-direction:column; gap:.25rem; margin-bottom:.75rem; min-width:0; }
+.person-search__hint { margin:0; color:var(--text-muted,#625c6b); font-size:.85rem; }
+.person-search__field { position:relative; }
+.person-search__field input { width:100%; padding-left:2.4rem; background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23512888' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-4-4'/%3E%3C/svg%3E") .7rem center/18px no-repeat; }
+.person-search__list { position:absolute; z-index:20; top:calc(100% + 4px); left:0; right:0; max-height:18rem; overflow-y:auto; margin:0; padding:.3rem; list-style:none; border:1px solid var(--border); border-radius:8px; background:#fff; box-shadow:0 10px 28px #21163b33; }
+.person-search__list[hidden] { display:none; }
+.person-search__option { display:flex; flex-direction:column; gap:.05rem; min-height:44px; justify-content:center; padding:.45rem .65rem; border-radius:6px; cursor:pointer; }
+.person-search__option[aria-selected="true"] { background:var(--tt-purple-soft,#f0e9f8); outline:2px solid var(--tt-purple,#4b2e83); outline-offset:-2px; }
+.person-search__name { color:var(--tt-purple-dark,#33205a); font-weight:700; }
+.person-search__detail { color:var(--text-muted,#625c6b); font-size:.84rem; }
+.person-search__empty { margin:.2rem 0 0; color:var(--text-muted,#625c6b); font-size:.88rem; }
+.person-search__chips { display:flex; flex-wrap:wrap; gap:.4rem; margin:.1rem 0 .3rem; padding:0; list-style:none; }
+.person-search__chip { display:inline-flex; align-items:center; gap:.2rem; padding:.15rem .2rem .15rem .65rem; border:1px solid var(--tt-purple,#4b2e83); border-radius:999px; background:var(--tt-purple-soft,#f0e9f8); color:var(--tt-purple-dark,#33205a); font-weight:650; font-size:.9rem; }
+.person-search__chip button { display:grid; place-items:center; width:28px; height:28px; min-height:28px; padding:0; border-radius:50%; background:transparent; color:inherit; font-size:1.1rem; line-height:1; }
+.person-search__chip button:hover:not(:disabled) { background:#fff; transform:none; box-shadow:none; }
+
+/* ---------- Shared date picker ---------- */
+.date-field__hint { color:var(--text-muted,#625c6b); font-size:.8rem; font-weight:500; }
+
+/* ---------- One to-do list (items leave only when the work is done) ---------- */
+.work-queue__title { margin:0 0 1rem; color:var(--tt-purple-dark,#33205a); font-size:1.15rem; }
+.work-queue__list { display:grid; gap:.65rem; margin:0; padding:0; list-style:none; }
+.work-queue__item { overflow:hidden; max-height:12rem; transition:opacity .24s ease,transform .24s ease,max-height .24s ease; }
+.work-queue__item--leaving { opacity:0; transform:translateX(-10px); max-height:0; }
+.work-queue__open { width:100%; display:flex; align-items:center; justify-content:space-between; gap:.75rem; min-height:54px; padding:.7rem .85rem; border:1px solid var(--border); border-radius:10px; background:#f8f6fb; color:var(--tt-purple-dark,#33205a); text-align:left; font-weight:700; }
+.work-queue__open:hover:not(:disabled) { background:var(--tt-purple-soft,#f0e9f8); transform:none; box-shadow:none; }
+.work-queue__open:disabled { background:#f8f6fb; color:var(--tt-purple-dark,#33205a); }
+.work-queue__text { display:grid; gap:.1rem; min-width:0; }
+.work-queue__label { font-weight:800; }
+.work-queue__detail { color:var(--text-muted,#625c6b); font-size:.84rem; font-weight:500; line-height:1.35; }
+.work-queue__count { flex:none; display:grid; place-items:center; min-width:32px; height:32px; padding:0 .45rem; border-radius:999px; background:var(--tt-purple,#4b2e83); color:#fff; font-size:.9rem; }
+.work-queue.work-queue--complete { display:grid; place-items:center; background:transparent; border-color:transparent; box-shadow:none; }
+.work-queue--complete .work-queue__title { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+.work-queue__clear { display:grid; place-items:center; gap:.4rem; min-height:170px; text-align:center; }
+.work-queue__clear p { margin:0; color:var(--tt-purple-dark,#33205a); font-size:1.1rem; font-weight:800; }
+.work-queue__clear p::after { content:""; display:block; width:60px; height:4px; margin:.75rem auto 0; border-radius:999px; background:var(--tt-gold,#c9a13b); }
+.work-queue__success { position:relative; display:grid; place-items:center; width:76px; height:76px; border:3px solid var(--tt-gold,#c9a13b); border-radius:50%; background:var(--tt-purple,#4b2e83); color:#fff; box-shadow:0 8px 20px #33205a2b; animation:work-success-pop .65s cubic-bezier(.2,.9,.25,1.25) both; }
+.work-queue__success svg { width:43px; height:43px; overflow:visible; }
+.work-queue__success path { fill:none; stroke:currentColor; stroke-width:7; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:58; stroke-dashoffset:58; animation:work-check-draw .55s ease-out .35s forwards; }
+.work-queue__success::before,.work-queue__success::after { content:"✦"; position:absolute; color:var(--tt-gold,#c9a13b); opacity:0; animation:work-sparkle .65s ease-out .62s both; }
+.work-queue__success::before { top:-8px; right:-15px; font-size:1.3rem; }
+.work-queue__success::after { bottom:0; left:-16px; font-size:1rem; animation-delay:.78s; }
+@keyframes work-success-pop { 0% { opacity:0; transform:scale(.55) translateY(8px); } 65% { opacity:1; transform:scale(1.08) translateY(-2px); } 100% { opacity:1; transform:scale(1) translateY(0); } }
+@keyframes work-check-draw { to { stroke-dashoffset:0; } }
+@keyframes work-sparkle { 0% { opacity:0; transform:scale(.35) rotate(-20deg); } 45% { opacity:1; transform:scale(1.15) rotate(8deg); } 100% { opacity:0; transform:scale(.8) rotate(20deg); } }
+@media (prefers-reduced-motion:reduce) { .work-queue__success,.work-queue__success path,.work-queue__success::before,.work-queue__success::after { animation:none; } .work-queue__success path { stroke-dashoffset:0; } }
+.student-todos { margin-bottom:1.35rem; border-top:5px solid var(--tt-gold,#c9a13b); }
+
+/* ---------- Payroll report and comparison ---------- */
+.payroll-report__intro,.approval-queue__intro,.pay-rate-manager__intro { margin:0 0 1rem; color:var(--text-muted,#625c6b); }
+.payroll-report__request { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.75rem; margin:0 0 1rem; padding:.7rem .9rem; border-left:4px solid var(--tt-gold,#c9a13b); border-radius:6px; background:#fff8dc; }
+.payroll-report__request p { margin:0; }
+.payroll-report__filters { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:.25rem 1rem; align-items:start; }
+.payroll-report__filters select { width:100%; }
+.payroll-report__actions { display:flex; flex-wrap:wrap; gap:.65rem; align-items:center; margin-top:.25rem; }
+.payroll-report__table { max-height:min(70vh,40rem); overflow:auto; border:1px solid var(--border); border-radius:10px; }
+.payroll-report__table table { min-width:960px; font-size:.92rem; }
+.payroll-report__table th,.payroll-report__table td { padding:.5rem .55rem; }
+.payroll-report__filters .person-search { grid-column:span 2; }
+@media (max-width:700px) { .payroll-report__filters .person-search { grid-column:auto; } }
+.payroll-report__table thead th { position:sticky; top:0; z-index:1; }
+.payroll-report__table tfoot th,.payroll-report__table tfoot td { font-weight:800; background:var(--table-header,#efecf5); border-top:2px solid var(--tt-purple,#4b2e83); }
+.payroll-report__table tbody th { font-weight:700; color:var(--tt-purple-dark,#33205a); background:transparent; }
+.payroll-report__compare { width:22px; height:22px; min-height:0; accent-color:var(--tt-purple,#4b2e83); }
+th.numeric,td.numeric { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.sort-button { display:inline-flex; align-items:center; gap:.35rem; min-height:32px; padding:.2rem .35rem; border-radius:6px; background:transparent; color:inherit; font:inherit; font-weight:800; white-space:nowrap; }
+.sort-button:hover:not(:disabled) { background:#fff; transform:none; box-shadow:none; }
+.sort-button__arrow { font-size:.75rem; opacity:.75; }
+.pay-comparison { margin-top:1.25rem; padding:1rem; border:2px solid var(--tt-purple,#4b2e83); border-radius:12px; background:#fff; }
+.pay-comparison__header { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+.pay-comparison__header h3 { margin:0; color:var(--tt-purple-dark,#33205a); }
+.pay-comparison__summary { margin:.75rem 0 0; }
+.pay-comparison tbody th { background:var(--table-header,#efecf5); }
+.pay-comparison__cell--differs { background:#fff3c4; font-weight:800; box-shadow:inset 4px 0 0 #8a6100; }
+
+/* ---------- Pay stub review ---------- */
+.stub-review__filters { display:grid; grid-template-columns:minmax(220px,2fr) minmax(200px,1fr) auto; gap:.25rem 1rem; align-items:end; }
+.stub-review__toggle,.stub-review__toggle input { display:flex; align-items:center; gap:.5rem; min-height:44px; }
+.stub-review__toggle input { width:20px; height:20px; min-height:0; }
+.stub-review__batch { margin:.5rem 0 0; }
+.stub-review__meta { display:block; margin-top:.15rem; color:var(--text-muted,#625c6b); font-size:.8rem; font-weight:500; }
+.stub-review__actions button { min-height:36px; padding:.4rem .7rem; }
+.team-pay-stubs tbody th { background:transparent; font-weight:700; color:var(--tt-purple-dark,#33205a); }
+.stub-flag { display:block; margin-top:.4rem; padding:.4rem .55rem; border-left:4px solid var(--text-muted,#625c6b); border-radius:4px; background:#f6f4f9; color:var(--text,#1a1a1a); font-weight:500; max-width:28rem; white-space:normal; }
+.stub-flag--open { border-left-color:#8a6100; background:#fff8dc; }
+.pay-stubs__download { min-height:36px; padding:.4rem .75rem; }
+.pay-rate-row__meta { display:block; color:var(--text-muted,#625c6b); font-size:.82rem; font-weight:500; }
+.correction-history__waiting,.timecard-waiting { color:#6b4a00; font-weight:650; }
+.user-management__supervisors { grid-column:1 / -1; }
+.user-management__search { margin-top:1.25rem; max-width:520px; }
+.user-management__edit { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:.25rem 1rem; align-items:end; }
+.user-management__edit .button-row { grid-column:1 / -1; }
+.user-management tbody th { background:transparent; font-weight:700; color:var(--tt-purple-dark,#33205a); }
+.approval-queue tbody th,.charge-accounts tbody th { background:transparent; font-weight:700; color:var(--tt-purple-dark,#33205a); }
+.reminder-sender { grid-column:1 / -1; }
+@media (max-width:700px) {
+  .stub-review__filters { grid-template-columns:1fr; }
+  .payroll-report__actions button { flex:1 1 100%; }
+}
+
+/* Long option text (e.g. charge account names) must not force forms wider than the screen. */
+.form-row-group > *,.form-row { min-width:0; }
+.form-row select,.form-row input { max-width:100%; min-width:0; }
+
+/* ---------- Multiple jobs ---------- */
+.clock-widget__jobs { display:grid; gap:.4rem; margin:0 0 1rem; padding:.75rem; border:1px solid var(--border); border-radius:10px; }
+.clock-widget__jobs legend,.clock-widget__switch legend { padding:0 .25rem; font-weight:700; color:var(--tt-purple-dark,#33205a); }
+.clock-widget__job { display:flex; align-items:center; gap:.6rem; min-height:44px; padding:.35rem .5rem; border-radius:8px; cursor:pointer; font-weight:650; }
+.clock-widget__job:hover { background:var(--tt-purple-soft,#f0e9f8); }
+.clock-widget__job input { width:20px; height:20px; min-height:0; flex:none; accent-color:var(--tt-purple,#4b2e83); }
+.clock-widget__job small { display:block; color:var(--text-muted,#625c6b); font-weight:500; }
+.clock-widget__wrong-job { margin-top:.75rem; width:100%; }
+.clock-widget__switch { display:grid; gap:.6rem; margin-top:.75rem; padding:.85rem; border:2px solid var(--tt-purple,#4b2e83); border-radius:10px; background:#fff; }
+.clock-widget__switch h3 { margin:0; font-size:1rem; color:var(--tt-purple-dark,#33205a); }
+.clock-widget__switch p { margin:0; }
+.clock-widget__switch fieldset { display:grid; gap:.3rem; margin:0; padding:.5rem; border:1px solid var(--border); border-radius:8px; }
+.student-time-tools__open { margin:.25rem 0 .5rem; }
+.student-time-tools__card { margin-top:.5rem; padding:1rem; border:2px solid var(--tt-purple,#4b2e83); border-radius:12px; background:#fff; }
+.student-time-tools__card h3 { margin-top:0; }
+.approval-queue__job { display:block; color:var(--text-muted,#625c6b); font-size:.82rem; }
+.approval-queue__change { margin-top:.35rem; min-height:32px; padding:.3rem .6rem; font-size:.85rem; }
+.approval-queue__move { display:grid; gap:.4rem; min-width:220px; margin-top:.5rem; padding:.6rem; border:1px solid var(--border); border-radius:8px; background:#fff; }
+.user-management__jobs { grid-column:1 / -1; margin:0; padding:.75rem; border:1px solid var(--border); border-radius:10px; }
+.user-management__jobs legend { font-weight:700; color:var(--tt-purple-dark,#33205a); }
+.user-management__jobs ul { display:grid; gap:.4rem; margin:.5rem 0; padding:0; list-style:none; }
+.user-management__jobs li { display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap; }
+.user-management__new-job { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:.25rem 1rem; align-items:end; }
+.user-management__new-job button { margin-bottom:.75rem; }
+.user-management__job { display:block; }
+.payroll-calendar__group { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:.25rem 1rem; margin:1rem 0; padding:1rem; border:1px solid var(--border); border-radius:10px; }
+.payroll-calendar__group legend { padding:0 .25rem; font-weight:800; color:var(--tt-purple-dark,#33205a); }
+.payroll-calendar__next { margin:1.5rem 0 .5rem; color:var(--tt-purple-dark,#33205a); font-size:1rem; }
+.payroll-calendar__upcoming { margin:0; padding-left:1.1rem; display:grid; gap:.3rem; }

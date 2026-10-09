@@ -22,8 +22,9 @@ export function sendEmailInBackground(c: Context<AppEnv>, message: EmailMessage)
   c.executionCtx.waitUntil(sending);
 }
 
-function layout(heading: string, paragraphs: string[], button?: { label: string; url: string }): string {
-  const body = paragraphs.map((p) => `<p style="margin:0 0 16px">${escapeHtml(p)}</p>`).join("");
+/** The shared email HTML shell. `extraHtml` must already be escaped. */
+export function layout(heading: string, paragraphs: string[], button?: { label: string; url: string }, extraHtml = ""): string {
+  const body = paragraphs.map((p) => `<p style="margin:0 0 16px">${escapeHtml(p)}</p>`).join("") + extraHtml;
   const action = button
     ? `<p style="margin:24px 0"><a href="${escapeHtml(button.url)}" style="background:#4b2e83;color:#fff;padding:12px 20px;border-radius:4px;text-decoration:none;font-weight:600">${escapeHtml(button.label)}</a></p>`
     : "";

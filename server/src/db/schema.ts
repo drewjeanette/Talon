@@ -40,6 +40,17 @@ export const departments = sqliteTable(
   (t) => [index("departments_college_idx").on(t.collegeId)]
 );
 
+// Banner "index" a job's pay is charged to. Can belong to a department other
+// than the student's home department.
+export const chargeAccounts = sqliteTable("charge_accounts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  code: text("code").notNull().unique(),
+  name: text("name").notNull(),
+  departmentId: integer("department_id").references(() => departments.id),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  ...timestamps,
+});
+
 export const users = sqliteTable(
   "users",
   {
@@ -48,6 +59,8 @@ export const users = sqliteTable(
     passwordHash: text("password_hash").notNull(),
     firstName: text("first_name").notNull(),
     lastName: text("last_name").notNull(),
+    // What the person goes by, e.g. "Sophie" for Sophia. Shown and searchable.
+    preferredName: text("preferred_name"),
     role: text("role", { enum: ["STUDENT", "SUPERVISOR", "ADMIN"] })
       .notNull()
       .default("STUDENT"),
@@ -60,16 +73,51 @@ export const users = sqliteTable(
     annualSalaryCents: integer("annual_salary_cents"),
 
     departmentId: integer("department_id").references(() => departments.id),
-    supervisorId: integer("supervisor_id"),
+    // The job's default charge account, copied onto each new time entry.
+    chargeAccountId: integer("charge_account_id").references(() => chargeAccounts.id),
 
     isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
     mustResetPw: integer("must_reset_pw", { mode: "boolean" }).notNull().default(true),
     lastLoginAt: integer("last_login_at", { mode: "timestamp" }),
     ...timestamps,
   },
+  (t) => [index("users_department_idx").on(t.departmentId)]
+);
+
+// A student's jobs. Each is charged to its own account; with two or more, the
+// student picks one when clocking in.
+export const studentJobs = sqliteTable(
+  "student_jobs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    chargeAccountId: integer("charge_account_id").references(() => chargeAccounts.id),
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    ...timestamps,
+  },
+  (t) => [index("student_jobs_user_idx").on(t.userId, t.isActive)]
+);
+
+// Admin-editable settings, one JSON value per key.
+export const appSettings = sqliteTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: text("value", { mode: "json" }).notNull(),
+  updatedById: integer("updated_by_id").references(() => users.id),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+
+// A student can have several supervisors; any of them can approve their time.
+export const studentSupervisors = sqliteTable(
+  "student_supervisors",
+  {
+    studentId: integer("student_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    supervisorId: integer("supervisor_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  },
   (t) => [
-    index("users_department_idx").on(t.departmentId),
-    index("users_supervisor_idx").on(t.supervisorId),
+    primaryKey({ columns: [t.studentId, t.supervisorId] }),
+    index("student_supervisors_supervisor_idx").on(t.supervisorId),
   ]
 );
 
@@ -157,6 +205,8 @@ export const timeEntries = sqliteTable(
       .notNull()
       .default("WEB"),
     notes: text("notes"),
+    chargeAccountId: integer("charge_account_id").references(() => chargeAccounts.id),
+    jobId: integer("job_id"),
     status: text("status", { enum: ["PENDING", "APPROVED", "REJECTED"] })
       .notNull()
       .default("PENDING"),
@@ -167,6 +217,7 @@ export const timeEntries = sqliteTable(
   (t) => [
     index("time_entries_user_clockin_idx").on(t.userId, t.clockIn),
     index("time_entries_status_idx").on(t.status),
+    index("time_entries_charge_account_idx").on(t.chargeAccountId),
   ]
 );
 
@@ -176,6 +227,7 @@ export const timeEntryChangeRequests = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     timeEntryId: integer("time_entry_id").references(() => timeEntries.id, { onDelete: "set null" }),
+    jobId: integer("job_id"),
     requestedClockIn: integer("requested_clock_in", { mode: "timestamp" }).notNull(),
     requestedClockOut: integer("requested_clock_out", { mode: "timestamp" }).notNull(),
     reason: text("reason").notNull(),
@@ -223,6 +275,10 @@ export const payStubs = sqliteTable(
     regularMinutes: integer("regular_minutes").notNull().default(0),
     overtimeMinutes: integer("overtime_minutes").notNull().default(0),
     grossPayCents: integer("gross_pay_cents").notNull().default(0),
+    // Line items, fixed when the stub is generated.
+    hourlyRateCents: integer("hourly_rate_cents"),
+    regularPayCents: integer("regular_pay_cents").notNull().default(0),
+    overtimePayCents: integer("overtime_pay_cents").notNull().default(0),
     status: text("status", { enum: ["DRAFT", "FINALIZED", "PAID"] })
       .notNull()
       .default("DRAFT"),
@@ -236,6 +292,12 @@ export const payStubs = sqliteTable(
     reviewedById: integer("reviewed_by_id").references(() => users.id),
     reviewedAt: integer("reviewed_at", { mode: "timestamp" }),
     reviewReason: text("review_reason"),
+    // An open question about the stub, so issues don't need a separate email.
+    flagNote: text("flag_note"),
+    flaggedById: integer("flagged_by_id").references(() => users.id),
+    flaggedAt: integer("flagged_at", { mode: "timestamp" }),
+    flagResolvedAt: integer("flag_resolved_at", { mode: "timestamp" }),
+    flagResolution: text("flag_resolution"),
   },
   (t) => [
     uniqueIndex("pay_stubs_user_period_idx").on(t.userId, t.payPeriodId),
@@ -260,6 +322,19 @@ export const notifications = sqliteTable(
     createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
   },
   (t) => [index("notifications_recipient_idx").on(t.recipientUserId, t.dismissedAt, t.createdAt)]
+);
+
+// Scheduled approval reminders already sent, one row per period and stage.
+export const reminderRuns = sqliteTable(
+  "reminder_runs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    payPeriodId: integer("pay_period_id").notNull().references(() => payPeriods.id, { onDelete: "cascade" }),
+    stage: text("stage").notNull(),
+    recipients: integer("recipients").notNull().default(0),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  },
+  (t) => [uniqueIndex("reminder_runs_period_stage_idx").on(t.payPeriodId, t.stage)]
 );
 
 export const reportRuns = sqliteTable(
@@ -312,14 +387,13 @@ export const departmentsRelations = relations(departments, ({ one, many }) => ({
   users: many(users),
 }));
 
+export const chargeAccountsRelations = relations(chargeAccounts, ({ one }) => ({
+  department: one(departments, { fields: [chargeAccounts.departmentId], references: [departments.id] }),
+}));
+
 export const usersRelations = relations(users, ({ one, many }) => ({
   department: one(departments, { fields: [users.departmentId], references: [departments.id] }),
-  supervisor: one(users, {
-    fields: [users.supervisorId],
-    references: [users.id],
-    relationName: "supervisor",
-  }),
-  reports: many(users, { relationName: "supervisor" }),
+  chargeAccount: one(chargeAccounts, { fields: [users.chargeAccountId], references: [chargeAccounts.id] }),
   timeEntries: many(timeEntries),
   timeEntryChangeRequests: many(timeEntryChangeRequests),
   payStubs: many(payStubs),
@@ -344,6 +418,7 @@ export const payStubsRelations = relations(payStubs, ({ one }) => ({
   payPeriod: one(payPeriods, { fields: [payStubs.payPeriodId], references: [payPeriods.id] }),
 }));
 
+export type ChargeAccount = typeof chargeAccounts.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type Department = typeof departments.$inferSelect;
 export type PayPeriod = typeof payPeriods.$inferSelect;
