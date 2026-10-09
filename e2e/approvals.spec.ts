@@ -7,7 +7,10 @@ async function requestMissedShift(page: Page, reason: string, daysAgo: number) {
   const day = new Date(Date.now() - daysAgo * 86_400_000);
   const local = (hour: number) => `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}T${String(hour).padStart(2, "0")}:00`;
   const form = page.locator(".student-time-tools");
+  await form.getByRole("button", { name: "Fix a missed clock-in or clock-out" }).click();
   await form.getByLabel("Shift to correct").selectOption("new");
+  // Liz has two jobs, so a missed shift says which one.
+  await form.getByLabel("Job", { exact: true }).selectOption({ label: "Math Tutor" });
   await form.getByLabel("Correct clock-in").fill(local(9));
   await form.getByLabel("Correct clock-out").fill(local(11));
   // Every date/time picker explains the same commit step.

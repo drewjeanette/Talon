@@ -520,3 +520,33 @@ th.numeric,td.numeric { text-align:right; font-variant-numeric:tabular-nums; whi
 /* Long option text (e.g. charge account names) must not force forms wider than the screen. */
 .form-row-group > *,.form-row { min-width:0; }
 .form-row select,.form-row input { max-width:100%; min-width:0; }
+
+/* ---------- Multiple jobs ---------- */
+.clock-widget__jobs { display:grid; gap:.4rem; margin:0 0 1rem; padding:.75rem; border:1px solid var(--border); border-radius:10px; }
+.clock-widget__jobs legend,.clock-widget__switch legend { padding:0 .25rem; font-weight:700; color:var(--tt-purple-dark,#33205a); }
+.clock-widget__job { display:flex; align-items:center; gap:.6rem; min-height:44px; padding:.35rem .5rem; border-radius:8px; cursor:pointer; font-weight:650; }
+.clock-widget__job:hover { background:var(--tt-purple-soft,#f0e9f8); }
+.clock-widget__job input { width:20px; height:20px; min-height:0; flex:none; accent-color:var(--tt-purple,#4b2e83); }
+.clock-widget__job small { display:block; color:var(--text-muted,#625c6b); font-weight:500; }
+.clock-widget__wrong-job { margin-top:.75rem; width:100%; }
+.clock-widget__switch { display:grid; gap:.6rem; margin-top:.75rem; padding:.85rem; border:2px solid var(--tt-purple,#4b2e83); border-radius:10px; background:#fff; }
+.clock-widget__switch h3 { margin:0; font-size:1rem; color:var(--tt-purple-dark,#33205a); }
+.clock-widget__switch p { margin:0; }
+.clock-widget__switch fieldset { display:grid; gap:.3rem; margin:0; padding:.5rem; border:1px solid var(--border); border-radius:8px; }
+.student-time-tools__open { margin:.25rem 0 .5rem; }
+.student-time-tools__card { margin-top:.5rem; padding:1rem; border:2px solid var(--tt-purple,#4b2e83); border-radius:12px; background:#fff; }
+.student-time-tools__card h3 { margin-top:0; }
+.approval-queue__job { display:block; color:var(--text-muted,#625c6b); font-size:.82rem; }
+.approval-queue__change { margin-top:.35rem; min-height:32px; padding:.3rem .6rem; font-size:.85rem; }
+.approval-queue__move { display:grid; gap:.4rem; min-width:220px; margin-top:.5rem; padding:.6rem; border:1px solid var(--border); border-radius:8px; background:#fff; }
+.user-management__jobs { grid-column:1 / -1; margin:0; padding:.75rem; border:1px solid var(--border); border-radius:10px; }
+.user-management__jobs legend { font-weight:700; color:var(--tt-purple-dark,#33205a); }
+.user-management__jobs ul { display:grid; gap:.4rem; margin:.5rem 0; padding:0; list-style:none; }
+.user-management__jobs li { display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap; }
+.user-management__new-job { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:.25rem 1rem; align-items:end; }
+.user-management__new-job button { margin-bottom:.75rem; }
+.user-management__job { display:block; }
+.payroll-calendar__group { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:.25rem 1rem; margin:1rem 0; padding:1rem; border:1px solid var(--border); border-radius:10px; }
+.payroll-calendar__group legend { padding:0 .25rem; font-weight:800; color:var(--tt-purple-dark,#33205a); }
+.payroll-calendar__next { margin:1.5rem 0 .5rem; color:var(--tt-purple-dark,#33205a); font-size:1rem; }
+.payroll-calendar__upcoming { margin:0; padding-left:1.1rem; display:grid; gap:.3rem; }

@@ -43,6 +43,9 @@ An hourly cron trigger (`[triggers]` in `server/wrangler.toml`) runs `runSchedul
 `server/src/services/reminder.service.ts`. It works in US Central time and sends each stage once per
 pay period (recorded in `reminder_runs`), and only to people with something waiting.
 
+Admins set these times in **Settings → Payroll Calendar** (stored in `app_settings`; defaults below),
+and can turn scheduled reminders off there. The tab previews the next send times.
+
 | Pay cycle | Approvals due | Reminder | Deadline morning | Escalation |
 |---|---|---|---|---|
 | Bi-weekly (period closes Sunday) | Monday 12:00 | Friday 9:00 | Monday 8:00 | Monday 10:00 |
@@ -56,5 +59,4 @@ pay period (recorded in `reminder_runs`), and only to people with something wait
 - **Students** get one email at the first stage only if a shift was rejected or they are still
   clocked in (`TIME_FIX_REMINDER`).
 - Admins can send the supervisor summaries on demand: Time Entry Approvals → Approval Reminders.
-- The times are placeholders until the business office sends the official payroll calendar; adjust
-  `reminderSchedule()` when it arrives.
+- Defaults live in `server/src/lib/payroll-calendar.ts`.

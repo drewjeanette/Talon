@@ -79,7 +79,7 @@ Demo accounts (change before using real data):
 | Student | student@tntech.edu | `password123` |
 
 More demo students (same password): `sophia.wells@` (preferred name Sophie, charged to a grant),
-`elizabeth.park@` (supervised by both supervisors), `robert.hale@`, `christopher.lane@`,
+`elizabeth.park@` (supervised by both supervisors, two jobs), `robert.hale@`, `christopher.lane@`,
 `william.turner@` (monthly, hourly), `katherine.diaz@`, `richard.moss@`. Run `npm run db:seed:generate`
 before a demo: pay periods and shifts are relative to the day the seed is generated.
 

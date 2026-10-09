@@ -11,9 +11,12 @@ interface PendingEntry {
   clockIn: string;
   clockOut: string | null;
   submittedAt: string | null;
-  chargeAccount: { code: string; name: string } | null;
+  chargeAccount: { id: number; code: string; name: string } | null;
+  jobTitle: string | null;
   user: Person;
 }
+
+interface ChargeAccount { id: number; code: string; name: string; isActive: boolean }
 
 interface PendingCorrection {
   id: number;
@@ -24,6 +27,7 @@ interface PendingCorrection {
   currentClockOut: string | null;
   reason: string;
   submittedAt: string;
+  jobTitle: string | null;
   user: Person;
 }
 
@@ -38,6 +42,8 @@ export function ApprovalQueue() {
   const [rejectTarget, setRejectTarget] = useState<RejectTarget>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [studentFilter, setStudentFilter] = useState<number[]>([]);
+  const [accounts, setAccounts] = useState<ChargeAccount[]>([]);
+  const [moving, setMoving] = useState<{ entryId: number; accountId: string } | null>(null);
 
   async function load() {
     const [pendingEntries, pendingCorrections] = await Promise.all([
@@ -48,7 +54,27 @@ export function ApprovalQueue() {
     setCorrections(pendingCorrections);
   }
 
-  useEffect(() => { load().catch(() => setMessage("Could not load pending time requests.")); }, []);
+  useEffect(() => {
+    load().catch(() => setMessage("Could not load pending time requests."));
+    api.get<ChargeAccount[]>("/org/charge-accounts").then((data) => setAccounts(data.filter((account) => account.isActive))).catch(() => setAccounts([]));
+  }, []);
+
+  async function moveAccount(entry: PendingEntry) {
+    if (!moving?.accountId) {
+      setMessage("Choose the charge account for this shift.");
+      return;
+    }
+    setMessage(null);
+    try {
+      const result = await api.patch<{ chargeAccount: { code: string } }>(`/timeclock/${entry.id}/charge-account`, { chargeAccountId: Number(moving.accountId) });
+      setMessage(`Shift for ${entry.user.fullName} moved to ${result.chargeAccount.code}.`);
+      setMoving(null);
+      await load();
+      notifyWorkChanged();
+    } catch (error) {
+      setMessage(error instanceof ApiError ? error.message : "Could not move the shift.");
+    }
+  }
 
   const students = useMemo(() => {
     const map = new Map<number, Person>();
@@ -135,7 +161,25 @@ export function ApprovalQueue() {
               <th scope="row">{entry.user.fullName}</th>
               <td>{new Date(entry.clockIn).toLocaleString()}</td>
               <td>{entry.clockOut ? new Date(entry.clockOut).toLocaleString() : "In progress"}</td>
-              <td title={entry.chargeAccount?.name}>{entry.chargeAccount?.code ?? "Unassigned"}</td>
+              <td>
+                <span title={entry.chargeAccount?.name}>{entry.chargeAccount?.code ?? "Unassigned"}</span>
+                {entry.jobTitle && <small className="approval-queue__job">{entry.jobTitle}</small>}
+                {moving?.entryId === entry.id ? (
+                  <div className="approval-queue__move">
+                    <label htmlFor={`move-account-${entry.id}`}>Charge this shift to</label>
+                    <select id={`move-account-${entry.id}`} value={moving.accountId} onChange={(event) => setMoving({ entryId: entry.id, accountId: event.target.value })}>
+                      <option value="">Choose an account</option>
+                      {accounts.filter((account) => account.id !== entry.chargeAccount?.id).map((account) => <option key={account.id} value={account.id}>{account.code} – {account.name}</option>)}
+                    </select>
+                    <div className="button-row">
+                      <button type="button" onClick={() => moveAccount(entry)}>Move shift</button>
+                      <button type="button" className="button--secondary" onClick={() => setMoving(null)}>Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" className="button--secondary approval-queue__change" onClick={() => setMoving({ entryId: entry.id, accountId: "" })} aria-label={`Change charge account for ${entry.user.fullName}'s shift`}>Change account</button>
+                )}
+              </td>
               <td>{entry.clockOut ? waitingFor(entry.submittedAt) : "Still clocked in"}</td>
               <td>
                 <div className="button-row">
@@ -160,7 +204,7 @@ export function ApprovalQueue() {
               <th scope="row">{request.user.fullName}</th>
               <td>{request.timeEntryId && request.currentClockIn ? <>{new Date(request.currentClockIn).toLocaleString()}<br />{request.currentClockOut ? new Date(request.currentClockOut).toLocaleString() : "No clock-out"}</> : "New missed shift"}</td>
               <td>{new Date(request.requestedClockIn).toLocaleString()}<br />{new Date(request.requestedClockOut).toLocaleString()}</td>
-              <td>{request.reason}</td>
+              <td>{request.reason}{request.jobTitle && <small className="approval-queue__job">Job: {request.jobTitle}</small>}</td>
               <td>{waitingFor(request.submittedAt)}</td>
               <td>
                 <div className="button-row">

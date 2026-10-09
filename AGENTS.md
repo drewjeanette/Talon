@@ -14,6 +14,8 @@ Talon: Tennessee Tech payroll + web-clock. Cloudflare Workers (Hono) API + D1 (D
 ## Layout
 - `server/src/routes/*.routes.ts` — Hono routers, mounted under `/api/*` in `server/src/index.ts`
 - `server/src/services/` — payroll, reports, audit, access (who may act on a student), reminder (payroll deadline emails) logic
+- `server/src/services/jobs.service.ts` — student jobs (each with a charge account; picked at clock-in when there are several)
+- `server/src/lib/payroll-calendar.ts` — reminder schedule settings (admin Settings → Payroll Calendar)
 - `server/src/lib/payroll-math.ts` — overtime split and charge-account attribution shared by stubs and reports
 - `server/src/middleware/auth.ts` — `requireAuth`, `requireRole`
 - `server/src/db/schema.ts` — Drizzle schema; `server/migrations/` — committed SQL migrations

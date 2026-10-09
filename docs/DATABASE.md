@@ -16,6 +16,8 @@ erDiagram
     CHARGE_ACCOUNTS ||--o{ USERS : "charged for job"
     CHARGE_ACCOUNTS ||--o{ TIME_ENTRIES : "charged for shift"
     USERS ||--o{ TIME_ENTRIES : logs
+    USERS ||--o{ STUDENT_JOBS : holds
+    STUDENT_JOBS ||--o{ TIME_ENTRIES : "worked for"
     USERS ||--o{ TIME_ENTRY_CHANGE_REQUESTS : submits
     USERS ||--o{ PAY_STUBS : receives
     USERS ||--o| USER_PROFILE_PHOTOS : has
@@ -71,6 +73,17 @@ erDiagram
         text name
         int department_id FK "owning department, nullable"
         int is_active "boolean"
+    }
+    STUDENT_JOBS {
+        int id PK
+        int user_id FK
+        text title
+        int charge_account_id FK
+        int is_active "boolean"
+    }
+    APP_SETTINGS {
+        text key PK
+        text value "JSON, e.g. payroll_calendar"
     }
     STUDENT_SUPERVISORS {
         int student_id PK, FK

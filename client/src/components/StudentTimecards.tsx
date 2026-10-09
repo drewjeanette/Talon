@@ -8,6 +8,7 @@ interface TimeEntry {
   clockOut: string | null;
   status: "PENDING" | "APPROVED" | "REJECTED";
   reviewedBy?: string | null;
+  jobTitle?: string | null;
 }
 
 /** Only the dates are needed here: stubs mark where past timecards begin and end. */
@@ -27,12 +28,15 @@ function date(value: string): string {
 
 /** `waitingOn` names who can approve pending shifts; shown with how long each has waited. */
 function TimecardTable({ entries, caption, waitingOn }: { entries: TimeEntry[]; caption: string; waitingOn?: string }) {
+  // Only students with more than one job need to see which job each shift was for.
+  const showJob = new Set(entries.map((entry) => entry.jobTitle).filter(Boolean)).size > 1;
   return <div className="table-scroll" role="region" aria-label={caption} tabIndex={0}><table>
     <caption className="sr-only">{caption}</caption>
-    <thead><tr><th scope="col">Clock In</th><th scope="col">Clock Out</th><th scope="col">Hrs Worked</th><th scope="col">Status</th><th scope="col">{waitingOn ? "Reviewed By / Waiting On" : "Reviewed By"}</th></tr></thead>
+    <thead><tr>{showJob && <th scope="col">Job</th>}<th scope="col">Clock In</th><th scope="col">Clock Out</th><th scope="col">Hrs Worked</th><th scope="col">Status</th><th scope="col">{waitingOn ? "Reviewed By / Waiting On" : "Reviewed By"}</th></tr></thead>
     <tbody>
-      {entries.length === 0 && <tr><td colSpan={5}>No time entries were recorded for this period.</td></tr>}
+      {entries.length === 0 && <tr><td colSpan={showJob ? 6 : 5}>No time entries were recorded for this period.</td></tr>}
       {entries.map((entry) => <tr key={entry.id} className={entry.clockOut ? undefined : "talon-live-entry"}>
+        {showJob && <td>{entry.jobTitle ?? "—"}</td>}
         <td>{new Date(entry.clockIn).toLocaleString()}</td>
         <td>{entry.clockOut ? new Date(entry.clockOut).toLocaleString() : "In progress"}</td>
         <td>{entry.clockOut ? hours(entry).toFixed(2) : "—"}</td>

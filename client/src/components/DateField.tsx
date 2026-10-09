@@ -4,8 +4,8 @@ interface DateFieldProps {
   label: string;
   value: string;
   onChange: (value: string) => void;
-  /** "date" for a day, "datetime-local" for a day and time. */
-  type?: "date" | "datetime-local";
+  /** "date" for a day, "datetime-local" for a day and time, "time" for a time of day. */
+  type?: "date" | "datetime-local" | "time";
   /** The button that saves the form, named in the hint so the commit step is always the same. */
   commitLabel: string;
   required?: boolean;
@@ -37,7 +37,7 @@ export function DateField({ label, value, onChange, type = "date", commitLabel, 
         onChange={(event) => onChange(event.target.value)}
       />
       <span id={hintId} className="date-field__hint">
-        {type === "date" ? "MM/DD/YYYY" : "MM/DD/YYYY, time"}. Saved when you select “{commitLabel}”.
+        {type === "date" ? "MM/DD/YYYY" : type === "time" ? "Time (HH:MM AM/PM)" : "MM/DD/YYYY, time"}. Saved when you select “{commitLabel}”.
       </span>
     </div>
   );

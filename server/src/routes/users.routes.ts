@@ -3,11 +3,12 @@ import { HTTPException } from "hono/http-exception";
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "../db/index.js";
-import { chargeAccounts, departments, refreshTokens, studentSupervisors, users } from "../db/schema.js";
+import { chargeAccounts, departments, refreshTokens, studentJobs, studentSupervisors, users } from "../db/schema.js";
 import { generateTempPassword, hashPassword } from "../lib/password.js";
 import { centsToDollarString, dollarsToCents } from "../lib/money.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { writeAuditLog } from "../services/audit.service.js";
+import { jobsByUser, syncDefaultAccount } from "../services/jobs.service.js";
 import { assertCanManageStudent, fullName, supervisedStudentIds, supervisorsByStudent } from "../services/access.service.js";
 import type { AppEnv } from "../types.js";
 
@@ -69,7 +70,8 @@ userRoutes.get("/", requireRole("SUPERVISOR"), async (c) => {
     .where(conditions.length ? and(...conditions) : undefined)
     .orderBy(asc(users.lastName), asc(users.firstName));
 
-  const supervisors = await supervisorsByStudent(db, rows.filter((r) => r.role === "STUDENT").map((r) => r.id));
+  const studentIds = rows.filter((r) => r.role === "STUDENT").map((r) => r.id);
+  const [supervisors, jobs] = await Promise.all([supervisorsByStudent(db, studentIds), jobsByUser(db, studentIds)]);
 
   return c.json(
     rows.map((r) => ({
@@ -86,6 +88,7 @@ userRoutes.get("/", requireRole("SUPERVISOR"), async (c) => {
       department: r.departmentId ? { id: r.departmentId, name: r.departmentName, code: r.departmentCode } : null,
       chargeAccount: r.chargeAccountId ? { id: r.chargeAccountId, code: r.chargeAccountCode, name: r.chargeAccountName } : null,
       supervisors: (supervisors.get(r.id) ?? []).map(({ id, name }) => ({ id, name })),
+      jobs: jobs.get(r.id) ?? [],
     }))
   );
 });
@@ -130,6 +133,7 @@ const createUserSchema = z
     payType: z.enum(["BIWEEKLY", "MONTHLY"]),
     departmentId: z.number().int().optional(),
     chargeAccountId: z.number().int().optional(),
+    jobTitle: z.string().trim().min(1).max(80).optional(),
     supervisorIds: z.array(z.number().int()).max(20).optional(),
     hourlyRate: z.number().positive().optional(),
     annualSalary: z.number().positive().optional(),
@@ -180,6 +184,9 @@ userRoutes.post("/", requireRole("ADMIN"), async (c) => {
   if (supervisorIds.length) {
     await db.insert(studentSupervisors).values(supervisorIds.map((supervisorId) => ({ studentId: user.id, supervisorId })));
   }
+  if (data.role === "STUDENT") {
+    await db.insert(studentJobs).values({ userId: user.id, title: data.jobTitle ?? "Student worker", chargeAccountId: data.chargeAccountId ?? null });
+  }
 
   await writeAuditLog(c, "USER_CREATE", "User", user.id);
   return c.json({ id: user.id, email: user.email, tempPassword }, 201);
@@ -188,7 +195,6 @@ userRoutes.post("/", requireRole("ADMIN"), async (c) => {
 const updateUserSchema = z.object({
   preferredName: z.string().trim().max(60).nullable().optional(),
   departmentId: z.number().int().nullable().optional(),
-  chargeAccountId: z.number().int().nullable().optional(),
   supervisorIds: z.array(z.number().int()).max(20).optional(),
 }).strict();
 
@@ -221,6 +227,40 @@ userRoutes.patch("/:id", requireRole("ADMIN"), async (c) => {
 
   await writeAuditLog(c, "USER_UPDATE", "User", id, data);
   return c.json({ saved: true });
+});
+
+const jobSchema = z.object({
+  title: z.string().trim().min(1).max(80),
+  chargeAccountId: z.number().int().positive().nullable(),
+});
+
+/** Adds a job for a student (admin). Students with two or more pick one at clock-in. */
+userRoutes.post("/:id/jobs", requireRole("ADMIN"), async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isInteger(id)) throw new HTTPException(400, { message: "Invalid user id." });
+  const data = jobSchema.parse(await c.req.json());
+  const db = getDb(c.env.DB);
+  const target = await db.query.users.findFirst({ where: eq(users.id, id) });
+  if (target?.role !== "STUDENT") throw new HTTPException(422, { message: "Only students have jobs." });
+  const [job] = await db.insert(studentJobs).values({ userId: id, ...data }).returning();
+  await syncDefaultAccount(db, id);
+  await writeAuditLog(c, "STUDENT_JOB_CREATE", "StudentJob", job.id, data);
+  return c.json(job, 201);
+});
+
+/** Renames, re-accounts, or ends a job (admin). Ended jobs keep their history. */
+userRoutes.patch("/:id/jobs/:jobId", requireRole("ADMIN"), async (c) => {
+  const id = Number(c.req.param("id"));
+  const jobId = Number(c.req.param("jobId"));
+  if (!Number.isInteger(id) || !Number.isInteger(jobId)) throw new HTTPException(400, { message: "Invalid id." });
+  const data = jobSchema.partial().extend({ isActive: z.boolean().optional() }).parse(await c.req.json());
+  const db = getDb(c.env.DB);
+  const [job] = await db.update(studentJobs).set({ ...data, updatedAt: new Date() })
+    .where(and(eq(studentJobs.id, jobId), eq(studentJobs.userId, id))).returning();
+  if (!job) throw new HTTPException(404, { message: "Job not found." });
+  await syncDefaultAccount(db, id);
+  await writeAuditLog(c, "STUDENT_JOB_UPDATE", "StudentJob", jobId, data);
+  return c.json(job);
 });
 
 userRoutes.patch("/:id/deactivate", requireRole("ADMIN"), async (c) => {

@@ -59,6 +59,18 @@ This file tracks what came out of that review and where each item stands.
 
 ## Not done / follow-ups
 
-- A student with two concurrent jobs still has one default charge account; supervisors can't yet
-  move a single shift to another account from the UI.
-- Reminder times need confirming against the official payroll calendar.
+- Reminder times need confirming against the official payroll calendar (admins can now change them
+  in Settings → Payroll Calendar).
+- A student's jobs share one hourly rate.
+
+## Follow-up round
+
+- **Payroll calendar** (Settings → Payroll Calendar, admins only): reminder, deadline-morning,
+  escalation, and due times for bi-weekly and monthly, plus an on/off switch and a preview of the
+  next sends.
+- **Several jobs per student**: admins add or end jobs (title + charge account) in User Management.
+  Students with two or more jobs pick one when clocking in and when reporting a missed shift; a
+  "Clocked in for the wrong job?" button opens a card to move the open or still-pending shift.
+- **Move a shift to another account**: "Change account" in Pending Time Approvals, for assigned
+  supervisors and admins.
+- **Missed clock-in form** opens as a card from "Fix a missed clock-in or clock-out".

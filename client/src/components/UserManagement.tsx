@@ -15,6 +15,7 @@ interface OrgUser {
   department: { id: number; name: string; code: string } | null;
   chargeAccount: { id: number; code: string; name: string } | null;
   supervisors: { id: number; name: string }[];
+  jobs: { id: number; title: string; chargeAccount: { id: number; code: string; name: string } | null }[];
 }
 
 interface Department {
@@ -35,7 +36,6 @@ interface ChargeAccount {
 interface EditDraft {
   preferredName: string;
   departmentId: string;
-  chargeAccountId: string;
   supervisorIds: number[];
 }
 
@@ -56,6 +56,8 @@ export function UserManagement() {
   const [chargeAccountId, setChargeAccountId] = useState("");
   const [supervisorIds, setSupervisorIds] = useState<number[]>([]);
   const [rate, setRate] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
+  const [newJob, setNewJob] = useState({ title: "", chargeAccountId: "" });
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<EditDraft | null>(null);
@@ -94,6 +96,7 @@ export function UserManagement() {
         payType,
         departmentId: departmentId ? Number(departmentId) : undefined,
         chargeAccountId: chargeAccountId ? Number(chargeAccountId) : undefined,
+        jobTitle: role === "STUDENT" && jobTitle.trim() ? jobTitle.trim() : undefined,
         supervisorIds: role === "STUDENT" ? supervisorIds : undefined,
       };
       if (payType === "BIWEEKLY" || role === "STUDENT") payload.hourlyRate = Number(rate);
@@ -107,6 +110,7 @@ export function UserManagement() {
       setPreferredName("");
       setRate("");
       setSupervisorIds([]);
+      setJobTitle("");
       await load();
     } catch (err) {
       setMessage(err instanceof ApiError ? err.message : "Could not create user.");
@@ -118,10 +122,35 @@ export function UserManagement() {
     setDraft({
       preferredName: user.preferredName ?? "",
       departmentId: user.department ? String(user.department.id) : "",
-      chargeAccountId: user.chargeAccount ? String(user.chargeAccount.id) : "",
       supervisorIds: user.supervisors.map((supervisor) => supervisor.id),
     });
+    setNewJob({ title: "", chargeAccountId: "" });
     setMessage(null);
+  }
+
+  async function addJob(user: OrgUser) {
+    if (!newJob.title.trim()) {
+      setMessage("Enter a job title.");
+      return;
+    }
+    try {
+      await api.post(`/users/${user.id}/jobs`, { title: newJob.title.trim(), chargeAccountId: newJob.chargeAccountId ? Number(newJob.chargeAccountId) : null });
+      setMessage(`Added ${newJob.title.trim()} for ${displayName(user)}.`);
+      setNewJob({ title: "", chargeAccountId: "" });
+      await load();
+    } catch (err) {
+      setMessage(err instanceof ApiError ? err.message : "Could not add the job.");
+    }
+  }
+
+  async function endJob(user: OrgUser, job: OrgUser["jobs"][number]) {
+    try {
+      await api.patch(`/users/${user.id}/jobs/${job.id}`, { isActive: false });
+      setMessage(`Ended ${job.title} for ${displayName(user)}. Past shifts keep it.`);
+      await load();
+    } catch (err) {
+      setMessage(err instanceof ApiError ? err.message : "Could not end the job.");
+    }
   }
 
   async function saveEdit(user: OrgUser) {
@@ -131,7 +160,6 @@ export function UserManagement() {
       await api.patch(`/users/${user.id}`, {
         preferredName: draft.preferredName.trim() || null,
         departmentId: draft.departmentId ? Number(draft.departmentId) : null,
-        chargeAccountId: draft.chargeAccountId ? Number(draft.chargeAccountId) : null,
         ...(user.role === "STUDENT" ? { supervisorIds: draft.supervisorIds } : {}),
       });
       setMessage(`Saved changes for ${displayName({ ...user, preferredName: draft.preferredName })}.`);
@@ -211,6 +239,12 @@ export function UserManagement() {
           <label htmlFor="new-dept">Home department</label>
           <select id="new-dept" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>{departmentOptions}</select>
         </div>
+        {role === "STUDENT" && (
+          <div className="form-row">
+            <label htmlFor="new-job-title">Job title</label>
+            <input id="new-job-title" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} maxLength={80} placeholder="e.g. Lab Assistant" />
+          </div>
+        )}
         <div className="form-row">
           <label htmlFor="new-account">Charge account (index)</label>
           <select id="new-account" value={chargeAccountId} onChange={(e) => setChargeAccountId(e.target.value)}>{accountOptions}</select>
@@ -241,7 +275,7 @@ export function UserManagement() {
               <th scope="col">Email</th>
               <th scope="col">Role</th>
               <th scope="col">Home department</th>
-              <th scope="col">Charge account</th>
+              <th scope="col">Jobs / charge account</th>
               <th scope="col">Supervisors</th>
               <th scope="col">Active</th>
               <th scope="col">Actions</th>
@@ -261,10 +295,32 @@ export function UserManagement() {
                       <label htmlFor={`edit-dept-${u.id}`}>Home department</label>
                       <select id={`edit-dept-${u.id}`} value={draft.departmentId} onChange={(e) => setDraft({ ...draft, departmentId: e.target.value })}>{departmentOptions}</select>
                     </div>
-                    <div className="form-row">
-                      <label htmlFor={`edit-account-${u.id}`}>Charge account</label>
-                      <select id={`edit-account-${u.id}`} value={draft.chargeAccountId} onChange={(e) => setDraft({ ...draft, chargeAccountId: e.target.value })}>{accountOptions}</select>
-                    </div>
+                    {u.role === "STUDENT" && (
+                      <fieldset className="user-management__jobs">
+                        <legend>Jobs</legend>
+                        <p className="form-help">With two or more jobs, the student picks one each time they clock in.</p>
+                        <ul>
+                          {u.jobs.map((job) => (
+                            <li key={job.id}>
+                              <span><strong>{job.title}</strong> · {job.chargeAccount ? `${job.chargeAccount.code} – ${job.chargeAccount.name}` : "No charge account"}</span>
+                              <button type="button" className="button--secondary" onClick={() => endJob(u, job)} aria-label={`End job ${job.title}`}>End job</button>
+                            </li>
+                          ))}
+                          {u.jobs.length === 0 && <li>No current jobs.</li>}
+                        </ul>
+                        <div className="user-management__new-job">
+                          <div className="form-row">
+                            <label htmlFor={`new-job-title-${u.id}`}>New job title</label>
+                            <input id={`new-job-title-${u.id}`} value={newJob.title} maxLength={80} onChange={(e) => setNewJob({ ...newJob, title: e.target.value })} />
+                          </div>
+                          <div className="form-row">
+                            <label htmlFor={`new-job-account-${u.id}`}>New job charge account</label>
+                            <select id={`new-job-account-${u.id}`} value={newJob.chargeAccountId} onChange={(e) => setNewJob({ ...newJob, chargeAccountId: e.target.value })}>{accountOptions}</select>
+                          </div>
+                          <button type="button" onClick={() => addJob(u)}>Add job</button>
+                        </div>
+                      </fieldset>
+                    )}
                     {u.role === "STUDENT" && (
                       <PersonSearch label="Supervisors" people={supervisorChoices} value={draft.supervisorIds} onChange={(ids) => setDraft({ ...draft, supervisorIds: ids })} multiple />
                     )}
@@ -281,7 +337,9 @@ export function UserManagement() {
                 <td>{u.email}</td>
                 <td>{u.role}</td>
                 <td>{u.department?.name ?? "—"}</td>
-                <td title={u.chargeAccount?.name}>{u.chargeAccount?.code ?? "—"}</td>
+                <td>{u.role === "STUDENT" && u.jobs.length
+                  ? u.jobs.map((job) => <span key={job.id} className="user-management__job">{job.title}{job.chargeAccount ? ` (${job.chargeAccount.code})` : ""}</span>)
+                  : <span title={u.chargeAccount?.name}>{u.chargeAccount?.code ?? "—"}</span>}</td>
                 <td>{u.role === "STUDENT" ? (u.supervisors.map((s) => s.name).join(", ") || "None assigned") : "—"}</td>
                 <td>{u.isActive ? "Yes" : "No"}</td>
                 <td>

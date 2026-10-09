@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { api, ApiError } from "../api/client";
 import { notifyWorkChanged, waitingFor } from "../lib/work";
 import { DateField } from "./DateField";
+import type { Job } from "./ClockWidget";
 
 interface TimeEntryOption {
   id: number;
@@ -42,6 +43,9 @@ export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryO
   const [reason, setReason] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [jobId, setJobId] = useState("");
 
   async function loadRequests() {
     setRequests(await api.get<CorrectionRequest[]>("/timeclock/correction-requests/mine"));
@@ -52,7 +56,17 @@ export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryO
       .then((data) => setHourlyRate(data.hourlyRate))
       .catch(() => setHourlyRate(null));
     loadRequests().catch(() => setMessage("Could not load correction requests."));
+    api.get<Job[]>("/timeclock/my-jobs").then(setJobs).catch(() => setJobs([]));
   }, []);
+
+  function closeForm() {
+    setOpen(false);
+    setTarget("new");
+    setClockIn("");
+    setClockOut("");
+    setReason("");
+    setJobId("");
+  }
 
   function chooseShift(value: string) {
     setTarget(value);
@@ -75,16 +89,21 @@ export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryO
       setMessage("Enter the corrected clock-in, clock-out, and reason.");
       return;
     }
+    if (target === "new" && jobs.length > 1 && !jobId) {
+      setMessage("Choose which job the missed shift was for.");
+      return;
+    }
     setBusy(true);
     try {
       await api.post("/timeclock/correction-requests", {
         timeEntryId: target === "new" ? null : Number(target),
+        ...(target === "new" && jobId ? { jobId: Number(jobId) } : {}),
         clockIn: new Date(clockIn).toISOString(),
         clockOut: new Date(clockOut).toISOString(),
         reason: reason.trim(),
       });
       setMessage("Correction sent for approval. Any of your supervisors can approve it.");
-      setReason("");
+      closeForm();
       await loadRequests();
       onSubmitted();
       notifyWorkChanged();
@@ -99,16 +118,30 @@ export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryO
     <section className="card student-time-tools" aria-labelledby="time-help-heading">
       <h2 id="time-help-heading">Pay &amp; Time Corrections</h2>
       <p className="student-pay-rate">Your hourly pay rate: <strong>{hourlyRate === null ? "Not set" : `$${hourlyRate} per hour`}</strong></p>
-      <form onSubmit={submit}>
+      {!open && (
+        <button type="button" className="student-time-tools__open" onClick={() => { setOpen(true); setMessage(""); }} aria-expanded={false} aria-controls="correction-card">
+          Fix a missed clock-in or clock-out
+        </button>
+      )}
+      {open && <form id="correction-card" onSubmit={submit} className="student-time-tools__card">
         <h3>Missed a clock-in or clock-out?</h3>
         <p>Choose a shift to edit, or request a completely missed shift. One of your supervisors must approve every change.</p>
         <div className="form-row">
           <label htmlFor="correction-shift">Shift to correct</label>
-          <select id="correction-shift" value={target} onChange={(event) => chooseShift(event.target.value)}>
+          <select id="correction-shift" value={target} onChange={(event) => chooseShift(event.target.value)} autoFocus>
             <option value="new">New missed shift</option>
             {entries.map((entry) => <option key={entry.id} value={entry.id}>{new Date(entry.clockIn).toLocaleString()}</option>)}
           </select>
         </div>
+        {target === "new" && jobs.length > 1 && (
+          <div className="form-row">
+            <label htmlFor="correction-job">Job</label>
+            <select id="correction-job" value={jobId} onChange={(event) => setJobId(event.target.value)} required>
+              <option value="">Choose a job</option>
+              {jobs.map((job) => <option key={job.id} value={job.id}>{job.title}</option>)}
+            </select>
+          </div>
+        )}
         <div className="form-row-group">
           <DateField id="requested-clock-in" label="Correct clock-in" type="datetime-local" value={clockIn} onChange={setClockIn} commitLabel="Send for approval" required />
           <DateField id="requested-clock-out" label="Correct clock-out" type="datetime-local" value={clockOut} onChange={setClockOut} commitLabel="Send for approval" required />
@@ -117,8 +150,11 @@ export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryO
           <label htmlFor="correction-reason">Reason for the correction</label>
           <textarea id="correction-reason" value={reason} onChange={(event) => setReason(event.target.value)} maxLength={500} required placeholder="Example: I forgot to clock out at the end of my shift." />
         </div>
-        <button type="submit" disabled={busy}>{busy ? "Sending…" : "Send for approval"}</button>
-      </form>
+        <div className="button-row">
+          <button type="submit" disabled={busy}>{busy ? "Sending…" : "Send for approval"}</button>
+          <button type="button" className="button--secondary" onClick={closeForm}>Cancel</button>
+        </div>
+      </form>}
       <p className="status-message" role="status" aria-live="polite">{message}</p>
       {requests.length > 0 && <div className="correction-history">
         <h3>Correction requests</h3>

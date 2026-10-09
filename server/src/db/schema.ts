@@ -84,6 +84,29 @@ export const users = sqliteTable(
   (t) => [index("users_department_idx").on(t.departmentId)]
 );
 
+// A student's jobs. Each is charged to its own account; with two or more, the
+// student picks one when clocking in.
+export const studentJobs = sqliteTable(
+  "student_jobs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    chargeAccountId: integer("charge_account_id").references(() => chargeAccounts.id),
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    ...timestamps,
+  },
+  (t) => [index("student_jobs_user_idx").on(t.userId, t.isActive)]
+);
+
+// Admin-editable settings, one JSON value per key.
+export const appSettings = sqliteTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: text("value", { mode: "json" }).notNull(),
+  updatedById: integer("updated_by_id").references(() => users.id),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+
 // A student can have several supervisors; any of them can approve their time.
 export const studentSupervisors = sqliteTable(
   "student_supervisors",
@@ -183,6 +206,7 @@ export const timeEntries = sqliteTable(
       .default("WEB"),
     notes: text("notes"),
     chargeAccountId: integer("charge_account_id").references(() => chargeAccounts.id),
+    jobId: integer("job_id"),
     status: text("status", { enum: ["PENDING", "APPROVED", "REJECTED"] })
       .notNull()
       .default("PENDING"),
@@ -203,6 +227,7 @@ export const timeEntryChangeRequests = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     timeEntryId: integer("time_entry_id").references(() => timeEntries.id, { onDelete: "set null" }),
+    jobId: integer("job_id"),
     requestedClockIn: integer("requested_clock_in", { mode: "timestamp" }).notNull(),
     requestedClockOut: integer("requested_clock_out", { mode: "timestamp" }).notNull(),
     reason: text("reason").notNull(),

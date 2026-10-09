@@ -1,6 +1,7 @@
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { getDb, type Db } from "../db/index.js";
-import { notificationPreferences, payPeriods, reminderRuns, users } from "../db/schema.js";
+import { appSettings, notificationPreferences, payPeriods, reminderRuns, users } from "../db/schema.js";
+import { PAYROLL_CALENDAR_KEY, readPayrollCalendar, type PayrollCalendar } from "../lib/payroll-calendar.js";
 import { escapeHtml, getEmailSender, type EmailMessage } from "../lib/email.js";
 import type { Bindings } from "../types.js";
 import { fullName, supervisorsByStudent } from "./access.service.js";
@@ -9,11 +10,13 @@ import { layout } from "./email.service.js";
 // Payroll deadline reminders. Only sent when something still needs doing, and
 // batched: one summary per supervisor, never one email per student.
 //
+// When they go out is the payroll calendar admins edit in Settings (see
+// lib/payroll-calendar.ts). Defaults:
 // Bi-weekly: payroll closes Sunday (the period end) and approvals are due by
 // noon Monday. Reminders go out the Friday before, Monday morning, and an
 // escalation at 10 AM Monday for anything still unapproved.
 // Monthly: approvals are due the 25th (the Friday before, if the 25th is on a
-// weekend), with the same three stages two business days apart.
+// weekend), with the first reminder two business days earlier.
 // Times are US Central (Tennessee Tech, Cookeville).
 
 export const PAYROLL_TIME_ZONE = "America/Chicago";
@@ -56,31 +59,40 @@ function minusBusinessDays(date: Date, days: number): Date {
   return result;
 }
 
-const at = (date: Date, hour: number, minute = 0) => centralTime(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate(), hour, minute);
+/** A "HH:MM" Central wall-clock time on a calendar date. */
+const at = (date: Date, time: string) =>
+  centralTime(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate(), Number(time.slice(0, 2)), Number(time.slice(3)));
 
 /**
  * When each reminder for a pay period goes out. Pay period dates come from
  * date pickers (midnight UTC), so the UTC calendar date is the payroll date.
  */
-export function reminderSchedule(period: { type: "BIWEEKLY" | "MONTHLY"; endDate: Date }): ScheduledReminder[] {
+export function reminderSchedule(period: { type: "BIWEEKLY" | "MONTHLY"; endDate: Date }, calendar: PayrollCalendar): ScheduledReminder[] {
   const end = new Date(Date.UTC(period.endDate.getUTCFullYear(), period.endDate.getUTCMonth(), period.endDate.getUTCDate()));
   if (period.type === "BIWEEKLY") {
-    const deadlineDay = addDays(end, 1); // Monday after the Sunday close
-    const deadline = at(deadlineDay, 12);
+    const c = calendar.biweekly;
+    const deadlineDay = addDays(end, c.dueDaysAfterClose);
+    const deadline = at(deadlineDay, c.dueTime);
     return [
-      { stage: "advance", at: at(addDays(end, -2), 9), deadline },
-      { stage: "deadline-morning", at: at(deadlineDay, 8), deadline },
-      { stage: "escalation", at: at(deadlineDay, 10), deadline },
+      { stage: "advance", at: at(addDays(end, -c.advanceDaysBeforeClose), c.advanceTime), deadline },
+      { stage: "deadline-morning", at: at(deadlineDay, c.deadlineMorningTime), deadline },
+      { stage: "escalation", at: at(deadlineDay, c.escalationTime), deadline },
     ];
   }
-  let deadlineDay = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 25));
+  const c = calendar.monthly;
+  let deadlineDay = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), c.dueDayOfMonth));
   while (deadlineDay.getUTCDay() === 0 || deadlineDay.getUTCDay() === 6) deadlineDay = addDays(deadlineDay, -1);
-  const deadline = at(deadlineDay, 12);
+  const deadline = at(deadlineDay, c.dueTime);
   return [
-    { stage: "advance", at: at(minusBusinessDays(deadlineDay, 2), 9), deadline },
-    { stage: "deadline-morning", at: at(deadlineDay, 8), deadline },
-    { stage: "escalation", at: at(deadlineDay, 10), deadline },
+    { stage: "advance", at: at(minusBusinessDays(deadlineDay, c.advanceBusinessDays), c.advanceTime), deadline },
+    { stage: "deadline-morning", at: at(deadlineDay, c.deadlineMorningTime), deadline },
+    { stage: "escalation", at: at(deadlineDay, c.escalationTime), deadline },
   ];
+}
+
+export async function loadPayrollCalendar(db: Db): Promise<PayrollCalendar> {
+  const row = await db.query.appSettings.findFirst({ where: eq(appSettings.key, PAYROLL_CALENDAR_KEY) });
+  return readPayrollCalendar(row?.value);
 }
 
 function formatDeadline(date: Date): string {
@@ -279,11 +291,13 @@ const SEND_WINDOW_MS = 6 * 3_600_000;
 /** Runs from the hourly cron trigger. Sends each period's due stages exactly once. */
 export async function runScheduledReminders(env: Bindings, now = new Date()) {
   const db = getDb(env.DB);
+  const calendar = await loadPayrollCalendar(db);
+  if (!calendar.enabled) return [];
   const periods = await db.select().from(payPeriods).where(ne(payPeriods.status, "CLOSED"));
   const results: { payPeriodId: number; stage: ReminderStage; result: ReminderResult }[] = [];
 
   for (const period of periods) {
-    for (const reminder of reminderSchedule(period)) {
+    for (const reminder of reminderSchedule(period, calendar)) {
       const elapsed = now.getTime() - reminder.at.getTime();
       if (elapsed < 0 || elapsed >= SEND_WINDOW_MS) continue;
       // Claim the stage first so overlapping runs can't both send it.

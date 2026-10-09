@@ -100,7 +100,9 @@ const lines = [
   "DELETE FROM time_entries;",
   "DELETE FROM refresh_tokens;",
   "DELETE FROM user_profile_photos;",
+  "DELETE FROM app_settings;",
   "DELETE FROM student_supervisors;",
+  "DELETE FROM student_jobs;",
   "DELETE FROM users;",
   "DELETE FROM charge_accounts;",
   "DELETE FROM departments;",
@@ -152,6 +154,19 @@ for (const person of people) {
   for (const supervisorId of person.supervisors ?? []) {
     lines.push(`INSERT INTO student_supervisors (student_id, supervisor_id, created_at) VALUES (${person.id}, ${supervisorId}, ${now});`);
   }
+}
+
+// Jobs: one per student, except Liz, who is a CS lab assistant and a math tutor.
+const jobs = [];
+for (const person of people.filter((p) => p.role === "STUDENT")) {
+  const account = ACCOUNTS.find((a) => a.id === person.account);
+  jobs.push({ id: jobs.length + 1, userId: person.id, title: person.id === 8 ? "CS Lab Assistant" : account.name, account: person.account });
+  if (person.id === 8) jobs.push({ id: jobs.length + 1, userId: 8, title: "Math Tutor", account: 2 });
+}
+const jobFor = (userId, account) => jobs.find((j) => j.userId === userId && j.account === account) ?? jobs.find((j) => j.userId === userId);
+lines.push("", "-- Student jobs (Liz has two, so she picks one when clocking in)");
+for (const job of jobs) {
+  lines.push(`INSERT INTO student_jobs (id, user_id, title, charge_account_id, is_active, created_at, updated_at) VALUES (${job.id}, ${job.userId}, ${q(job.title)}, ${job.account}, 1, ${now}, ${now});`);
 }
 
 // ---------- Time ----------
@@ -211,7 +226,7 @@ lines.push("", "-- Time entries");
 for (const e of entries) {
   const rejection = e.status === "REJECTED" ? q("Clock-out was left running past the end of your shift.") : "NULL";
   lines.push(
-    `INSERT INTO time_entries (id, user_id, clock_in, clock_out, source, status, charge_account_id, edited_by_id, rejection_reason, created_at, updated_at) VALUES (${e.id}, ${e.userId}, ${e.clockIn}, ${e.clockOut}, 'WEB', ${q(e.status)}, ${e.account}, ${e.editedBy ?? "NULL"}, ${rejection}, ${e.clockIn}, ${e.status === "PENDING" ? e.clockOut : e.clockOut + 4 * HOUR});`
+    `INSERT INTO time_entries (id, user_id, clock_in, clock_out, source, status, job_id, charge_account_id, edited_by_id, rejection_reason, created_at, updated_at) VALUES (${e.id}, ${e.userId}, ${e.clockIn}, ${e.clockOut}, 'WEB', ${q(e.status)}, ${jobFor(e.userId, e.account).id}, ${e.account}, ${e.editedBy ?? "NULL"}, ${rejection}, ${e.clockIn}, ${e.status === "PENDING" ? e.clockOut : e.clockOut + 4 * HOUR});`
   );
 }
 
