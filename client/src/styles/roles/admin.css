@@ -13,7 +13,7 @@
   --danger: #9b1c1c;
   --danger-dark: #6e1414;
   --disabled: #9c96a8;
-  --focus: #1a56d6;
+  --focus: #9a6b00;
 }
 
 /* ---------- Page ---------- */
@@ -50,6 +50,13 @@ h2 {
 .app-header a {
   color: #fff;
   font-weight: 600;
+  text-decoration:none;
+}
+
+.app-header__nav a:hover,
+.app-header__dashboard-label:hover {
+  text-decoration:underline;
+  text-underline-offset:.18em;
 }
 
 .app-header__brand {
@@ -240,9 +247,9 @@ caption {
 }
 
 /* ---------- Balanced dashboard refresh ---------- */
-:root { --tt-purple:#512888; --tt-purple-dark:#321653; --tt-purple-soft:#f0e9f8; --tt-gold:#ffca28; --success:#247a3b; --success-dark:#195d2c; --text-muted:#625c6b; --bg:#f5f3f8; --border:#ddd7e5; --table-header:#eee8f5; }
+:root { --tt-purple:#512888; --tt-purple-dark:#321653; --tt-purple-soft:#f0e9f8; --tt-gold:#ffca28; --success:#247a3b; --success-dark:#195d2c; --text-muted:#625c6b; --bg:#f5f3f8; --border:#ddd7e5; --table-header:#eee8f5; --focus:#9a6b00; }
 body { background:linear-gradient(180deg,#eee8f5 0,var(--bg) 260px); }
-.app-header { min-height:68px; padding:.85rem clamp(1rem,4vw,2.5rem); box-shadow:0 3px 12px #32165326; }
+.app-header { min-height:68px; padding:.85rem clamp(1rem,4vw,2.5rem); border-bottom:5px solid var(--tt-gold); box-shadow:0 3px 12px #32165326; }
 .app-header__brand { font-size:1.45rem; letter-spacing:.02em; }
 .app-header__logout { background:#fff; color:var(--tt-purple-dark); }
 .app-header__logout:hover:not(:disabled) { background:var(--tt-purple-soft); }
@@ -316,11 +323,14 @@ th:last-child { border-radius:0 8px 8px 0; }
 .admin-calendar__day { display:grid; place-items:center; aspect-ratio:1; border-radius:50%; color:var(--text); font-size:.75rem; }
 .admin-calendar__day--today { background:var(--tt-purple); color:#fff; font-weight:800; box-shadow:0 0 0 2px #fff,0 0 0 4px var(--tt-gold); }
 .admin-tile-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; }
-.admin-tile { min-height:155px; padding:1.1rem; display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-start; gap:.45rem; text-align:left; color:var(--text); background:#fff; border:1px solid var(--border); border-top:5px solid var(--tt-purple); box-shadow:0 3px 10px #33205a12; }
+.admin-tile { min-height:155px; padding:1.1rem; display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-start; gap:.45rem; text-align:left; color:var(--text); background:linear-gradient(180deg,#fff 0,#fbf8ff 100%); border:1px solid #cdbfe5; border-top:5px solid var(--tt-purple); box-shadow:0 3px 10px #33205a12; }
 .admin-tile:nth-child(2),.admin-tile:nth-child(5) { border-top-color:#7651a8; }
 .admin-tile:nth-child(3),.admin-tile:nth-child(6) { border-top-color:var(--tt-gold); }
-.admin-tile:hover:not(:disabled),.admin-tile[aria-pressed="true"] { background:var(--tt-purple-soft); color:var(--text); border-color:var(--tt-purple); box-shadow:0 7px 18px #33205a24; }
+.admin-tile:hover:not(:disabled),.admin-tile[aria-pressed="true"] { background:linear-gradient(180deg,#fff8df 0,#f4edf9 100%); color:var(--text); border-color:var(--tt-gold); box-shadow:0 0 0 2px #ffca2840,0 8px 20px #33205a24; }
+.admin-tile:focus-visible { outline-color:var(--tt-gold); }
 .admin-tile__icon { display:grid; place-items:center; width:42px; height:42px; border-radius:10px; background:var(--tt-purple-soft); color:var(--tt-purple-dark); font-size:1.35rem; }
+.admin-tile:nth-child(2n) .admin-tile__icon { background:#fff2bd; color:#5c3b00; }
+.admin-tile:nth-child(3n) .admin-tile__icon { background:#eadff7; color:var(--tt-purple); }
 .admin-tile__icon svg { width:23px; height:23px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 .admin-tile__title { color:var(--tt-purple-dark); font-size:1rem; font-weight:800; }
 .admin-tile__description { color:var(--text-muted); font-size:.86rem; font-weight:500; line-height:1.35; }
@@ -447,3 +457,47 @@ th:last-child { border-radius:0 8px 8px 0; }
   .talon-report-controls { grid-template-columns:1fr; }
   .talon-report-actions button { flex:1 1 100%; width:100%; }
 }
+
+html[data-theme="dark"] {
+  --tt-purple:#6f45b5;
+  --tt-purple-dark:#f5edff;
+  --tt-purple-soft:#2e2340;
+  --tt-gold:#ffd766;
+  --success:#3f9f58;
+  --success-dark:#327d46;
+  --text:#f7f2ff;
+  --text-muted:#cfc5de;
+  --bg:#15101d;
+  --surface:#21182d;
+  --border:#5f4c7a;
+  --table-header:#332548;
+  --danger:#ff8d8d;
+  --danger-dark:#d75f5f;
+  --disabled:#706680;
+  --focus:#ffd766;
+}
+
+html[data-theme="dark"] body { background:linear-gradient(180deg,#241637 0,var(--bg) 260px); }
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .admin-work-panel,
+html[data-theme="dark"] .admin-tools-panel,
+html[data-theme="dark"] .department-management__table,
+html[data-theme="dark"] .admin-table-tools,
+html[data-theme="dark"] .talon-report-panel,
+html[data-theme="dark"] .form-row-group { background:var(--surface); border-color:var(--border); box-shadow:0 8px 22px #07030d66; }
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea { background:#171120; color:var(--text); border-color:#746092; }
+html[data-theme="dark"] th,
+html[data-theme="dark"] .department-management__table th { background:var(--table-header); color:var(--tt-purple-dark); }
+html[data-theme="dark"] .admin-tile { background:linear-gradient(180deg,#251a34 0,#21182d 100%); border-color:#7a62a0; border-top-color:var(--tt-purple); box-shadow:0 8px 22px #07030d55; }
+html[data-theme="dark"] .admin-tile:hover:not(:disabled),
+html[data-theme="dark"] .admin-tile[aria-pressed="true"] { background:linear-gradient(180deg,#3a2d1a 0,#2d2440 100%); border-color:var(--tt-gold); box-shadow:0 0 0 2px #ffd7664d,0 10px 24px #07030d77; }
+html[data-theme="dark"] .admin-tile__icon { background:#372a4b; color:#f5edff; }
+html[data-theme="dark"] .admin-tile:nth-child(2n) .admin-tile__icon { background:#4a3a18; color:var(--tt-gold); }
+html[data-theme="dark"] .admin-work-task,
+html[data-theme="dark"] .talon-resolved-entry { background:#1a1325; border-color:var(--border); }
+html[data-theme="dark"] .admin-work-item:hover:not(:disabled),
+html[data-theme="dark"] .admin-work-item[aria-expanded="true"],
+html[data-theme="dark"] .status-message:not(:empty) { background:var(--tt-purple-soft); color:var(--tt-purple-dark); }
+html[data-theme="dark"] .admin-section-bar { background:#33204f; border:1px solid #7a62a0; border-bottom:4px solid var(--tt-gold); }
