@@ -84,6 +84,10 @@ export function ApprovalQueue() {
   const showEntry = (item: { user: Person }) => !studentFilter.length || studentFilter.includes(item.user.id);
   const shownEntries = entries.filter(showEntry);
   const shownCorrections = corrections.filter(showEntry);
+  const splitStudents = studentFilter.length === 2
+    ? studentFilter.map((id) => students.find((student) => student.id === id)).filter((student): student is Person => Boolean(student))
+    : [];
+  const showSplitReview = splitStudents.length === 2;
 
   function openReject(kind: "entry" | "correction", id: number) {
     setRejectTarget({ kind, id });
@@ -93,7 +97,7 @@ export function ApprovalQueue() {
 
   async function decideEntry(id: number, status: "APPROVED" | "REJECTED") {
     if (status === "REJECTED" && rejectionReason.trim().length < 3) {
-      setMessage("Enter a reason before rejecting the time entry.");
+      setMessage("Enter a reason before denying the time entry.");
       return;
     }
     setMessage(null);
@@ -102,8 +106,8 @@ export function ApprovalQueue() {
         status,
         ...(status === "REJECTED" ? { rejectionReason: rejectionReason.trim() } : {}),
       });
-      setMessage(`Time entry ${status === "APPROVED" ? "approved" : "rejected"}.`);
-      setAttribution({ action: status === "APPROVED" ? "Approved by" : "Rejected by", name: user?.firstName ?? "Supervisor" });
+      setMessage(`Time entry ${status === "APPROVED" ? "approved" : "denied"}.`);
+      setAttribution({ action: status === "APPROVED" ? "Approved by" : "Denied by", name: user?.firstName ?? "Supervisor" });
       setRejectTarget(null);
       await load();
       notifyWorkChanged();
@@ -136,13 +140,95 @@ export function ApprovalQueue() {
   function rejectionForm(kind: "entry" | "correction", id: number) {
     if (rejectTarget?.kind !== kind || rejectTarget.id !== id) return null;
     return <div className="approval-rejection-form">
-      <label htmlFor={`reject-${kind}-${id}`}>Reason for {kind === "entry" ? "rejection" : "denial"}</label>
+      <label htmlFor={`reject-${kind}-${id}`}>Reason for denial</label>
       <textarea id={`reject-${kind}-${id}`} value={rejectionReason} onChange={(event) => setRejectionReason(event.target.value)} maxLength={500} autoFocus required />
       <div className="button-row">
-        <button type="button" className="button--danger" onClick={() => kind === "entry" ? decideEntry(id, "REJECTED") : decideCorrection(id, "REJECTED")}>Confirm {kind === "entry" ? "rejection" : "denial"}</button>
+        <button type="button" className="button--danger" onClick={() => kind === "entry" ? decideEntry(id, "REJECTED") : decideCorrection(id, "REJECTED")}>Confirm denial</button>
         <button type="button" className="button--secondary" onClick={() => setRejectTarget(null)}>Cancel</button>
       </div>
     </div>;
+  }
+
+  function statusFor(submittedAt: string | null, inProgress = false) {
+    return inProgress ? "In progress" : `Pending ${waitingFor(submittedAt)}`;
+  }
+
+  function entryActions(entry: PendingEntry) {
+    return <>
+      <div className="button-row approval-queue__actions">
+        <button type="button" onClick={() => decideEntry(entry.id, "APPROVED")} className="approval-queue__approve" aria-label={`Approve time entry for ${entry.user.fullName}`}>Approve</button>
+        <button type="button" onClick={() => openReject("entry", entry.id)} className="button--danger approval-queue__reject" aria-label={`Deny time entry for ${entry.user.fullName}`}>Deny</button>
+      </div>
+      {rejectionForm("entry", entry.id)}
+    </>;
+  }
+
+  function correctionActions(request: PendingCorrection) {
+    return <>
+      <div className="button-row approval-queue__actions">
+        <button type="button" onClick={() => decideCorrection(request.id, "APPROVED")} className="approval-queue__approve" aria-label={`Approve time correction for ${request.user.fullName}`}>Approve</button>
+        <button type="button" onClick={() => openReject("correction", request.id)} className="button--danger approval-queue__reject" aria-label={`Deny time correction for ${request.user.fullName}`}>Deny</button>
+      </div>
+      {rejectionForm("correction", request.id)}
+    </>;
+  }
+
+  function entryChargeAccount(entry: PendingEntry) {
+    return <td>
+      <span title={entry.chargeAccount?.name}>{entry.chargeAccount?.code ?? "Unassigned"}</span>
+      {entry.jobTitle && <small className="approval-queue__job">{entry.jobTitle}</small>}
+      {moving?.entryId === entry.id ? (
+        <div className="approval-queue__move">
+          <label htmlFor={`move-account-${entry.id}`}>Charge this shift to</label>
+          <select id={`move-account-${entry.id}`} value={moving.accountId} onChange={(event) => setMoving({ entryId: entry.id, accountId: event.target.value })}>
+            <option value="">Choose an account</option>
+            {accounts.filter((account) => account.id !== entry.chargeAccount?.id).map((account) => <option key={account.id} value={account.id}>{account.code} – {account.name}</option>)}
+          </select>
+          <div className="button-row">
+            <button type="button" onClick={() => moveAccount(entry)}>Move shift</button>
+            <button type="button" className="button--secondary" onClick={() => setMoving(null)}>Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" className="button--secondary approval-queue__change" onClick={() => setMoving({ entryId: entry.id, accountId: "" })} aria-label={`Change charge account for ${entry.user.fullName}'s shift`}>Change account</button>
+      )}
+    </td>;
+  }
+
+  function splitStudentPanel(student: Person) {
+    const studentEntries = entries.filter((entry) => entry.user.id === student.id);
+    const studentCorrections = corrections.filter((request) => request.user.id === student.id);
+    return <section key={student.id} className="approval-split-card" aria-labelledby={`approval-split-${student.id}`}>
+      <h3 id={`approval-split-${student.id}`}>{student.fullName}</h3>
+      <div className="approval-split-card__section">
+        <h4>Clock entries</h4>
+        {studentEntries.length === 0 ? <p>No regular time entries waiting.</p> : studentEntries.map((entry) => (
+          <article key={entry.id} className="approval-review-item">
+            <dl>
+              <div><dt>Clock In</dt><dd>{new Date(entry.clockIn).toLocaleString()}</dd></div>
+              <div><dt>Clock Out</dt><dd>{entry.clockOut ? new Date(entry.clockOut).toLocaleString() : "In progress"}</dd></div>
+              <div><dt>Charge account</dt><dd>{entry.chargeAccount?.code ?? "Unassigned"}{entry.jobTitle ? ` - ${entry.jobTitle}` : ""}</dd></div>
+              <div><dt>Status</dt><dd>{statusFor(entry.submittedAt, !entry.clockOut)}</dd></div>
+            </dl>
+            {entryActions(entry)}
+          </article>
+        ))}
+      </div>
+      <div className="approval-split-card__section">
+        <h4>Corrections</h4>
+        {studentCorrections.length === 0 ? <p>No correction requests waiting.</p> : studentCorrections.map((request) => (
+          <article key={request.id} className="approval-review-item">
+            <dl>
+              <div><dt>Current shift</dt><dd>{request.timeEntryId && request.currentClockIn ? <>{new Date(request.currentClockIn).toLocaleString()}<br />{request.currentClockOut ? new Date(request.currentClockOut).toLocaleString() : "No clock-out"}</> : "New missed shift"}</dd></div>
+              <div><dt>Requested shift</dt><dd>{new Date(request.requestedClockIn).toLocaleString()}<br />{new Date(request.requestedClockOut).toLocaleString()}</dd></div>
+              <div><dt>Reason</dt><dd>{request.reason}{request.jobTitle ? ` - Job: ${request.jobTitle}` : ""}</dd></div>
+              <div><dt>Status</dt><dd>{statusFor(request.submittedAt)}</dd></div>
+            </dl>
+            {correctionActions(request)}
+          </article>
+        ))}
+      </div>
+    </section>;
   }
 
   return (
@@ -150,44 +236,25 @@ export function ApprovalQueue() {
       <h2 id="approvals-heading" tabIndex={-1}>Pending Time Approvals</h2>
       <p className="approval-queue__intro">{user?.role === "ADMIN" ? "Every student's time. Any admin or any of a student's supervisors can approve." : "Time from every student assigned to you. Any of a student's supervisors can approve."}</p>
       {students.length > 1 && <PersonSearch label="Filter by student" people={students} value={studentFilter} onChange={setStudentFilter} multiple />}
+      {showSplitReview && (
+        <div className="approval-split-view" aria-label="Side-by-side student approval review">
+          {splitStudents.map(splitStudentPanel)}
+        </div>
+      )}
       <h3>Clock entries</h3>
       <div className="table-scroll" role="region" aria-label="Time entries awaiting approval" tabIndex={0}>
         <table>
           <caption className="sr-only">Time entries awaiting approval</caption>
-          <thead><tr><th scope="col">Employee</th><th scope="col">Clock In</th><th scope="col">Clock Out</th><th scope="col">Charge account</th><th scope="col">Waiting</th><th scope="col">Actions</th></tr></thead>
+          <thead><tr><th scope="col">Employee</th><th scope="col">Clock In</th><th scope="col">Clock Out</th><th scope="col">Charge account</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
           <tbody>
             {shownEntries.length === 0 && <tr><td colSpan={6}>There are no regular time entries waiting for approval.</td></tr>}
             {shownEntries.map((entry) => <tr key={entry.id}>
               <th scope="row">{entry.user.fullName}</th>
               <td>{new Date(entry.clockIn).toLocaleString()}</td>
               <td>{entry.clockOut ? new Date(entry.clockOut).toLocaleString() : "In progress"}</td>
-              <td>
-                <span title={entry.chargeAccount?.name}>{entry.chargeAccount?.code ?? "Unassigned"}</span>
-                {entry.jobTitle && <small className="approval-queue__job">{entry.jobTitle}</small>}
-                {moving?.entryId === entry.id ? (
-                  <div className="approval-queue__move">
-                    <label htmlFor={`move-account-${entry.id}`}>Charge this shift to</label>
-                    <select id={`move-account-${entry.id}`} value={moving.accountId} onChange={(event) => setMoving({ entryId: entry.id, accountId: event.target.value })}>
-                      <option value="">Choose an account</option>
-                      {accounts.filter((account) => account.id !== entry.chargeAccount?.id).map((account) => <option key={account.id} value={account.id}>{account.code} – {account.name}</option>)}
-                    </select>
-                    <div className="button-row">
-                      <button type="button" onClick={() => moveAccount(entry)}>Move shift</button>
-                      <button type="button" className="button--secondary" onClick={() => setMoving(null)}>Cancel</button>
-                    </div>
-                  </div>
-                ) : (
-                  <button type="button" className="button--secondary approval-queue__change" onClick={() => setMoving({ entryId: entry.id, accountId: "" })} aria-label={`Change charge account for ${entry.user.fullName}'s shift`}>Change account</button>
-                )}
-              </td>
-              <td>{entry.clockOut ? waitingFor(entry.submittedAt) : "Still clocked in"}</td>
-              <td>
-                <div className="button-row">
-                  <button type="button" onClick={() => decideEntry(entry.id, "APPROVED")} className="approval-queue__approve" aria-label={`Approve time entry for ${entry.user.fullName}`}>Approve</button>
-                  <button type="button" onClick={() => openReject("entry", entry.id)} className="button--danger approval-queue__reject" aria-label={`Reject time entry for ${entry.user.fullName}`}>Reject</button>
-                </div>
-                {rejectionForm("entry", entry.id)}
-              </td>
+              {entryChargeAccount(entry)}
+              <td>{statusFor(entry.submittedAt, !entry.clockOut)}</td>
+              <td>{entryActions(entry)}</td>
             </tr>)}
           </tbody>
         </table>
@@ -197,7 +264,7 @@ export function ApprovalQueue() {
       <div className="table-scroll" role="region" aria-label="Time correction requests awaiting approval" tabIndex={0}>
         <table>
           <caption className="sr-only">Student time correction requests awaiting approval</caption>
-          <thead><tr><th scope="col">Employee</th><th scope="col">Current shift</th><th scope="col">Requested shift</th><th scope="col">Student reason</th><th scope="col">Waiting</th><th scope="col">Actions</th></tr></thead>
+          <thead><tr><th scope="col">Employee</th><th scope="col">Current shift</th><th scope="col">Requested shift</th><th scope="col">Student reason</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
           <tbody>
             {shownCorrections.length === 0 && <tr><td colSpan={6}>There are no missed-punch or correction requests waiting for approval.</td></tr>}
             {shownCorrections.map((request) => <tr key={request.id}>
@@ -205,14 +272,8 @@ export function ApprovalQueue() {
               <td>{request.timeEntryId && request.currentClockIn ? <>{new Date(request.currentClockIn).toLocaleString()}<br />{request.currentClockOut ? new Date(request.currentClockOut).toLocaleString() : "No clock-out"}</> : "New missed shift"}</td>
               <td>{new Date(request.requestedClockIn).toLocaleString()}<br />{new Date(request.requestedClockOut).toLocaleString()}</td>
               <td>{request.reason}{request.jobTitle && <small className="approval-queue__job">Job: {request.jobTitle}</small>}</td>
-              <td>{waitingFor(request.submittedAt)}</td>
-              <td>
-                <div className="button-row">
-                  <button type="button" onClick={() => decideCorrection(request.id, "APPROVED")} className="approval-queue__approve" aria-label={`Approve time correction for ${request.user.fullName}`}>Approve change</button>
-                  <button type="button" onClick={() => openReject("correction", request.id)} className="button--danger approval-queue__reject" aria-label={`Deny time correction for ${request.user.fullName}`}>Deny</button>
-                </div>
-                {rejectionForm("correction", request.id)}
-              </td>
+              <td>{statusFor(request.submittedAt)}</td>
+              <td>{correctionActions(request)}</td>
             </tr>)}
           </tbody>
         </table>

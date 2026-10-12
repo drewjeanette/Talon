@@ -2,6 +2,7 @@ import { useRef, type KeyboardEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import { NotificationSettings } from "../components/settings/NotificationSettings";
 import { AccountSettings } from "../components/settings/AccountSettings";
+import { AppearanceSettings } from "../components/settings/AppearanceSettings";
 import { PayrollCalendarSettings } from "../components/settings/PayrollCalendarSettings";
 import { useAuth, type Role } from "../context/AuthContext";
 
@@ -9,8 +10,9 @@ import { useAuth, type Role } from "../context/AuthContext";
 // tab list, keyboard navigation and ?tab= deep links pick it up automatically.
 // `roles` limits a tab to those roles (the API enforces the same).
 const ALL_SECTIONS: { id: string; label: string; Component: () => JSX.Element | null; roles?: Role[] }[] = [
-  { id: "notifications", label: "Notifications", Component: NotificationSettings },
   { id: "account", label: "Account", Component: AccountSettings },
+  { id: "appearance", label: "Appearance", Component: AppearanceSettings },
+  { id: "notifications", label: "Notifications", Component: NotificationSettings },
   { id: "payroll-calendar", label: "Payroll Calendar", Component: PayrollCalendarSettings, roles: ["ADMIN"] },
 ];
 

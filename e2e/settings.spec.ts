@@ -20,6 +20,7 @@ for (const role of Object.keys(ACCOUNTS) as Role[]) {
       await expect(page.getByRole("banner").getByRole("link", { name: "Settings" })).toHaveAttribute("aria-current", "page");
       // Dashboard stays in the top-center nav and leads back to the dashboard.
       await expect(page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Dashboard" })).toBeVisible();
+      await page.getByRole("tab", { name: "Notifications" }).click();
       const switches = page.getByRole("switch");
       await expect(switches).toHaveCount(EXPECTED_TYPES[role].length);
       for (const label of EXPECTED_TYPES[role]) await expect(page.getByRole("switch", { name: label })).toBeVisible();
@@ -46,8 +47,12 @@ for (const role of Object.keys(ACCOUNTS) as Role[]) {
     });
 
     test("account tab shows details and is keyboard reachable", async ({ page }) => {
-      await page.getByRole("tab", { name: "Notifications" }).focus();
-      await page.keyboard.press("ArrowDown");
+      await page.getByRole("tab", { name: "Appearance" }).click();
+      await expect(page.getByRole("heading", { name: "Appearance" })).toBeVisible();
+      await expect(page.getByText("Use a lower-light purple and gold theme across Talon.")).toHaveCount(0);
+
+      await page.getByRole("tab", { name: "Appearance" }).focus();
+      await page.keyboard.press("ArrowUp");
       await expect(page.getByRole("tab", { name: "Account" })).toBeFocused();
       await expect(page.getByRole("tab", { name: "Account" })).toHaveAttribute("aria-selected", "true");
       await expect(page).toHaveURL(/tab=account/);
