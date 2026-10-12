@@ -33,10 +33,9 @@ export function LoginPage() {
       <form onSubmit={handleSubmit} aria-labelledby="login-heading" className="card login-card">
         <img className="ttu-corner-logo" src={ttuLogo} alt="Tennessee Tech" fetchPriority="high" />
         <h1 id="login-heading">Talon Sign In</h1>
-        <p>Tennessee Tech Payroll &amp; Web Clock</p>
         {notice && <p role="status" className="form-notice">{notice}</p>}
         <div className="form-row">
-          <label htmlFor="email">TN Tech email</label>
+          <label htmlFor="email">Email</label>
           <input
             id="email"
             type="email"

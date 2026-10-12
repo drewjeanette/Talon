@@ -59,7 +59,7 @@ const resetPasswordSchema = z.object({
   newPassword,
 });
 
-const RESET_TOKEN_MINUTES = 30;
+const RESET_TOKEN_MINUTES = 2;
 // Requests beyond these limits are silently ignored (the response never changes).
 const RESET_LIMIT_PER_USER_PER_HOUR = 3;
 const RESET_LIMIT_PER_IP_PER_HOUR = 10;
@@ -261,7 +261,7 @@ authRoutes.post("/forgot-password", async (c) => {
   // Identical response whether or not the account exists, so this endpoint
   // cannot be used to discover valid addresses.
   const response = c.json({
-    message: "If that email belongs to a Talon account, a link to reset the password is on its way.",
+    message: "Email sent successfully. The link will expire in 2 minutes.",
   });
 
   const db = getDb(c.env.DB);

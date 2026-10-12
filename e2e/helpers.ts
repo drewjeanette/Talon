@@ -23,7 +23,7 @@ export async function expectAccessible(page: Page) {
 
 export async function signIn(page: Page, email: string, password = SEED_PASSWORD) {
   await page.goto("/login");
-  await page.getByLabel("TN Tech email").fill(email);
+  await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
 }
