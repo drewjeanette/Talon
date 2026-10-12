@@ -6,6 +6,7 @@ interface PendingEntry {
   id: number;
   clockIn: string;
   clockOut: string | null;
+  status: string;
   user: { id: number; firstName: string; lastName: string };
 }
 
@@ -21,6 +22,10 @@ interface PendingCorrection {
 }
 
 type RejectTarget = { kind: "entry" | "correction"; id: number } | null;
+
+function employeeName(user: PendingEntry["user"]) {
+  return user.id === 3 && user.firstName === "Chris" ? "Chris" : `${user.firstName} ${user.lastName}`;
+}
 
 export function ApprovalQueue() {
   const { user } = useAuth();
@@ -50,7 +55,7 @@ export function ApprovalQueue() {
 
   async function decideEntry(id: number, status: "APPROVED" | "REJECTED") {
     if (status === "REJECTED" && rejectionReason.trim().length < 3) {
-      setMessage("Enter a reason before rejecting the time entry.");
+      setMessage("Enter a reason before denying the time entry.");
       return;
     }
     setMessage(null);
@@ -59,8 +64,8 @@ export function ApprovalQueue() {
         status,
         ...(status === "REJECTED" ? { rejectionReason: rejectionReason.trim() } : {}),
       });
-      setMessage(`Time entry ${status === "APPROVED" ? "approved" : "rejected"}.`);
-      setAttribution({ action: status === "APPROVED" ? "Approved by" : "Rejected by", name: user?.firstName ?? "Supervisor" });
+      setMessage(`Time entry ${status === "APPROVED" ? "approved" : "denied"}.`);
+      setAttribution({ action: status === "APPROVED" ? "Approved by" : "Denied by", name: user?.firstName ?? "Supervisor" });
       setRejectTarget(null);
       await load();
     } catch (error) {
@@ -91,10 +96,10 @@ export function ApprovalQueue() {
   function rejectionForm(kind: "entry" | "correction", id: number) {
     if (rejectTarget?.kind !== kind || rejectTarget.id !== id) return null;
     return <div className="approval-rejection-form">
-      <label htmlFor={`reject-${kind}-${id}`}>Reason for {kind === "entry" ? "rejection" : "denial"}</label>
+      <label htmlFor={`reject-${kind}-${id}`}>Reason for denial</label>
       <textarea id={`reject-${kind}-${id}`} value={rejectionReason} onChange={(event) => setRejectionReason(event.target.value)} maxLength={500} autoFocus required />
       <div className="button-row">
-        <button type="button" className="button--danger" onClick={() => kind === "entry" ? decideEntry(id, "REJECTED") : decideCorrection(id, "REJECTED")}>Confirm {kind === "entry" ? "rejection" : "denial"}</button>
+        <button type="button" className="button--danger" onClick={() => kind === "entry" ? decideEntry(id, "REJECTED") : decideCorrection(id, "REJECTED")}>Confirm denial</button>
         <button type="button" className="button--secondary" onClick={() => setRejectTarget(null)}>Cancel</button>
       </div>
     </div>;
@@ -107,17 +112,18 @@ export function ApprovalQueue() {
       <div className="table-scroll" role="region" aria-label="Time entries awaiting approval" tabIndex={0}>
         <table>
           <caption className="sr-only">Time entries awaiting approval</caption>
-          <thead><tr><th scope="col">Employee</th><th scope="col">Clock In</th><th scope="col">Clock Out</th><th scope="col">Actions</th></tr></thead>
+          <thead><tr><th scope="col">Employee</th><th scope="col">Clock In</th><th scope="col">Clock Out</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
           <tbody>
-            {entries.length === 0 && <tr><td colSpan={4}>There are no regular time entries waiting for approval.</td></tr>}
+            {entries.length === 0 && <tr><td colSpan={5}>There are no regular time entries waiting for approval.</td></tr>}
             {entries.map((entry) => <tr key={entry.id}>
-              <td>{entry.user.id === 3 && entry.user.firstName === "Chris" ? "Chris" : `${entry.user.firstName} ${entry.user.lastName}`}</td>
+              <td>{employeeName(entry.user)}</td>
               <td>{new Date(entry.clockIn).toLocaleString()}</td>
               <td>{entry.clockOut ? new Date(entry.clockOut).toLocaleString() : "In progress"}</td>
+              <td>{entry.clockOut ? "Pending" : "In progress"}</td>
               <td>
-                <div className="button-row">
+                <div className="button-row approval-queue__actions">
                   <button type="button" onClick={() => decideEntry(entry.id, "APPROVED")} className="approval-queue__approve" aria-label={`Approve time entry for ${entry.user.firstName} ${entry.user.lastName}`}>Approve</button>
-                  <button type="button" onClick={() => openReject("entry", entry.id)} className="button--danger approval-queue__reject" aria-label={`Reject time entry for ${entry.user.firstName} ${entry.user.lastName}`}>Reject</button>
+                  <button type="button" onClick={() => openReject("entry", entry.id)} className="button--danger approval-queue__reject" aria-label={`Deny time entry for ${entry.user.firstName} ${entry.user.lastName}`}>Deny</button>
                 </div>
                 {rejectionForm("entry", entry.id)}
               </td>
@@ -130,17 +136,18 @@ export function ApprovalQueue() {
       <div className="table-scroll" role="region" aria-label="Time correction requests awaiting approval" tabIndex={0}>
         <table>
           <caption className="sr-only">Student time correction requests awaiting approval</caption>
-          <thead><tr><th scope="col">Employee</th><th scope="col">Current shift</th><th scope="col">Requested shift</th><th scope="col">Student reason</th><th scope="col">Actions</th></tr></thead>
+          <thead><tr><th scope="col">Employee</th><th scope="col">Current shift</th><th scope="col">Requested shift</th><th scope="col">Student reason</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
           <tbody>
-            {corrections.length === 0 && <tr><td colSpan={5}>There are no missed-punch or correction requests waiting for approval.</td></tr>}
+            {corrections.length === 0 && <tr><td colSpan={6}>There are no missed-punch or correction requests waiting for approval.</td></tr>}
             {corrections.map((request) => <tr key={request.id}>
               <td>{request.user.firstName} {request.user.lastName}</td>
               <td>{request.timeEntryId && request.currentClockIn ? <>{new Date(request.currentClockIn).toLocaleString()}<br />{request.currentClockOut ? new Date(request.currentClockOut).toLocaleString() : "No clock-out"}</> : "New missed shift"}</td>
               <td>{new Date(request.requestedClockIn).toLocaleString()}<br />{new Date(request.requestedClockOut).toLocaleString()}</td>
               <td>{request.reason}</td>
+              <td>Pending</td>
               <td>
-                <div className="button-row">
-                  <button type="button" onClick={() => decideCorrection(request.id, "APPROVED")} className="approval-queue__approve" aria-label={`Approve time correction for ${request.user.firstName} ${request.user.lastName}`}>Approve change</button>
+                <div className="button-row approval-queue__actions">
+                  <button type="button" onClick={() => decideCorrection(request.id, "APPROVED")} className="approval-queue__approve" aria-label={`Approve time correction for ${request.user.firstName} ${request.user.lastName}`}>Approve</button>
                   <button type="button" onClick={() => openReject("correction", request.id)} className="button--danger approval-queue__reject" aria-label={`Deny time correction for ${request.user.firstName} ${request.user.lastName}`}>Deny</button>
                 </div>
                 {rejectionForm("correction", request.id)}

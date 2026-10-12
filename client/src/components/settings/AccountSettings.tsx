@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
-import { applyTheme, getStoredTheme, type ThemePreference } from "../../styles/theme";
 
 const MIN_PASSWORD_LENGTH = 12;
 
@@ -12,7 +11,6 @@ export function AccountSettings() {
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [theme, setTheme] = useState<ThemePreference>(() => getStoredTheme());
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -37,34 +35,8 @@ export function AccountSettings() {
     }
   }
 
-  function changeTheme(nextTheme: ThemePreference) {
-    setTheme(nextTheme);
-    applyTheme(nextTheme);
-  }
-
   return (
     <>
-      <div className="card settings-card" aria-labelledby="appearance-heading" role="region">
-        <h2 id="appearance-heading">Appearance</h2>
-        <div className="settings-list settings-list--single">
-          <div className="settings-list__item">
-            <div>
-              <label htmlFor="dark-mode-toggle" className="settings-list__label">Dark mode</label>
-              <span className="form-help">Use a lower-light purple and gold theme across Talon.</span>
-            </div>
-            <input
-              id="dark-mode-toggle"
-              className="settings-switch"
-              type="checkbox"
-              role="switch"
-              checked={theme === "dark"}
-              aria-checked={theme === "dark"}
-              onChange={(event) => changeTheme(event.target.checked ? "dark" : "light")}
-            />
-          </div>
-        </div>
-      </div>
-
       <div className="card settings-card" aria-labelledby="account-details-heading" role="region">
         <h2 id="account-details-heading">Account Details</h2>
         <dl className="settings-details">

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth, ApiError } from "../context/AuthContext";
 import ttuLogo from "../assets/ttu-logo.png";
@@ -7,10 +7,23 @@ export function LoginPage() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
   const notice = (useLocation().state as { notice?: string } | null)?.notice;
+  const emailRef = useRef<HTMLInputElement | null>(null);
+  const passwordRef = useRef<HTMLInputElement | null>(null);
+  const userEditedRef = useRef(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const autofillTimer = window.setTimeout(() => {
+      const active = document.activeElement;
+      if (userEditedRef.current || active === emailRef.current || active === passwordRef.current) return;
+      setEmail("");
+      setPassword("");
+    }, 100);
+    return () => window.clearTimeout(autofillTimer);
+  }, []);
 
   if (user) return <Navigate to="/" replace />;
 
@@ -38,11 +51,16 @@ export function LoginPage() {
           <label htmlFor="email">Email</label>
           <input
             id="email"
+            ref={emailRef}
+            name="email"
             type="email"
             autoComplete="username"
             placeholder="name@tntech.edu"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              userEditedRef.current = true;
+              setEmail(e.target.value);
+            }}
             pattern="[^@ ]+@tntech[.]edu"
             title="Use your @tntech.edu email address"
             required
@@ -54,10 +72,15 @@ export function LoginPage() {
           <label htmlFor="password">Password</label>
           <input
             id="password"
+            ref={passwordRef}
+            name="password"
             type="password"
             autoComplete="current-password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              userEditedRef.current = true;
+              setPassword(e.target.value);
+            }}
             required
           />
         </div>
