@@ -12,9 +12,10 @@ test("login page links to forgot password and is accessible", async ({ page }) =
 
 test("forgot password gives the same answer for unknown emails", async ({ page }) => {
   await page.goto("/forgot-password");
-  await page.getByLabel("TN Tech email").fill("nobody-here@tntech.edu");
+  await page.getByLabel("Email").fill("nobody-here@tntech.edu");
   await page.getByRole("button", { name: "Send reset link" }).click();
-  await expect(page.getByRole("status")).toContainText("If that email belongs to a Talon account");
+  await expect(page.getByRole("status")).toContainText("Email sent successfully. The link will expire in 2 minutes.");
+  await expect(page.getByRole("timer")).toContainText(/Time remaining: (2:00|1:59)/);
 });
 
 test("an invalid reset link is rejected", async ({ page }) => {
@@ -32,9 +33,10 @@ test("a user can reset a forgotten password from the emailed link", async ({ pag
   const newPassword = `reset-${testInfo.project.name}-${Date.now()}`;
 
   await page.goto("/forgot-password");
-  await page.getByLabel("TN Tech email").fill(email);
+  await page.getByLabel("Email").fill(email);
   await page.getByRole("button", { name: "Send reset link" }).click();
   await expect(page.getByRole("status")).toBeVisible();
+  await expect(page.getByRole("timer")).toBeVisible();
 
   const link = await latestEmailLink(email, "/reset-password");
   await page.goto(link);

@@ -124,6 +124,12 @@ button:hover:not(:disabled) {
 .login-card__links a {
   color: var(--tt-purple-dark);
   font-weight: 600;
+  text-decoration: none;
+}
+
+.login-card__links a:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
 }
 
 .form-notice {
@@ -132,5 +138,12 @@ button:hover:not(:disabled) {
   border-radius: 4px;
   background: #f5f0fb;
   color: var(--tt-purple-dark);
+  font-weight: 600;
+}
+
+.reset-countdown {
+  margin: 0.75rem 0 0;
+  color: var(--tt-purple-dark);
+  font-size: 0.95rem;
   font-weight: 600;
 }
