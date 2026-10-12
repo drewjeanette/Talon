@@ -13,7 +13,7 @@
   --danger: #9b1c1c;
   --danger-dark: #6e1414;
   --disabled: #9c96a8;
-  --focus: #1a56d6;
+  --focus: #9a6b00;
 }
 
 /* ---------- Page ---------- */
@@ -50,6 +50,13 @@ h2 {
 .app-header a {
   color: #fff;
   font-weight: 600;
+  text-decoration:none;
+}
+
+.app-header__nav a:hover,
+.app-header__dashboard-label:hover {
+  text-decoration:underline;
+  text-underline-offset:.18em;
 }
 
 .app-header__brand {
@@ -212,9 +219,9 @@ caption {
 }
 
 /* ---------- Balanced dashboard refresh ---------- */
-:root { --tt-purple:#512888; --tt-purple-dark:#321653; --tt-purple-soft:#f0e9f8; --tt-gold:#ffca28; --success:#247a3b; --success-dark:#195d2c; --text-muted:#625c6b; --bg:#f5f3f8; --border:#ddd7e5; --table-header:#eee8f5; }
+:root { --tt-purple:#512888; --tt-purple-dark:#321653; --tt-purple-soft:#f0e9f8; --tt-gold:#ffca28; --success:#247a3b; --success-dark:#195d2c; --text-muted:#625c6b; --bg:#f5f3f8; --border:#ddd7e5; --table-header:#eee8f5; --focus:#9a6b00; }
 body { background: linear-gradient(180deg, #eee8f5 0, var(--bg) 260px); }
-.app-header { min-height:68px; padding:.85rem clamp(1rem,4vw,2.5rem); box-shadow:0 3px 12px #32165326; }
+.app-header { min-height:68px; padding:.85rem clamp(1rem,4vw,2.5rem); border-bottom:5px solid var(--tt-gold); box-shadow:0 3px 12px #32165326; }
 .app-header__brand { font-size:1.45rem; letter-spacing:.02em; }
 .app-header__logout { background:#fff; color:var(--tt-purple-dark); }
 .app-header__logout:hover:not(:disabled) { background:var(--tt-purple-soft); }
@@ -358,3 +365,40 @@ th:last-child { border-radius:0 8px 8px 0; }
 
 .talon-action-attribution { margin:.45rem 0 0; color:var(--text-muted); font-size:.9rem; }
 .talon-action-signature { margin-left:.2rem; color:var(--tt-purple-dark); font-family:"Segoe Script","Brush Script MT",cursive; font-size:1.05rem; font-style:italic; font-weight:650; }
+
+html[data-theme="dark"] {
+  --tt-purple:#6f45b5;
+  --tt-purple-dark:#f5edff;
+  --tt-purple-soft:#2e2340;
+  --tt-gold:#ffd766;
+  --success:#3f9f58;
+  --success-dark:#327d46;
+  --text:#f7f2ff;
+  --text-muted:#cfc5de;
+  --bg:#15101d;
+  --surface:#21182d;
+  --border:#5f4c7a;
+  --table-header:#332548;
+  --danger:#ff8d8d;
+  --danger-dark:#d75f5f;
+  --disabled:#706680;
+  --focus:#ffd766;
+}
+
+html[data-theme="dark"] body { background:linear-gradient(180deg,#241637 0,var(--bg) 260px); }
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .supervisor-todos,
+html[data-theme="dark"] .supervisor-calendar,
+html[data-theme="dark"] .talon-notifications { background:var(--surface); border-color:var(--border); box-shadow:0 8px 22px #07030d66; }
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea { background:#171120; color:var(--text); border-color:#746092; }
+html[data-theme="dark"] th { background:var(--table-header); color:var(--tt-purple-dark); }
+html[data-theme="dark"] .supervisor-todo,
+html[data-theme="dark"] .talon-notification__detail { background:#1a1325; border-color:var(--border); }
+html[data-theme="dark"] .supervisor-todo:hover,
+html[data-theme="dark"] .supervisor-todo-empty,
+html[data-theme="dark"] .status-message:not(:empty),
+html[data-theme="dark"] .talon-notification__bell { background:var(--tt-purple-soft); color:var(--tt-purple-dark); }
+html[data-theme="dark"] .talon-notification__dismiss { background:#21182d; }
+html[data-theme="dark"] .talon-notification__dismiss:hover:not(:disabled) { background:#352230; }

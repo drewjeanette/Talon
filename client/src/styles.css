@@ -12,7 +12,7 @@
     --danger: #9b1c1c;
     --danger-dark: #6e1414;
     --disabled: #9c96a8;
-    --focus: #1a56d6;
+    --focus: #9a6b00;
   }
 
   * {
@@ -78,6 +78,7 @@
     gap: 1rem;
     padding: 0.75rem 1.5rem;
     background: var(--tt-purple);
+    border-bottom: 5px solid var(--tt-gold);
     color: #fff;
   }
 
@@ -97,6 +98,13 @@
   .app-header a {
     color: #fff;
     font-weight: 600;
+    text-decoration: none;
+  }
+
+  .app-header__nav a:hover,
+  .app-header__dashboard-label:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
   }
 
   .app-header__brand {
@@ -394,7 +402,9 @@ textarea { width:100%; min-height:84px; padding:.55rem; border:1px solid var(--b
 .settings-card__status:empty { display:none; }
 .settings-card__status { color:var(--tt-purple-dark); font-weight:600; }
 .settings-list { margin:0 0 1rem; padding:0; list-style:none; }
+.settings-list--single { margin:1rem 0 0; }
 .settings-list__item { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.85rem 0; border-bottom:1px solid var(--border); }
+.settings-list--single .settings-list__item { padding-bottom:0; border-bottom:0; }
 .settings-list__item > div { display:grid; gap:.1rem; }
 .settings-list__label { font-weight:700; font-size:.95rem; }
 .settings-list__item--locked .settings-list__label { color:#514a5b; }
@@ -408,6 +418,40 @@ textarea { width:100%; min-height:84px; padding:.55rem; border:1px solid var(--b
 .settings-list .settings-switch::after { content:""; position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:50%; background:#6b6474; transition:transform .15s; }
 .settings-list .settings-switch:checked { border-color:var(--tt-purple); background:var(--tt-purple); }
 .settings-list .settings-switch:checked::after { transform:translateX(20px); background:#fff; }
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+html[data-theme="dark"] .form-help,
+html[data-theme="dark"] .settings-details dt,
+html[data-theme="dark"] .settings-list__always,
+html[data-theme="dark"] .settings-list__item--locked .settings-list__label {
+  color: var(--text-muted);
+}
+
+html[data-theme="dark"] .settings-tabs__tab:hover:not(:disabled),
+html[data-theme="dark"] .settings-tabs__tab[aria-selected="true"] {
+  background: var(--tt-purple-soft);
+}
+
+html[data-theme="dark"] .settings-list .settings-switch {
+  border-color: #9e91b5;
+  background: #2d2438;
+}
+
+html[data-theme="dark"] .settings-list .settings-switch::after {
+  background: #c8bed8;
+}
+
+html[data-theme="dark"] .settings-list .settings-switch:checked {
+  border-color: var(--tt-gold);
+  background: var(--tt-gold);
+}
+
+html[data-theme="dark"] .settings-list .settings-switch:checked::after {
+  background: #241932;
+}
 
 @media (max-width:700px) {
   .settings-layout { grid-template-columns:1fr; }
