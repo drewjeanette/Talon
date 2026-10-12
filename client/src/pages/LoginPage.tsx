@@ -16,13 +16,22 @@ export function LoginPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    const autofillTimer = window.setTimeout(() => {
+    function clearAutofill() {
       const active = document.activeElement;
       if (userEditedRef.current || active === emailRef.current || active === passwordRef.current) return;
+      if (emailRef.current) emailRef.current.value = "";
+      if (passwordRef.current) passwordRef.current.value = "";
       setEmail("");
       setPassword("");
-    }, 100);
-    return () => window.clearTimeout(autofillTimer);
+    }
+
+    clearAutofill();
+    const timers = [50, 150, 400, 900, 1600].map((delay) => window.setTimeout(clearAutofill, delay));
+    window.addEventListener("pageshow", clearAutofill);
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer));
+      window.removeEventListener("pageshow", clearAutofill);
+    };
   }, []);
 
   if (user) return <Navigate to="/" replace />;
