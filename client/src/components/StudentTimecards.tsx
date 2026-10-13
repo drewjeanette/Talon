@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
-import { waitingFor } from "../lib/work";
 
 interface TimeEntry {
   id: number;
@@ -26,8 +25,7 @@ function date(value: string): string {
   return new Date(value).toLocaleDateString();
 }
 
-/** `waitingOn` names who can approve pending shifts; shown with how long each has waited. */
-function TimecardTable({ entries, caption, waitingOn }: { entries: TimeEntry[]; caption: string; waitingOn?: string }) {
+function TimecardTable({ entries, caption }: { entries: TimeEntry[]; caption: string }) {
   // Only students with more than one job need to see which job each shift was for.
   const showJob = new Set(entries.map((entry) => entry.jobTitle).filter(Boolean)).size > 1;
   return <div className="table-scroll" role="region" aria-label={caption} tabIndex={0}><table>
@@ -41,13 +39,7 @@ function TimecardTable({ entries, caption, waitingOn }: { entries: TimeEntry[]; 
         <td>{entry.clockOut ? new Date(entry.clockOut).toLocaleString() : "In progress"}</td>
         <td>{entry.clockOut ? hours(entry).toFixed(2) : "—"}</td>
         <td className="talon-timecard__status">{entry.clockOut ? entry.status : "CLOCKED IN"}</td>
-        <td>
-          {entry.reviewedBy
-            ? <span className="talon-timecard__signature">{entry.reviewedBy}</span>
-            : waitingOn && entry.status === "PENDING" && entry.clockOut
-              ? <span className="timecard-waiting">{waitingOn} · {waitingFor(entry.clockOut)}</span>
-              : "—"}
-        </td>
+        <td>{entry.reviewedBy ? <span className="talon-timecard__signature">{entry.reviewedBy}</span> : ""}</td>
       </tr>)}
     </tbody>
   </table></div>;
@@ -83,7 +75,7 @@ export function StudentTimecards({ entries, waitingOn }: { entries: TimeEntry[];
         <h2 id="talon-current-timecard-heading">Current Timecard</h2>
         <span className="talon-timecards__total">{date(currentStart.toISOString())} – {date(currentEnd.toISOString())} · {currentHours.toFixed(2)} hrs</span>
       </div>
-      <TimecardTable entries={currentEntries} caption="Current timecard" waitingOn={waitingOn} />
+      <TimecardTable entries={currentEntries} caption="Current timecard" />
     </section>
 
     <section className="card talon-past-timecards" aria-labelledby="talon-past-timecards-heading">
