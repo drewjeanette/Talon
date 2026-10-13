@@ -17,10 +17,9 @@ import { PayRateManager } from "../components/PayRateManager";
 import { TeamPayStubStatus } from "../components/TeamPayStubStatus";
 import { StudentTimecards } from "../components/StudentTimecards";
 import { ReminderSender } from "../components/ReminderSender";
-import { WorkQueue } from "../components/WorkQueue";
+import { WorkQueue, type TodoItem } from "../components/WorkQueue";
 import type { AdminToolKey } from "../components/AdminLaunchpad";
 import { api } from "../api/client";
-import { goToTodo } from "../lib/goTo";
 
 interface TimeEntry {
   id: number;
@@ -78,13 +77,20 @@ export function DashboardPage() {
     });
   }
 
+  function openStudentTodo(item: TodoItem) {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const selector = item.target === "time" ? ".student-time-tools" : ".talon-current-timecard";
+    const target = document.querySelector(selector) as HTMLElement | null;
+    target?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+    target?.querySelector<HTMLElement>("h2, button, select, input, textarea")?.focus({ preventScroll: true });
+  }
+
   return (
     <main id="main-content" className={`dashboard dashboard--${user.role.toLowerCase()}`} data-admin-view={user.role === "ADMIN" && adminSection ? adminSection : undefined}>
       <h1 className="dashboard__title"><ProfilePhotoButton userId={user.id} onStatus={setPhotoStatus} /><span>{greeting}, {user.preferredName || user.firstName}</span></h1>
       {photoStatus && <p className="dashboard__photo-message" role="status">{photoStatus}</p>}
 
       {user.role === "SUPERVISOR" && <SupervisorOrganizer />}
-      {user.role === "STUDENT" && <WorkQueue title="To-Dos" className="card student-todos" onOpen={goToTodo} hideWhenEmpty />}
       {user.role === "ADMIN" && (
         <>
           <AdminLaunchpad selected={adminSection} onSelect={selectAdminSection} />
@@ -101,6 +107,7 @@ export function DashboardPage() {
         {clocksIn && user.role !== "ADMIN" && (
           <>
             <ClockWidget onChange={loadEntries} />
+            {user.role === "STUDENT" && <WorkQueue title="To-Dos" className="card student-todos" onOpen={openStudentTodo} hideWhenEmpty />}
             {user.role === "STUDENT" && <StudentTimeTools entries={entries} onSubmitted={loadEntries} />}
             <TimesheetTable entries={entries} caption="My recent time entries" />
             {user.role === "STUDENT" && <StudentTimecards entries={entries} waitingOn={approverList(approvers)} />}

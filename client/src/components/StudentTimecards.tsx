@@ -32,7 +32,7 @@ function TimecardTable({ entries, caption, waitingOn }: { entries: TimeEntry[]; 
   const showJob = new Set(entries.map((entry) => entry.jobTitle).filter(Boolean)).size > 1;
   return <div className="table-scroll" role="region" aria-label={caption} tabIndex={0}><table>
     <caption className="sr-only">{caption}</caption>
-    <thead><tr>{showJob && <th scope="col">Job</th>}<th scope="col">Clock In</th><th scope="col">Clock Out</th><th scope="col">Hrs Worked</th><th scope="col">Status</th><th scope="col">{waitingOn ? "Reviewed By / Waiting On" : "Reviewed By"}</th></tr></thead>
+    <thead><tr>{showJob && <th scope="col">Job</th>}<th scope="col">Clock In</th><th scope="col">Clock Out</th><th scope="col">Hrs Worked</th><th scope="col">Status</th><th scope="col">Reviewed by</th></tr></thead>
     <tbody>
       {entries.length === 0 && <tr><td colSpan={showJob ? 6 : 5}>No time entries were recorded for this period.</td></tr>}
       {entries.map((entry) => <tr key={entry.id} className={entry.clockOut ? undefined : "talon-live-entry"}>
@@ -45,7 +45,7 @@ function TimecardTable({ entries, caption, waitingOn }: { entries: TimeEntry[]; 
           {entry.reviewedBy
             ? <span className="talon-timecard__signature">{entry.reviewedBy}</span>
             : waitingOn && entry.status === "PENDING" && entry.clockOut
-              ? <span className="timecard-waiting">Waiting on {waitingOn} · {waitingFor(entry.clockOut)}</span>
+              ? <span className="timecard-waiting">{waitingOn} · {waitingFor(entry.clockOut)}</span>
               : "—"}
         </td>
       </tr>)}
