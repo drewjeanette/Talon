@@ -40,6 +40,19 @@ export const departments = sqliteTable(
   (t) => [index("departments_college_idx").on(t.collegeId)]
 );
 
+export const chargeAccounts = sqliteTable(
+  "charge_accounts",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    code: text("code").notNull().unique(),
+    name: text("name").notNull(),
+    departmentId: integer("department_id").references(() => departments.id),
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    ...timestamps,
+  },
+  (t) => [index("charge_accounts_department_idx").on(t.departmentId)]
+);
+
 export const users = sqliteTable(
   "users",
   {
@@ -60,6 +73,8 @@ export const users = sqliteTable(
     annualSalaryCents: integer("annual_salary_cents"),
 
     departmentId: integer("department_id").references(() => departments.id),
+    preferredName: text("preferred_name"),
+    chargeAccountId: integer("charge_account_id").references(() => chargeAccounts.id),
     supervisorId: integer("supervisor_id"),
 
     isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
@@ -71,6 +86,32 @@ export const users = sqliteTable(
     index("users_department_idx").on(t.departmentId),
     index("users_supervisor_idx").on(t.supervisorId),
   ]
+);
+
+export const studentSupervisors = sqliteTable(
+  "student_supervisors",
+  {
+    studentId: integer("student_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    supervisorId: integer("supervisor_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  },
+  (t) => [
+    primaryKey({ columns: [t.studentId, t.supervisorId] }),
+    index("student_supervisors_supervisor_idx").on(t.supervisorId),
+  ]
+);
+
+export const studentJobs = sqliteTable(
+  "student_jobs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    chargeAccountId: integer("charge_account_id").references(() => chargeAccounts.id),
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    ...timestamps,
+  },
+  (t) => [index("student_jobs_user_idx").on(t.userId, t.isActive)]
 );
 
 // Photos live outside users so authentication queries never read image bytes.
@@ -153,6 +194,8 @@ export const timeEntries = sqliteTable(
       .references(() => users.id),
     clockIn: integer("clock_in", { mode: "timestamp" }).notNull(),
     clockOut: integer("clock_out", { mode: "timestamp" }),
+    chargeAccountId: integer("charge_account_id").references(() => chargeAccounts.id),
+    jobId: integer("job_id").references(() => studentJobs.id),
     source: text("source", { enum: ["WEB", "KIOSK", "MANUAL"] })
       .notNull()
       .default("WEB"),
@@ -176,6 +219,7 @@ export const timeEntryChangeRequests = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     timeEntryId: integer("time_entry_id").references(() => timeEntries.id, { onDelete: "set null" }),
+    jobId: integer("job_id").references(() => studentJobs.id),
     requestedClockIn: integer("requested_clock_in", { mode: "timestamp" }).notNull(),
     requestedClockOut: integer("requested_clock_out", { mode: "timestamp" }).notNull(),
     reason: text("reason").notNull(),
@@ -230,12 +274,20 @@ export const payStubs = sqliteTable(
       .notNull()
       .default(sql`(unixepoch())`),
     finalizedById: integer("finalized_by_id").references(() => users.id),
+    hourlyRateCents: integer("hourly_rate_cents"),
+    regularPayCents: integer("regular_pay_cents").notNull().default(0),
+    overtimePayCents: integer("overtime_pay_cents").notNull().default(0),
     reviewStatus: text("review_status", { enum: ["PENDING", "APPROVED", "REJECTED"] })
       .notNull()
       .default("PENDING"),
     reviewedById: integer("reviewed_by_id").references(() => users.id),
     reviewedAt: integer("reviewed_at", { mode: "timestamp" }),
     reviewReason: text("review_reason"),
+    flagNote: text("flag_note"),
+    flaggedById: integer("flagged_by_id").references(() => users.id),
+    flaggedAt: integer("flagged_at", { mode: "timestamp" }),
+    flagResolvedAt: integer("flag_resolved_at", { mode: "timestamp" }),
+    flagResolution: text("flag_resolution"),
   },
   (t) => [
     uniqueIndex("pay_stubs_user_period_idx").on(t.userId, t.payPeriodId),
@@ -243,6 +295,25 @@ export const payStubs = sqliteTable(
     index("pay_stubs_review_status_idx").on(t.reviewStatus, t.payPeriodId),
   ]
 );
+
+export const reminderRuns = sqliteTable(
+  "reminder_runs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    payPeriodId: integer("pay_period_id").notNull().references(() => payPeriods.id, { onDelete: "cascade" }),
+    stage: text("stage").notNull(),
+    recipients: integer("recipients").notNull().default(0),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  },
+  (t) => [uniqueIndex("reminder_runs_period_stage_idx").on(t.payPeriodId, t.stage)]
+);
+
+export const appSettings = sqliteTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedById: integer("updated_by_id").references(() => users.id),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
 
 export const notifications = sqliteTable(
   "notifications",

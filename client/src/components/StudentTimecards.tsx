@@ -43,7 +43,7 @@ function TimecardTable({ entries, caption }: { entries: TimeEntry[]; caption: st
         <td>{entry.clockOut ? new Date(entry.clockOut).toLocaleString() : "In progress"}</td>
         <td>{entry.clockOut ? hours(entry).toFixed(2) : "—"}</td>
         <td className="talon-timecard__status">{entry.clockOut ? entry.status : "CLOCKED IN"}</td>
-        <td>{entry.reviewedBy ? <span className="talon-timecard__signature">{entry.reviewedBy}</span> : "—"}</td>
+        <td>{entry.reviewedBy ? <span className="talon-timecard__signature">{entry.reviewedBy}</span> : ""}</td>
       </tr>)}
     </tbody>
   </table></div>;

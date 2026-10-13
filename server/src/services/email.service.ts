@@ -22,13 +22,13 @@ export function sendEmailInBackground(c: Context<AppEnv>, message: EmailMessage)
   c.executionCtx.waitUntil(sending);
 }
 
-function layout(heading: string, paragraphs: string[], button?: { label: string; url: string }): string {
+export function layout(heading: string, paragraphs: string[], button?: { label: string; url: string }, extraHtml = ""): string {
   const body = paragraphs.map((p) => `<p style="margin:0 0 16px">${escapeHtml(p)}</p>`).join("");
   const action = button
     ? `<p style="margin:24px 0"><a href="${escapeHtml(button.url)}" style="background:#4b2e83;color:#fff;padding:12px 20px;border-radius:4px;text-decoration:none;font-weight:600">${escapeHtml(button.label)}</a></p>`
     : "";
   return `<div style="font-family:system-ui,Segoe UI,Roboto,sans-serif;color:#1a1a1a;max-width:560px;margin:0 auto;padding:24px;border-top:4px solid #c9a13b">
-<h1 style="color:#33205a;font-size:22px;margin:0 0 16px">${escapeHtml(heading)}</h1>${body}${action}
+<h1 style="color:#33205a;font-size:22px;margin:0 0 16px">${escapeHtml(heading)}</h1>${body}${extraHtml}${action}
 <p style="margin:24px 0 0;color:#514a5b;font-size:13px">Talon · Tennessee Tech Payroll &amp; Web Clock</p></div>`;
 }
 

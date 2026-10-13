@@ -48,11 +48,13 @@ timeclockRoutes.post("/clock-out", async (c) => {
   await writeAuditLog(c, "CLOCK_OUT", "TimeEntry", entry.id);
   await c.env.DB.prepare(`
     INSERT INTO notifications (recipient_user_id, sender_user_id, type, title, body, action, requires_action)
-    SELECT id, ?, 'CLOCK_OUT', 'Biweekly pay ready',
-           (SELECT first_name FROM users WHERE id = ?) || ' clocked out. Review and finalize pay for the current biweekly period.',
-           'FINALIZE_PAY', 1
-    FROM users WHERE role = 'ADMIN' AND is_active = 1
-  `).bind(me.id, me.id).run();
+    SELECT supervisor.id, ?, 'TIME_ENTRY_SUBMITTED', 'Timecard ready for review',
+           (SELECT first_name FROM users WHERE id = ?) || ' clocked out. Review their timecard.',
+           'OPEN_APPROVALS', 1
+    FROM student_supervisors ss
+    INNER JOIN users supervisor ON supervisor.id = ss.supervisor_id
+    WHERE ss.student_id = ? AND supervisor.is_active = 1
+  `).bind(me.id, me.id, me.id).run();
   return c.json(entry);
 });
 

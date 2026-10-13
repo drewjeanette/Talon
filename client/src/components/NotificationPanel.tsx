@@ -57,8 +57,15 @@ export function NotificationPanel({ onReportSender }: { onReportSender?: (name: 
     (document.querySelector("#report-heading") as HTMLElement | null)?.focus({ preventScroll: true });
   }
 
+  function openApprovals() {
+    update({ read: true });
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    document.querySelector(".approval-queue")?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+    (document.querySelector("#approvals-heading") as HTMLElement | null)?.focus({ preventScroll: true });
+  }
+
   return (
-    <section className="card talon-notifications" aria-label="Report notifications">
+    <section className="card talon-notifications" aria-label="Notifications">
       <div className="talon-notification__summary">
         <button type="button" className="talon-notification__bell" aria-label={`View report notifications, ${unread} unread`} aria-expanded={open} onClick={() => setOpen((value) => !value)}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>
@@ -71,6 +78,7 @@ export function NotificationPanel({ onReportSender }: { onReportSender?: (name: 
         <p>{item.body}</p>
         <div className="talon-notification__actions">
           {item.action === "OPEN_REPORT" && <button type="button" className="talon-notification__open" onClick={openReport}>Open Report</button>}
+          {item.action === "OPEN_APPROVALS" && <button type="button" className="talon-notification__open" onClick={openApprovals}>Open Approvals</button>}
           <button type="button" className="talon-notification__read" onClick={() => update({ read: true })} disabled={item.read}>{item.read ? "Marked as Read" : "Mark as Read"}</button>
           <button type="button" className="talon-notification__dismiss" onClick={() => update({ read: true, dismissed: true })}>Dismiss</button>
         </div>
