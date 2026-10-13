@@ -52,7 +52,7 @@ export function LoginPage() {
 
   return (
     <main id="main-content" className="login-page">
-      <form onSubmit={handleSubmit} aria-labelledby="login-heading" className="card login-card">
+      <form onSubmit={handleSubmit} aria-labelledby="login-heading" className="card login-card" autoComplete="off">
         <img className="ttu-corner-logo" src={ttuLogo} alt="Tennessee Tech" fetchPriority="high" />
         <h1 id="login-heading">Talon Sign In</h1>
         {notice && <p role="status" className="form-notice">{notice}</p>}
@@ -61,9 +61,9 @@ export function LoginPage() {
           <input
             id="email"
             ref={emailRef}
-            name="email"
+            name="talon-login-email"
             type="email"
-            autoComplete="username"
+            autoComplete="off"
             placeholder="name@tntech.edu"
             value={email}
             onChange={(e) => {
@@ -82,9 +82,9 @@ export function LoginPage() {
           <input
             id="password"
             ref={passwordRef}
-            name="password"
+            name="talon-login-password"
             type="password"
-            autoComplete="current-password"
+            autoComplete="new-password"
             value={password}
             onChange={(e) => {
               userEditedRef.current = true;
