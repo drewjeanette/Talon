@@ -14,7 +14,7 @@ database listening on a network socket.
 | Outside attacker, no credentials | Reach the API or database directly | D1 has no public endpoint at all; it is reachable only through the Worker binding |
 | Credential stuffing / brute force | Log in as someone else | Memory-hard scrypt hashes, Cloudflare Rate Limiting on `/api/auth/*`, identical failure responses |
 | Authenticated student | Read or approve another department's data | Server-side query scoping, verified by test (see below) |
-| Authenticated supervisor | Escalate to admin, or read another department | Role checked from a signed JWT; report scope overwritten server-side |
+| Authenticated supervisor | Escalate to admin, or read students not assigned to them | Role checked from a signed JWT; report people filter intersected with their students server-side |
 | Stolen access token (XSS) | Replay the session | Token held in memory only, 15 minute expiry; refresh token is httpOnly + SameSite=Strict |
 | Stolen database dump | Recover passwords or sessions | Passwords are salted scrypt hashes; refresh tokens stored as SHA-256 hashes, not raw |
 | Malicious dependency | Supply-chain compromise | `npm audit` in setup; small dependency surface (Hono, Drizzle, jose, Zod) |
@@ -46,10 +46,12 @@ RBAC is enforced **twice**, deliberately:
 
 1. **Route level** — `requireRole("SUPERVISOR")` rejects the wrong role before a handler runs
    ([`middleware/auth.ts`](../server/src/middleware/auth.ts)).
-2. **Query level** — handlers scope the *data*, not just the endpoint. A supervisor's report request
-   has its `scope`/`scopeId` parameters **overwritten** with their own department id read from the
-   database ([`routes/reports.routes.ts`](../server/src/routes/reports.routes.ts)). The same applies
-   to `/timeclock/pending` and `/users`, which filter on `supervisorId`.
+2. **Query level** — handlers scope the *data*, not just the endpoint. A supervisor only ever gets
+   the students assigned to them in `student_supervisors`: a report request's scope is ignored and
+   its people filter is intersected with their students
+   ([`routes/reports.routes.ts`](../server/src/routes/reports.routes.ts)). The same applies to
+   `/timeclock/pending`, `/users`, and stub review, and every write checks
+   `assertCanManageStudent` ([`services/access.service.ts`](../server/src/services/access.service.ts)).
 
 A bug in one layer therefore cannot leak another unit's payroll data on its own.
 
@@ -63,8 +65,9 @@ These were exercised against a running Worker and D1 during development:
 |---|---|
 | Student requests `/reports/payroll` | `403 Insufficient permissions.` |
 | Student requests `/users` and `POST /users` | `403` on both |
-| Supervisor requests `scope=ALL` | Silently narrowed to their own department; another department's employee absent from output |
-| Supervisor forges `scope=DEPARTMENT&scopeId=<other dept>` | Still pinned to their own department |
+| Supervisor requests `scope=ALL` | Silently narrowed to their own students; other students absent from output |
+| Supervisor forges `employeeId=<someone else's student>` | Filtered out server-side |
+| Supervisor approves another supervisor's student's correction | `403 You are not assigned to this student.` |
 | Login with wrong password vs. unknown email | Byte-identical `Invalid email or password.` |
 | Request with no token | `401` |
 

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../api/client";
-import { ReportGenerator } from "./ReportGenerator";
+import { notifyWorkChanged } from "../lib/work";
+import { DateField } from "./DateField";
+import { PayrollReport } from "./PayrollReport";
 
 interface PayPeriod {
   id: number;
@@ -40,6 +42,7 @@ export function PayPeriodManager() {
       });
       setMessage("Pay period created.");
       await load();
+      notifyWorkChanged();
     } catch (err) {
       setMessage(err instanceof ApiError ? err.message : "Could not create pay period.");
     }
@@ -51,6 +54,7 @@ export function PayPeriodManager() {
       const result = await api.post<{ generated: number }>(`/payroll/periods/${id}/generate`);
       setMessage(`Generated ${result.generated} pay stubs.`);
       await load();
+      notifyWorkChanged();
     } catch (err) {
       setMessage(err instanceof ApiError ? err.message : "Could not generate pay stubs.");
     }
@@ -62,6 +66,7 @@ export function PayPeriodManager() {
       await api.post(`/payroll/periods/${id}/finalize`);
       setMessage("Pay period finalized.");
       await load();
+      notifyWorkChanged();
     } catch (err) {
       setMessage(err instanceof ApiError ? err.message : "Could not finalize pay period.");
     }
@@ -78,22 +83,12 @@ export function PayPeriodManager() {
             <option value="MONTHLY">Monthly (faculty)</option>
           </select>
         </div>
-        <div className="form-row">
-          <label htmlFor="start-date">Start date</label>
-          <input id="start-date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
-        </div>
-        <div className="form-row">
-          <label htmlFor="end-date">End date</label>
-          <input id="end-date" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
-        </div>
-        <div className="form-row">
-          <label htmlFor="pay-date">Pay date</label>
-          <input id="pay-date" type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} required />
-        </div>
+        <DateField id="start-date" label="Start date" value={startDate} onChange={setStartDate} commitLabel="Create pay period" required />
+        <DateField id="end-date" label="End date" value={endDate} onChange={setEndDate} commitLabel="Create pay period" required min={startDate || undefined} />
+        <DateField id="pay-date" label="Pay date" value={payDate} onChange={setPayDate} commitLabel="Create pay period" required />
         <button type="submit">Create pay period</button>
       </form>
 
-      <ReportGenerator embedded />
 
       <div className="table-scroll" role="region" aria-label="Existing pay periods" tabIndex={0}>
         <table>
@@ -132,6 +127,7 @@ export function PayPeriodManager() {
       <p role="status" aria-live="polite" className="status-message">
         {message}
       </p>
+      <PayrollReport embedded />
     </section>
   );
 }

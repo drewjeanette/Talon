@@ -2,9 +2,9 @@ import { test, expect } from "@playwright/test";
 import { ACCOUNTS, expectAccessible, signIn, type Role } from "./helpers";
 
 const EXPECTED_TYPES: Record<Role, string[]> = {
-  STUDENT: ["Time entry decisions", "Time correction decisions", "New pay stubs"],
-  SUPERVISOR: ["Entries awaiting approval", "Time correction requests", "Payroll reports"],
-  ADMIN: ["Biweekly pay ready", "Rejected pay stubs"],
+  STUDENT: ["Time that needs fixing"],
+  SUPERVISOR: ["Approval reminders", "Deadline escalations"],
+  ADMIN: ["Payroll deadline summary", "Rejected pay stubs"],
 };
 
 for (const role of Object.keys(ACCOUNTS) as Role[]) {

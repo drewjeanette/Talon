@@ -1,11 +1,13 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { eq, sql } from "drizzle-orm";
+import { asc, eq, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "../db/index.js";
-import { notificationPreferences } from "../db/schema.js";
+import { appSettings, notificationPreferences, payPeriods } from "../db/schema.js";
+import { PAYROLL_CALENDAR_KEY, payrollCalendarSchema, type PayrollCalendar } from "../lib/payroll-calendar.js";
+import { loadPayrollCalendar, reminderSchedule } from "../services/reminder.service.js";
 import { notificationTypesFor } from "../lib/notification-types.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, requireRole } from "../middleware/auth.js";
 import { writeAuditLog } from "../services/audit.service.js";
 import type { AppEnv } from "../types.js";
 
@@ -58,4 +60,34 @@ settingsRoutes.patch("/notifications", async (c) => {
     off: preferences.filter((p) => !p.emailEnabled).map((p) => p.type),
   });
   return c.body(null, 204);
+});
+
+/** Upcoming reminder send times for every open pay period, so admins can check the calendar. */
+async function upcomingReminders(db: ReturnType<typeof getDb>, calendar: PayrollCalendar) {
+  const periods = await db.select().from(payPeriods).where(ne(payPeriods.status, "CLOSED")).orderBy(asc(payPeriods.endDate));
+  const now = Date.now();
+  return periods.flatMap((period) => reminderSchedule(period, calendar)
+    .filter((reminder) => reminder.at.getTime() > now)
+    .map((reminder) => ({ payPeriodId: period.id, periodType: period.type, periodEnd: period.endDate, stage: reminder.stage, at: reminder.at, deadline: reminder.deadline })))
+    .sort((a, b) => a.at.getTime() - b.at.getTime())
+    .slice(0, 6);
+}
+
+/** When payroll reminder emails go out (admin only). */
+settingsRoutes.get("/payroll-calendar", requireRole("ADMIN"), async (c) => {
+  const db = getDb(c.env.DB);
+  const calendar = await loadPayrollCalendar(db);
+  return c.json({ calendar, upcoming: calendar.enabled ? await upcomingReminders(db, calendar) : [] });
+});
+
+settingsRoutes.patch("/payroll-calendar", requireRole("ADMIN"), async (c) => {
+  const parsed = payrollCalendarSchema.safeParse(await c.req.json());
+  if (!parsed.success) throw new HTTPException(400, { message: parsed.error.issues[0]?.message ?? "Check the payroll calendar values." });
+  const calendar = parsed.data;
+  const db = getDb(c.env.DB);
+  await db.insert(appSettings)
+    .values({ key: PAYROLL_CALENDAR_KEY, value: calendar, updatedById: c.get("user").id })
+    .onConflictDoUpdate({ target: appSettings.key, set: { value: calendar, updatedById: c.get("user").id, updatedAt: new Date() } });
+  await writeAuditLog(c, "PAYROLL_CALENDAR_UPDATE", "AppSetting", undefined, calendar);
+  return c.json({ calendar, upcoming: calendar.enabled ? await upcomingReminders(db, calendar) : [] });
 });

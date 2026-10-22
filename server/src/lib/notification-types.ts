@@ -14,53 +14,37 @@ export interface NotificationType {
   roles: Role[];
 }
 
+// Only reminders that ask someone to do something. No confirmations ("you
+// submitted X", "X was approved"): the business office asked for fewer emails.
 export const NOTIFICATION_TYPES: NotificationType[] = [
   {
-    type: "TIME_ENTRY_REVIEWED",
-    label: "Time entry decisions",
-    description: "When a supervisor approves or rejects one of your time entries.",
+    type: "TIME_FIX_REMINDER",
+    label: "Time that needs fixing",
+    description: "Before payroll closes, if a shift was rejected or you forgot to clock out.",
     roles: ["STUDENT"],
   },
   {
-    type: "CORRECTION_REVIEWED",
-    label: "Time correction decisions",
-    description: "When a time correction you requested is approved or rejected.",
-    roles: ["STUDENT"],
-  },
-  {
-    type: "PAY_STUB_READY",
-    label: "New pay stubs",
-    description: "When a pay stub for a finalized pay period is available.",
-    roles: ["STUDENT"],
-  },
-  {
-    type: "TIME_ENTRY_SUBMITTED",
-    label: "Entries awaiting approval",
-    description: "When someone on your team submits time that needs your review.",
+    type: "APPROVAL_REMINDER",
+    label: "Approval reminders",
+    description: "One summary before each payroll deadline listing every student waiting on your approval.",
     roles: ["SUPERVISOR"],
   },
   {
-    type: "CORRECTION_REQUESTED",
-    label: "Time correction requests",
-    description: "When someone on your team asks to correct a time entry.",
+    type: "APPROVAL_ESCALATION",
+    label: "Deadline escalations",
+    description: "On deadline morning, if any of your students' time is still not approved.",
     roles: ["SUPERVISOR"],
   },
   {
-    type: "REPORT_READY",
-    label: "Payroll reports",
-    description: "When a payroll report you requested is ready to download.",
-    roles: ["SUPERVISOR"],
-  },
-  {
-    type: "CLOCK_OUT",
-    label: "Biweekly pay ready",
-    description: "When an hourly worker clocks out and the current pay period needs finalizing.",
+    type: "PAYROLL_SUMMARY",
+    label: "Payroll deadline summary",
+    description: "On deadline morning, everything still waiting for approval across all departments.",
     roles: ["ADMIN"],
   },
   {
     type: "PAY_STUB_REJECTED",
     label: "Rejected pay stubs",
-    description: "When a supervisor rejects a generated pay stub.",
+    description: "When a supervisor rejects a generated pay stub and it needs fixing.",
     roles: ["ADMIN"],
   },
 ];

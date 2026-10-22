@@ -12,7 +12,8 @@ import { payrollRoutes } from "./routes/payroll.routes.js";
 import { reportRoutes } from "./routes/reports.routes.js";
 import { notificationRoutes } from "./routes/notifications.routes.js";
 import { settingsRoutes } from "./routes/settings.routes.js";
-import type { AppEnv } from "./types.js";
+import { runScheduledReminders } from "./services/reminder.service.js";
+import type { AppEnv, Bindings } from "./types.js";
 
 const app = new Hono<AppEnv>();
 
@@ -67,4 +68,10 @@ app.onError((err, c) => {
   return c.json({ error: "Internal server error." }, 500);
 });
 
-export default app;
+export default {
+  fetch: app.fetch,
+  /** Hourly cron (wrangler.toml): payroll deadline reminders, sent once per stage. */
+  scheduled(_controller: ScheduledController, env: Bindings, ctx: ExecutionContext) {
+    ctx.waitUntil(runScheduledReminders(env).catch((err) => console.error("Scheduled reminders failed:", err)));
+  },
+} satisfies ExportedHandler<Bindings>;

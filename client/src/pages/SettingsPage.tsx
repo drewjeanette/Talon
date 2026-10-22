@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { NotificationSettings } from "../components/settings/NotificationSettings";
 import { AccountSettings } from "../components/settings/AccountSettings";
 import { AppearanceSettings } from "../components/settings/AppearanceSettings";
+import { PayrollCalendarSettings } from "../components/settings/PayrollCalendarSettings";
 import { useAuth, type Role } from "../context/AuthContext";
 
 // Each entry is one Settings tab. To add a section, add an entry here; the
@@ -12,6 +13,7 @@ const ALL_SECTIONS: { id: string; label: string; Component: () => JSX.Element | 
   { id: "account", label: "Account", Component: AccountSettings },
   { id: "appearance", label: "Appearance", Component: AppearanceSettings },
   { id: "notifications", label: "Notifications", Component: NotificationSettings },
+  { id: "payroll-calendar", label: "Payroll Calendar", Component: PayrollCalendarSettings, roles: ["ADMIN"] },
 ];
 
 export function SettingsPage() {

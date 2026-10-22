@@ -46,10 +46,7 @@ async function request<T>(path: string, options: RequestInit = {}, retry = true)
   if (res.status === 204) return undefined as T;
 
   const contentType = res.headers.get("content-type") ?? "";
-  if (contentType.includes("text/csv")) {
-    return (await res.blob()) as unknown as T;
-  }
-  if (contentType.startsWith("image/")) {
+  if (contentType.includes("text/csv") || contentType.includes("application/pdf") || contentType.startsWith("image/")) {
     return (await res.blob()) as unknown as T;
   }
   return res.json() as Promise<T>;

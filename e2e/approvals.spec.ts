@@ -18,9 +18,10 @@ async function requestMissedShift(page: Page, reason: string, daysAgo: number) {
   await form.getByLabel("Reason for the correction").fill(reason);
   await form.getByRole("button", { name: "Send for approval" }).click();
   await expect(form.getByRole("status")).toHaveText("Correction sent for approval. Any of your supervisors can approve it.");
-  // Liz has two supervisors; the request shows who it waits on and for how long.
+  // Pending student requests no longer name a supervisor; reviewer details appear after review.
   const request = form.getByRole("listitem").filter({ hasText: reason });
-  await expect(request).toContainText("Waiting on Marcus Reyes or Sabrina Supervisor · pending");
+  await expect(request).toContainText("Missed shift: PENDING");
+  await expect(request).not.toContainText("Waiting on");
   await expectAccessible(page);
 }
 

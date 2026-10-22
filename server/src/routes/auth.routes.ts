@@ -69,6 +69,7 @@ interface UserWithDepartment {
   email: string;
   firstName: string;
   lastName: string;
+  preferredName: string | null;
   role: "STUDENT" | "SUPERVISOR" | "ADMIN";
   payType: "BIWEEKLY" | "MONTHLY";
   mustResetPw: boolean;
@@ -86,6 +87,7 @@ function serializeUser(user: UserWithDepartment) {
     email: user.email,
     firstName: user.firstName,
     lastName: user.lastName,
+    preferredName: user.preferredName,
     role: user.role,
     payType: user.payType,
     mustResetPw: user.mustResetPw,

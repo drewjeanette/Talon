@@ -6,7 +6,7 @@
 // read the emails printed by EMAIL_DEV_LOG (e.g. password reset links).
 
 import { spawn, spawnSync } from "node:child_process";
-import { createWriteStream, rmSync, existsSync } from "node:fs";
+import { createWriteStream, mkdirSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -20,19 +20,21 @@ const wrangler = (args, opts = {}) =>
   spawnSync("npx", ["wrangler", ...args], { cwd: server, stdio: "inherit", shell: true, ...opts });
 
 rmSync(state, { recursive: true, force: true });
-if (!existsSync(join(server, "seed", "seed.sql"))) {
-  spawnSync("node", ["seed/generate-seed.mjs"], { cwd: server, stdio: "inherit" });
-}
+mkdirSync(state, { recursive: true });
+// A fresh seed every run: its pay periods and shifts are relative to today.
+const seed = join(state, "seed.sql");
+const generated = spawnSync("node", ["seed/generate-seed.mjs", seed], { cwd: server, stdio: "inherit" });
+if (generated.status !== 0) process.exit(generated.status ?? 1);
 // Throwaway accounts for tests that change a password, one per Playwright
 // project, so the shared demo logins keep working. Same password as the seed.
 const resetUsers = ["e2e.reset.desktop@tntech.edu", "e2e.reset.mobile@tntech.edu"]
-  .map((email) => `INSERT INTO users (email, password_hash, first_name, last_name)
-    SELECT '${email}', password_hash, 'Reset', 'Tester' FROM users WHERE email = 'student@tntech.edu';`)
+  .map((email) => `INSERT INTO users (email, password_hash, first_name, last_name, hourly_rate_cents)
+    SELECT '${email}', password_hash, 'Reset', 'Tester', hourly_rate_cents FROM users WHERE email = 'student@tntech.edu';`)
   .join(" ");
 
 for (const args of [
   ["d1", "migrations", "apply", "talon-db", "--local", "--persist-to", state],
-  ["d1", "execute", "talon-db", "--local", "--persist-to", state, "--file=./seed/seed.sql"],
+  ["d1", "execute", "talon-db", "--local", "--persist-to", state, `--file=${seed}`],
   ["d1", "execute", "talon-db", "--local", "--persist-to", state, `--command="${resetUsers.replace(/\s+/g, " ")}"`],
 ]) {
   const result = wrangler(args, { env: { ...process.env, CI: "1" } });

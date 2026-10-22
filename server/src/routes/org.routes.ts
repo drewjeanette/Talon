@@ -3,7 +3,7 @@ import { HTTPException } from "hono/http-exception";
 import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "../db/index.js";
-import { colleges, departments } from "../db/schema.js";
+import { chargeAccounts, colleges, departments } from "../db/schema.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { writeAuditLog } from "../services/audit.service.js";
 import type { AppEnv } from "../types.js";
@@ -106,4 +106,65 @@ orgRoutes.patch("/departments/:id", requireRole("ADMIN"), async (c) => {
 
   await writeAuditLog(c, "DEPARTMENT_UPDATE", "Department", id, data);
   return c.json(department);
+});
+
+// Charge accounts (Banner "index"). Any signed-in user may read the list for
+// labels; only admins change it.
+orgRoutes.get("/charge-accounts", async (c) => {
+  const db = getDb(c.env.DB);
+  const rows = await db
+    .select({
+      id: chargeAccounts.id,
+      code: chargeAccounts.code,
+      name: chargeAccounts.name,
+      isActive: chargeAccounts.isActive,
+      departmentId: departments.id,
+      departmentName: departments.name,
+      departmentCode: departments.code,
+    })
+    .from(chargeAccounts)
+    .leftJoin(departments, eq(chargeAccounts.departmentId, departments.id))
+    .orderBy(asc(chargeAccounts.code));
+
+  return c.json(rows.map((r) => ({
+    id: r.id,
+    code: r.code,
+    name: r.name,
+    isActive: r.isActive,
+    department: r.departmentId ? { id: r.departmentId, name: r.departmentName, code: r.departmentCode } : null,
+  })));
+});
+
+const chargeAccountSchema = z.object({
+  code: z.string().trim().min(1).max(40),
+  name: z.string().trim().min(1).max(120),
+  departmentId: z.number().int().nullable().optional(),
+});
+
+orgRoutes.post("/charge-accounts", requireRole("ADMIN"), async (c) => {
+  const data = chargeAccountSchema.parse(await c.req.json());
+  const db = getDb(c.env.DB);
+  const [account] = await db
+    .insert(chargeAccounts)
+    .values({ code: data.code, name: data.name, departmentId: data.departmentId ?? null })
+    .returning();
+  await writeAuditLog(c, "CHARGE_ACCOUNT_CREATE", "ChargeAccount", account.id);
+  return c.json(account, 201);
+});
+
+const updateChargeAccountSchema = chargeAccountSchema.partial().extend({ isActive: z.boolean().optional() });
+
+orgRoutes.patch("/charge-accounts/:id", requireRole("ADMIN"), async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isInteger(id)) throw new HTTPException(400, { message: "Invalid charge account id." });
+  const data = updateChargeAccountSchema.parse(await c.req.json());
+  const db = getDb(c.env.DB);
+  const [account] = await db
+    .update(chargeAccounts)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(chargeAccounts.id, id))
+    .returning();
+  if (!account) throw new HTTPException(404, { message: "Charge account not found." });
+  await writeAuditLog(c, "CHARGE_ACCOUNT_UPDATE", "ChargeAccount", id, data);
+  return c.json(account);
 });
