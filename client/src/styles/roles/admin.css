@@ -435,6 +435,7 @@ th:last-child { border-radius:0 8px 8px 0; }
 .admin-tile:nth-child(3) { border-top-color:var(--tt-gold); }
 .admin-tile:nth-child(1):hover:not(:disabled),.admin-tile:nth-child(4):hover:not(:disabled),.admin-tile:nth-child(1)[aria-pressed="true"],.admin-tile:nth-child(4)[aria-pressed="true"] { border-top-color:var(--tt-purple); }
 .admin-tile:nth-child(2):hover:not(:disabled),.admin-tile:nth-child(3):hover:not(:disabled),.admin-tile:nth-child(2)[aria-pressed="true"],.admin-tile:nth-child(3)[aria-pressed="true"] { border-top-color:var(--tt-gold); }
+.admin-tile:nth-child(5),.admin-tile:nth-child(5):hover:not(:disabled),.admin-tile:nth-child(5)[aria-pressed="true"] { border-top-color:var(--tt-purple); }
 .talon-approver-heading,
 .talon-approver-cell { text-align:right; white-space:nowrap; }
 .talon-approver-cell { min-width:105px; }

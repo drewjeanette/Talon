@@ -26,11 +26,13 @@ export function LoginPage() {
     }
 
     clearAutofill();
-    const timers = [50, 150, 400, 900, 1600].map((delay) => window.setTimeout(clearAutofill, delay));
+    const timers = [50, 150, 400, 900, 1600, 2600, 4000].map((delay) => window.setTimeout(clearAutofill, delay));
     window.addEventListener("pageshow", clearAutofill);
+    window.addEventListener("focus", clearAutofill);
     return () => {
       timers.forEach((timer) => window.clearTimeout(timer));
       window.removeEventListener("pageshow", clearAutofill);
+      window.removeEventListener("focus", clearAutofill);
     };
   }, []);
 
@@ -63,9 +65,12 @@ export function LoginPage() {
             ref={emailRef}
             name="talon-login-email"
             type="email"
-            autoComplete="off"
+            autoComplete="new-password"
             placeholder="name@tntech.edu"
             value={email}
+            data-1p-ignore="true"
+            data-lpignore="true"
+            data-form-type="other"
             onChange={(e) => {
               userEditedRef.current = true;
               setEmail(e.target.value);
@@ -86,6 +91,9 @@ export function LoginPage() {
             type="password"
             autoComplete="new-password"
             value={password}
+            data-1p-ignore="true"
+            data-lpignore="true"
+            data-form-type="other"
             onChange={(e) => {
               userEditedRef.current = true;
               setPassword(e.target.value);

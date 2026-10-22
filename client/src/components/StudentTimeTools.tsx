@@ -116,7 +116,7 @@ export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryO
 
   return (
     <section className="card student-time-tools" aria-labelledby="time-help-heading">
-      <h2 id="time-help-heading">Pay &amp; Time Corrections</h2>
+      <h2 id="time-help-heading" tabIndex={-1}>Pay &amp; Time Corrections</h2>
       <p className="student-pay-rate">Your hourly pay rate: <strong>{hourlyRate === null ? "Not set" : `$${hourlyRate} per hour`}</strong></p>
       {!open && (
         <button type="button" className="student-time-tools__open" onClick={() => { setOpen(true); setMessage(""); }} aria-expanded={false} aria-controls="correction-card">
