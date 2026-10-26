@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
+import { minutesBetween } from "../lib/money.js";
 import { getDb } from "../db/index.js";
 import { chargeAccounts, studentJobs, timeEntries, timeEntryChangeRequests, users } from "../db/schema.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
@@ -105,6 +106,30 @@ timeclockRoutes.get("/my-entries", async (c) => {
 });
 
 const jobChangeSchema = z.object({ jobId: z.number().int().positive() });
+
+/** Read-only time history for the admin's student comparison. */
+timeclockRoutes.get("/students/:id/entries", requireRole("ADMIN"), async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isSafeInteger(id) || id <= 0) throw new HTTPException(400, { message: "Invalid student id." });
+  const db = getDb(c.env.DB);
+  const student = await db.query.users.findFirst({ where: and(eq(users.id, id), eq(users.role, "STUDENT")), columns: { id: true } });
+  if (!student) throw new HTTPException(404, { message: "Student not found." });
+  const entries = await db.select({
+    id: timeEntries.id,
+    clockIn: timeEntries.clockIn,
+    clockOut: timeEntries.clockOut,
+    status: timeEntries.status,
+    jobTitle: studentJobs.title,
+  }).from(timeEntries)
+    .leftJoin(studentJobs, eq(timeEntries.jobId, studentJobs.id))
+    .where(eq(timeEntries.userId, id))
+    .orderBy(desc(timeEntries.clockIn), desc(timeEntries.id))
+    .limit(100);
+  return c.json(entries.map((entry) => ({
+    ...entry,
+    minutes: entry.clockOut ? Math.max(0, minutesBetween(entry.clockIn, entry.clockOut)) : null,
+  })));
+});
 
 /**
  * "I clocked in for the wrong job": a student moves their own shift to another

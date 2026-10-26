@@ -1,7 +1,49 @@
 import { test, expect } from "@playwright/test";
-import { ACCOUNTS, PEOPLE, expectAccessible, openAdminTool, pickPerson, signInToDashboard, suggestions } from "./helpers";
+import { ACCOUNTS, PEOPLE, SEED_PASSWORD, expectAccessible, openAdminTool, pickPerson, signInToDashboard, suggestions } from "./helpers";
 
 test.describe("person search behaves the same everywhere", () => {
+  test("admin compares two students on the same page and keeps each selection", async ({ page }, testInfo) => {
+    await signInToDashboard(page, ACCOUNTS.ADMIN);
+    await openAdminTool(page, "User Management");
+    await page.getByRole("button", { name: "Compare students", exact: true }).click();
+    const first = page.getByRole("region", { name: "Student 1 comparison", exact: true });
+    const second = page.getByRole("region", { name: "Student 2 comparison", exact: true });
+    const historyResponse = page.waitForResponse((response) => /\/timeclock\/students\/\d+\/entries$/.test(response.url()));
+    await pickPerson(page, "Student 1", "sophie", "Sophia (Sophie) Wells");
+    const history = await (await historyResponse).json() as { status: string; minutes: number | null }[];
+    expect(history.length).toBeGreaterThan(0);
+    await expect(first.getByRole("region", { name: "Shift history for Sophia (Sophie) Wells", exact: true }).getByRole("listitem")).toHaveCount(history.length);
+    const approvedHours = (history.filter((entry) => entry.status === "APPROVED").reduce((total, entry) => total + (entry.minutes ?? 0), 0) / 60).toFixed(2);
+    await expect(first.locator("dl > div").filter({ has: page.getByText("Approved hours", { exact: true }) })).toContainText(approvedHours);
+    await page.getByRole("combobox", { name: "Student 2", exact: true }).fill("sophie");
+    await expect(suggestions(page, "Student 2").filter({ hasText: "Sophia (Sophie) Wells" })).toHaveCount(0);
+    await pickPerson(page, "Student 2", "liz", "Elizabeth (Liz) Park");
+    await expect(first.getByRole("heading", { name: "Sophia (Sophie) Wells", exact: true })).toBeVisible();
+    await expect(second.getByRole("heading", { name: "Elizabeth (Liz) Park", exact: true })).toBeVisible();
+    await expect(second).toContainText("Math Tutor");
+    await expect(second.getByRole("region", { name: "Shift history for Elizabeth (Liz) Park", exact: true })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "2 of 2 students selected." })).toBeVisible();
+    await expectAccessible(page);
+    await page.screenshot({ path: testInfo.outputPath("student-comparison.png"), fullPage: true });
+
+    await page.getByRole("button", { name: "Back to user list", exact: true }).click();
+    await expect(page.getByRole("region", { name: "All users", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Compare students", exact: true }).click();
+    await expect(first.getByRole("heading", { name: "Sophia (Sophie) Wells", exact: true })).toBeVisible();
+    await page.route("**/api/timeclock/students/*/entries", (route) => route.fulfill({ status: 503, json: { error: "Temporarily unavailable" } }), { times: 1 });
+    await page.getByRole("combobox", { name: "Student 2", exact: true }).fill("bob");
+    await page.getByRole("combobox", { name: "Student 2", exact: true }).press("ArrowDown");
+    await page.getByRole("combobox", { name: "Student 2", exact: true }).press("Enter");
+    await expect(second.getByRole("heading", { name: "Robert Hale", exact: true })).toBeVisible();
+    await expect(first.getByRole("heading", { name: "Sophia (Sophie) Wells", exact: true })).toBeVisible();
+    await expect(second.getByRole("status").filter({ hasText: "Could not load time entries." })).toBeVisible();
+    await expect(second.getByRole("region", { name: "Shift history for Elizabeth (Liz) Park", exact: true })).toHaveCount(0);
+    await second.getByRole("button", { name: "Retry time entries" }).click();
+    await expect(second.getByRole("region", { name: "Shift history for Robert Hale", exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/$/);
+    await expectAccessible(page);
+  });
+
   test("admin finds people by preferred name, nickname, partial name, and typo", async ({ page }) => {
     await signInToDashboard(page, ACCOUNTS.ADMIN);
     await openAdminTool(page, "User Management");
@@ -36,6 +78,16 @@ test.describe("person search behaves the same everywhere", () => {
     await expect(table.getByRole("rowheader").filter({ hasText: "Robert Hale" })).toBeVisible();
   });
 });
+
+for (const role of ["STUDENT", "SUPERVISOR"] as const) {
+  test(`${role.toLowerCase()} cannot access the admin comparison time history`, async ({ request }) => {
+    const login = await request.post("/api/auth/login", { data: { email: ACCOUNTS[role], password: SEED_PASSWORD } });
+    expect(login.ok()).toBeTruthy();
+    const { accessToken } = await login.json();
+    const response = await request.get("/api/timeclock/students/1/entries", { headers: { Authorization: `Bearer ${accessToken}` } });
+    expect(response.status()).toBe(403);
+  });
+}
 
 test.describe("supervisors only see their own students; admins see everyone", () => {
   test("first supervisor sees Computer Science students, including the shared one", async ({ page }) => {
