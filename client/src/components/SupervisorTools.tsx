@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { ApprovalQueue } from "./ApprovalQueue";
-import { ClockWidget } from "./ClockWidget";
 import { PayRateManager } from "./PayRateManager";
 import { PayrollReport } from "./PayrollReport";
 import { PayStubList } from "./PayStubList";
@@ -27,10 +26,8 @@ function Category({ id, title, description, icon, children }: {
   );
 }
 
-export function SupervisorTools({ clocksIn, entries, onEntriesChanged }: {
-  clocksIn: boolean;
+export function SupervisorTools({ entries }: {
   entries: Parameters<typeof TimesheetTable>[0]["entries"];
-  onEntriesChanged: () => void;
 }) {
   return (
     <section className="supervisor-tools" aria-labelledby="supervisor-tools-heading">
@@ -51,10 +48,9 @@ export function SupervisorTools({ clocksIn, entries, onEntriesChanged }: {
         <Category id="supervisor-my-stubs" title="My Pay Stubs" description="View and download your own pay stubs." icon="M6 3h9l3 3v15H6z M14 3v4h4 M9 11h6 M9 15h6">
           <PayStubList />
         </Category>
-        {clocksIn && <Category id="supervisor-my-time" title="My Web Clock & Time Entries" description="Clock in or out and view your own recent time entries." icon="M12 8v5l3 2 M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0">
-          <ClockWidget onChange={onEntriesChanged} />
+        <Category id="supervisor-my-time" title="My Time Entries" description="View your own recent clock-in and clock-out times." icon="M12 8v5l3 2 M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0">
           <TimesheetTable entries={entries} caption="My recent time entries" />
-        </Category>}
+        </Category>
       </div>
     </section>
   );

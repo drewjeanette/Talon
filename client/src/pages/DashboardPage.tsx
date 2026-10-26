@@ -53,8 +53,6 @@ export function DashboardPage() {
 
   if (!user) return null;
   const greeting = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
-  // Students clock in whether they are paid bi-weekly or monthly.
-  const clocksIn = user.role === "STUDENT" || user.payType === "BIWEEKLY";
   const sectionTitles: Record<AdminToolKey, string> = {
     approvals: "Time Entry Approvals",
     payroll: "Generate Payroll and Pay Periods",
@@ -85,8 +83,8 @@ export function DashboardPage() {
       {photoStatus && <p className="dashboard__photo-message" role="status">{photoStatus}</p>}
 
       {user.role === "SUPERVISOR" && <>
-        <SupervisorOrganizer />
-        <SupervisorTools clocksIn={clocksIn} entries={entries} onEntriesChanged={loadEntries} />
+        <SupervisorOrganizer onClockChange={loadEntries} />
+        <SupervisorTools entries={entries} />
       </>}
       {user.role === "ADMIN" && (
         <>
@@ -101,7 +99,7 @@ export function DashboardPage() {
       )}
 
       {(user.role === "STUDENT" || (user.role === "ADMIN" && adminSection)) && <div className="dashboard-grid">
-        {clocksIn && user.role === "STUDENT" && (
+        {user.role === "STUDENT" && (
           <>
             <ClockWidget onChange={loadEntries} />
             {user.role === "STUDENT" && <WorkQueue title="To-Dos" className="card student-todos" onOpen={openStudentTodo} hideWhenEmpty />}
