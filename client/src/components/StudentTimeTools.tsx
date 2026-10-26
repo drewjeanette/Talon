@@ -19,6 +19,7 @@ interface CorrectionRequest {
   status: "PENDING" | "APPROVED" | "REJECTED";
   reviewerName: string | null;
   reviewerReason: string | null;
+  waitingOn: string[];
   createdAt: string;
 }
 
@@ -39,6 +40,8 @@ export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryO
   const [open, setOpen] = useState(false);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [jobId, setJobId] = useState("");
+  const [supervisors, setSupervisors] = useState<string[] | null>(null);
+  const [supervisorsError, setSupervisorsError] = useState(false);
 
   async function loadRequests() {
     setRequests(await api.get<CorrectionRequest[]>("/timeclock/correction-requests/mine"));
@@ -51,6 +54,17 @@ export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryO
     loadRequests().catch(() => setMessage("Could not load correction requests."));
     api.get<Job[]>("/timeclock/my-jobs").then(setJobs).catch(() => setJobs([]));
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setSupervisors(null);
+    setSupervisorsError(false);
+    api.get<{ supervisors: string[] }>("/users/me/approvers").then((data) => {
+      if (!cancelled) setSupervisors(data.supervisors);
+    }).catch(() => { if (!cancelled) setSupervisorsError(true); });
+    return () => { cancelled = true; };
+  }, [open]);
 
   function closeForm() {
     setOpen(false);
@@ -143,6 +157,12 @@ export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryO
           <label htmlFor="correction-reason">Reason for the correction</label>
           <textarea id="correction-reason" value={reason} onChange={(event) => setReason(event.target.value)} maxLength={500} required placeholder="Example: I forgot to clock out at the end of my shift." />
         </div>
+        <p className="correction-recipient" aria-live="polite">
+          {supervisorsError ? "Could not load your assigned supervisor. Your request will still be available to your assigned supervisors and admins."
+            : supervisors === null ? "Loading assigned supervisor…"
+            : supervisors.length ? <>Sent to: <strong>{supervisors.join(", ")}</strong>{supervisors.length > 1 && ". Any assigned supervisor can approve."}</>
+            : "No supervisor assigned. An admin can review your request."}
+        </p>
         <div className="button-row">
           <button type="submit" disabled={busy}>{busy ? "Sending…" : "Send for approval"}</button>
           <button type="button" className="button--secondary" onClick={closeForm}>Cancel</button>
@@ -156,6 +176,10 @@ export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryO
             <strong>{request.timeEntryId ? "Shift correction" : "Missed shift"}: {request.status}</strong>
             <span>{new Date(request.requestedClockIn).toLocaleString()} – {new Date(request.requestedClockOut).toLocaleString()}</span>
             <span>Reason: {request.reason}</span>
+            {request.status === "PENDING" && <span>{request.waitingOn.length === 1
+              ? `Waiting for ${request.waitingOn[0]}’s approval.`
+              : request.waitingOn.length > 1 ? `Waiting for approval from ${request.waitingOn.join(", ")}. Any assigned supervisor can approve.`
+              : "Waiting for an admin’s approval. No supervisor is assigned."}</span>}
             {request.reviewerName && <span>Reviewed by {request.reviewerName}</span>}
             {request.reviewerReason && <span>Supervisor response: {request.reviewerReason}</span>}
           </li>)}
