@@ -3,15 +3,17 @@ import { RoleCalendar } from "./RoleCalendar";
 import { WorkQueue } from "./WorkQueue";
 import { ClockWidget } from "./ClockWidget";
 
-/** Every supervisor's clock stays visible before their to-do list and calendar. */
+/** Every supervisor's calendar sits beneath their clock, beside the to-do list. */
 export function SupervisorOrganizer({ onClockChange }: { onClockChange: () => void }) {
   return (
     <div className="supervisor-organizer">
-      <ClockWidget onChange={onClockChange} />
+      <div className="supervisor-clock-column">
+        <ClockWidget onChange={onClockChange} />
+        <section className="supervisor-calendar" aria-label="Supervisor calendar">
+          <RoleCalendar role="supervisor" />
+        </section>
+      </div>
       <WorkQueue title="To-Dos" className="supervisor-todos" onOpen={goToTodo} />
-      <section className="supervisor-calendar" aria-label="Supervisor calendar">
-        <RoleCalendar role="supervisor" />
-      </section>
     </div>
   );
 }
