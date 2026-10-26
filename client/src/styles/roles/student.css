@@ -357,10 +357,18 @@ th:last-child { border-radius: 0 8px 8px 0; }
 .student-time-tools label { color:#111; font-weight:700; }
 .student-time-tools input,
 .student-time-tools select,
-.student-time-tools textarea { border-color:#cabde0; }
+.student-time-tools textarea {
+  border:2px solid var(--tt-purple);
+  box-shadow:inset 4px 0 0 var(--tt-gold);
+  padding-left:1rem;
+}
 .student-time-tools input:focus,
 .student-time-tools select:focus,
-.student-time-tools textarea:focus { border-color:var(--tt-purple); box-shadow:0 0 0 3px #51288824; outline:0; }
+.student-time-tools textarea:focus {
+  border-color:var(--tt-purple);
+  outline:3px solid var(--focus);
+  outline-offset:2px;
+}
 .correction-history { margin-top:1.25rem; }
 .correction-history h3 { color:#111; font-weight:850; }
 .correction-history ul { display:grid; gap:.8rem; margin:0; padding:0; list-style:none; }
@@ -395,6 +403,9 @@ html[data-theme="dark"] .stub-rejection-form { background:var(--surface); border
 html[data-theme="dark"] input,
 html[data-theme="dark"] select,
 html[data-theme="dark"] textarea { background:#171120; color:var(--text); border-color:#746092; }
+html[data-theme="dark"] .student-time-tools input,
+html[data-theme="dark"] .student-time-tools select,
+html[data-theme="dark"] .student-time-tools textarea { border-color:#b99be5; }
 html[data-theme="dark"] th { background:var(--table-header); color:var(--tt-purple-dark); }
 html[data-theme="dark"] .clock-widget__status,
 html[data-theme="dark"] .status-message:not(:empty),
