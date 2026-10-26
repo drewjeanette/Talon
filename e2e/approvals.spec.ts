@@ -30,7 +30,9 @@ async function requestMissedShift(page: Page, reason: string, daysAgo: number, s
   await expect(form.getByText("Saved when you select “Send for approval”.")).toHaveCount(2);
   await form.getByLabel("Reason for the correction").fill(reason);
   await form.getByRole("button", { name: "Send for approval" }).click();
-  await expect(form.getByRole("status")).toHaveText("Correction sent for approval. Any of your supervisors can approve it.");
+  await expect(form.getByRole("status")).toHaveText(student === PEOPLE.LIZ
+    ? "Correction sent to Marcus Reyes, Sabrina Supervisor for approval. Any assigned supervisor can approve it."
+    : "Correction sent to Sabrina Supervisor for approval.");
   // The pending request names the currently assigned approvers.
   const request = form.getByRole("listitem").filter({ hasText: reason });
   await expect(request).toContainText("Missed shift: PENDING");
