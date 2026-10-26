@@ -17,6 +17,12 @@ export function goTo(selector: string) {
   window.requestAnimationFrame(() => {
     const element = document.querySelector(selector) as HTMLElement | null;
     if (!element) return;
+    // Dashboard categories must be expanded before their heading can receive focus.
+    let category = element.closest("details");
+    while (category) {
+      category.open = true;
+      category = category.parentElement?.closest("details") ?? null;
+    }
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     element.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
     if (!element.hasAttribute("tabindex")) element.setAttribute("tabindex", "-1");

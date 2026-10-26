@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { ACCOUNTS, PEOPLE, SEED_PASSWORD, expectAccessible, openAdminTool, pickPerson, signInToDashboard, suggestions } from "./helpers";
+import { ACCOUNTS, PEOPLE, SEED_PASSWORD, expectAccessible, openAdminTool, openSupervisorTool, pickPerson, signInToDashboard, suggestions } from "./helpers";
 
 test.describe("person search behaves the same everywhere", () => {
   test("admin builds and prints a report for three students while keeping selections", async ({ page }, testInfo) => {
@@ -114,11 +114,13 @@ for (const role of ["STUDENT", "SUPERVISOR"] as const) {
 test.describe("supervisors only see their own students; admins see everyone", () => {
   test("first supervisor sees Computer Science students, including the shared one", async ({ page }) => {
     await signInToDashboard(page, ACCOUNTS.SUPERVISOR);
+    await openSupervisorTool(page, "Student Hourly Pay Rates");
     const rate = (name: string) => page.getByRole("spinbutton", { name: new RegExp(`^${name.replace(/[()]/g, "\\$&")}`) });
     await expect(rate("Chris Student")).toBeVisible();
     await expect(rate("Elizabeth (Liz) Park")).toBeVisible();
     await expect(rate("Robert Hale")).toHaveCount(0);
     const report = page.locator(".payroll-report");
+    await openSupervisorTool(page, "Payroll Reports");
     await expect(report.getByRole("rowheader", { name: "Chris Student" })).toBeVisible();
     await expect(report.getByRole("rowheader", { name: "Robert Hale" })).toHaveCount(0);
     await expectAccessible(page);
@@ -126,6 +128,7 @@ test.describe("supervisors only see their own students; admins see everyone", ()
 
   test("second supervisor sees Mathematics students and the shared student", async ({ page }) => {
     await signInToDashboard(page, PEOPLE.SECOND_SUPERVISOR);
+    await openSupervisorTool(page, "Student Hourly Pay Rates");
     const rate = (name: string) => page.getByRole("spinbutton", { name: new RegExp(`^${name.replace(/[()]/g, "\\$&")}`) });
     await expect(rate("Robert Hale")).toBeVisible();
     await expect(rate("Elizabeth (Liz) Park")).toBeVisible();

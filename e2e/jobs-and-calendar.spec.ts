@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { ACCOUNTS, PEOPLE, expectAccessible, openAdminTool, pickPerson, signInToDashboard } from "./helpers";
+import { ACCOUNTS, PEOPLE, expectAccessible, openAdminTool, openSupervisorTool, pickPerson, signInToDashboard } from "./helpers";
 
 // Liz (elizabeth.park@) has two jobs in the seed: CS Lab Assistant (110245) and
 // Math Tutor (120310). Everyone else has one.
@@ -52,6 +52,7 @@ test("a student with one job just clocks in, and the missed-punch form opens as 
 
 test("a supervisor moves a pending shift to a different charge account", async ({ page }) => {
   await signInToDashboard(page, ACCOUNTS.SUPERVISOR);
+  await openSupervisorTool(page, "Time Entry Approvals");
   const queue = page.locator(".approval-queue");
   const row = queue.getByRole("row").filter({ has: page.getByRole("rowheader", { name: "Chris Student" }) }).first();
   await row.getByRole("button", { name: /Change charge account/ }).click();
