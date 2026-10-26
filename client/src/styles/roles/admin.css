@@ -550,3 +550,30 @@ html[data-theme="dark"] .admin-work-item:hover:not(:disabled),
 html[data-theme="dark"] .admin-work-item[aria-expanded="true"],
 html[data-theme="dark"] .status-message:not(:empty) { background:var(--tt-purple-soft); color:var(--tt-purple-dark); }
 html[data-theme="dark"] .admin-section-bar { background:#33204f; border:1px solid #7a62a0; border-bottom:4px solid var(--tt-gold); }
+
+/* Dark surfaces for current notification controls and light-only accents. */
+html[data-theme="dark"] .work-queue__open,
+html[data-theme="dark"] .work-queue__open:disabled { background:#241b32; color:var(--text); border-color:#9b85b6; }
+html[data-theme="dark"] .work-queue__open:hover:not(:disabled),
+html[data-theme="dark"] .work-queue__open:focus-visible { background:#39274d; color:var(--text); border-color:var(--tt-gold); }
+html[data-theme="dark"] .work-queue__detail { color:#ddd1eb; }
+html[data-theme="dark"] .work-queue__count { background:#512888; color:#fff; }
+html[data-theme="dark"] .admin-section-bar__back,
+html[data-theme="dark"] .talon-report-csv { background:var(--surface); color:var(--text); border-color:#b692e0; }
+html[data-theme="dark"] .admin-section-bar__back:hover:not(:disabled),
+html[data-theme="dark"] .talon-report-csv:hover:not(:disabled),
+html[data-theme="dark"] .sort-button:hover:not(:disabled) { background:#39274d; color:var(--text); }
+html[data-theme="dark"] .person-search__list,
+html[data-theme="dark"] .pay-comparison { background:var(--surface); color:var(--text); border-color:#9b85b6; }
+html[data-theme="dark"] .person-search__chip button:hover:not(:disabled) { background:#39274d; color:var(--text); }
+html[data-theme="dark"] .payroll-report__request,
+html[data-theme="dark"] .stub-flag--open,
+html[data-theme="dark"] .pay-comparison__cell--differs { background:#3c2e16; color:var(--text); }
+html[data-theme="dark"] .stub-flag { background:#30253f; color:var(--text); }
+html[data-theme="dark"] .pay-comparison__cell--differs { box-shadow:inset 4px 0 0 var(--tt-gold); }
+html[data-theme="dark"] button.button--danger { background:#9b1c1c; color:#fff; }
+html[data-theme="dark"] button.button--danger:hover:not(:disabled) { background:#7b1717; }
+html[data-theme="dark"] :is(.pay-period-manager,.user-management,.department-management) button[type="submit"],
+html[data-theme="dark"] .approval-queue__approve { background:#247a3b; color:#fff; }
+html[data-theme="dark"] :is(.pay-period-manager,.user-management,.department-management) button[type="submit"]:hover:not(:disabled),
+html[data-theme="dark"] .approval-queue__approve:hover:not(:disabled) { background:#195d2c; }

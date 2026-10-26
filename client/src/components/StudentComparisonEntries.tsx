@@ -10,7 +10,13 @@ interface Entry {
   minutes: number | null;
 }
 
-export function StudentComparisonEntries({ studentId, name }: { studentId: number; name: string }) {
+export type EntryLoadStatus = "loading" | "ready" | "error";
+
+export function StudentComparisonEntries({ studentId, name, onStatusChange }: {
+  studentId: number;
+  name: string;
+  onStatusChange?: (id: number, status: EntryLoadStatus) => void;
+}) {
   const [entries, setEntries] = useState<Entry[] | null>(null);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -19,11 +25,15 @@ export function StudentComparisonEntries({ studentId, name }: { studentId: numbe
     let cancelled = false;
     setEntries(null);
     setError(false);
+    onStatusChange?.(studentId, "loading");
     api.get<Entry[]>(`/timeclock/students/${studentId}/entries`).then((data) => {
-      if (!cancelled) setEntries(data);
-    }).catch(() => { if (!cancelled) setError(true); });
+      if (!cancelled) {
+        setEntries(data);
+        onStatusChange?.(studentId, "ready");
+      }
+    }).catch(() => { if (!cancelled) { setError(true); onStatusChange?.(studentId, "error"); } });
     return () => { cancelled = true; };
-  }, [studentId, attempt]);
+  }, [studentId, attempt, onStatusChange]);
 
   return <section aria-label={`Time entries for ${name}`}>
     <h5 className="student-comparison__entries-heading">Time entries</h5>
@@ -50,6 +60,17 @@ export function StudentComparisonEntries({ studentId, name }: { studentId: numbe
           </li>)}
         </ul>
       </div>}
+      {entries.length > 0 && <table className="student-reports__print-entries">
+        <caption>Time entries for {name}</caption>
+        <thead><tr><th scope="col">Title</th><th scope="col">Clock In</th><th scope="col">Clock Out</th><th scope="col">Hours</th><th scope="col">Status</th></tr></thead>
+        <tbody>{entries.map((entry) => <tr key={entry.id}>
+          <td>{entry.jobTitle ?? "Unassigned job"}</td>
+          <td>{new Date(entry.clockIn).toLocaleString()}</td>
+          <td>{entry.clockOut ? new Date(entry.clockOut).toLocaleString() : "In progress"}</td>
+          <td>{entry.minutes === null ? "In progress" : (entry.minutes / 60).toFixed(2)}</td>
+          <td>{entry.clockOut ? entry.status : "CLOCKED IN"}</td>
+        </tr>)}</tbody>
+      </table>}
     </>}
   </section>;
 }

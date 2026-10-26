@@ -582,6 +582,47 @@ th.numeric,td.numeric { text-align:right; font-variant-numeric:tabular-nums; whi
 .student-comparison__entries li { padding:.75rem; }
 .student-comparison__entries li + li { border-top:2px solid var(--border); }
 @media (max-width:600px) { .student-comparison__grid { grid-template-columns:1fr; } }
+.student-reports__grid { grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); align-items:start; }
+.student-reports__footer { margin-top:1.25rem; }
+.student-reports__prepared { color:var(--text-muted,#625c6b); }
+.student-reports__print-entries { display:none; }
+@media print {
+  @page student-report { margin:14mm; }
+  body:has(.student-reports) { background:#fff !important; color:#000 !important; }
+  body:has(.student-reports) .app-header,
+  body:has(.student-reports) .skip-link,
+  body:has(.student-reports) .site-footer,
+  body:has(.student-reports) .admin-launchpad,
+  body:has(.student-reports) .admin-section-bar,
+  body:has(.student-reports) .dashboard__title,
+  body:has(.student-reports) .dashboard__photo-message,
+  body:has(.student-reports) .user-management > h2,
+  body:has(.student-reports) .user-management > button,
+  body:has(.student-reports) .user-management > .status-message,
+  body:has(.student-reports) .user-management > div:not(#student-reports),
+  .student-reports__controls,.student-reports__footer,
+  .student-reports .student-comparison__entries { display:none !important; }
+  body:has(.student-reports) .dashboard,
+  body:has(.student-reports) .dashboard-grid,
+  body:has(.student-reports) .user-management { display:block; max-width:none; margin:0; padding:0; border:0; background:#fff; box-shadow:none; }
+  .student-reports { page:student-report; font-size:10pt; line-height:1.4; }
+  .student-reports h3 { font-size:14pt; }
+  .student-reports h4 { font-size:12pt; margin:.6rem 0; }
+  .student-reports h5 { font-size:11pt; margin:.7rem 0; }
+  .student-reports * { color:#000 !important; background:transparent !important; box-shadow:none !important; text-shadow:none !important; }
+  .student-reports__grid { display:block; }
+  .student-reports__card { padding:0; margin:1rem 0; border:0; }
+  .student-reports__card + .student-reports__card { break-before:page; }
+  .student-reports__card > .student-comparison__details { display:grid; grid-template-columns:1fr 1fr; gap:0 1rem; }
+  .student-reports__card > section > .student-comparison__details { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; }
+  .student-reports .student-comparison__details > div { padding:.35rem 0; }
+  .student-reports .student-comparison__details dd { margin-top:.15rem; }
+  .student-reports__print-entries { display:table; width:100%; table-layout:fixed; border-collapse:collapse; font-size:10pt; }
+  .student-reports__print-entries caption { color:#000; text-align:left; }
+  .student-reports__print-entries th,.student-reports__print-entries td { padding:6pt; border-bottom:1px solid #999; overflow-wrap:anywhere; }
+  .student-reports__print-entries thead { display:table-header-group; }
+  .student-reports__print-entries tr { break-inside:avoid; }
+}
 .user-management__edit { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:.25rem 1rem; align-items:end; }
 .user-management__edit .button-row { grid-column:1 / -1; }
 .user-management__account-actions { grid-column:1 / -1; margin-top:1rem; min-width:0; padding:1rem; border:1px solid var(--border); border-radius:10px; }
