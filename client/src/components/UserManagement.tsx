@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "../api/client";
 import { displayName } from "../lib/nameSearch";
 import { PersonSearch } from "./PersonSearch";
+import { StudentComparisonEntries } from "./StudentComparisonEntries";
 
 interface OrgUser {
   id: number;
@@ -45,6 +46,8 @@ export function UserManagement() {
   const [accounts, setAccounts] = useState<ChargeAccount[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [filter, setFilter] = useState<number[]>([]);
+  const [comparing, setComparing] = useState(false);
+  const [comparison, setComparison] = useState<(number | null)[]>([null, null]);
 
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -79,6 +82,7 @@ export function UserManagement() {
 
   const people = useMemo(() => users.map((user) => ({ ...user, detail: [user.role.toLowerCase(), user.department?.name].filter(Boolean).join(" · ") })), [users]);
   const supervisorChoices = useMemo(() => people.filter((user) => user.isActive && user.role !== "STUDENT"), [people]);
+  const studentChoices = people.filter((user) => user.role === "STUDENT");
   const activeDepartments = departments.filter((d) => d.isActive);
   const activeAccounts = accounts.filter((a) => a.isActive);
   const shown = filter.length ? users.filter((user) => filter.includes(user.id)) : users;
@@ -203,6 +207,37 @@ export function UserManagement() {
   return (
     <section aria-labelledby="users-heading" className="card user-management">
       <h2 id="users-heading">User Management</h2>
+      <button type="button" aria-expanded={comparing} aria-controls="student-comparison" onClick={() => setComparing(!comparing)}>
+        {comparing ? "Back to user list" : "Compare students"}
+      </button>
+      <section id="student-comparison" aria-labelledby="student-comparison-heading" hidden={!comparing}>
+        <h3 id="student-comparison-heading">Compare students</h3>
+        <p>Search for two students. Each selection stays here while you search for the other student.</p>
+        <div className="student-comparison__grid">
+          {comparison.map((studentId, index) => {
+            const student = users.find((user) => user.id === studentId);
+            return <section key={index} className="student-comparison__card" aria-label={`Student ${index + 1} comparison`}>
+              <PersonSearch label={`Student ${index + 1}`} people={studentChoices.filter((user) => user.id !== comparison[1 - index])}
+                value={studentId === null ? [] : [studentId]}
+                onChange={(ids) => setComparison((current) => current.map((id, slot) => slot === index ? ids[0] ?? null : id))} />
+              {student ? <>
+                <h4>{displayName(student)}</h4>
+                <dl className="student-comparison__details">
+                  <div><dt>Email</dt><dd>{student.email}</dd></div>
+                  <div><dt>Home department</dt><dd>{student.department?.name ?? "None assigned"}</dd></div>
+                  <div><dt>Student Job Title</dt><dd>{student.jobs.length ? student.jobs.map((job) => <div key={job.id}>{job.title}{job.chargeAccount && <div>Charge account: {job.chargeAccount.code} – {job.chargeAccount.name}</div>}</div>) : "No current jobs"}</dd></div>
+                  <div><dt>Supervisors</dt><dd>{student.supervisors.map((supervisor) => supervisor.name).join(", ") || "None assigned"}</dd></div>
+                  <div><dt>Pay type</dt><dd>{student.payType === "BIWEEKLY" ? "Biweekly" : "Monthly"}</dd></div>
+                  <div><dt>Active</dt><dd>{student.isActive ? "Yes" : "No"}</dd></div>
+                </dl>
+                <StudentComparisonEntries key={student.id} studentId={student.id} name={displayName(student)} />
+              </> : <p>Choose a student to see their details.</p>}
+            </section>;
+          })}
+        </div>
+        <p role="status">{comparison.filter((id) => id !== null).length} of 2 students selected.</p>
+      </section>
+      <div hidden={comparing}>
       <form onSubmit={handleCreate} className="form-row-group user-management__form">
         <div className="form-row">
           <label htmlFor="new-email">Email</label>
@@ -354,6 +389,7 @@ export function UserManagement() {
             ))}
           </tbody>
         </table>
+      </div>
       </div>
       <p role="status" aria-live="polite" className="status-message">
         {message}

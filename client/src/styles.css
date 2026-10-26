@@ -568,6 +568,20 @@ th.numeric,td.numeric { text-align:right; font-variant-numeric:tabular-nums; whi
 .correction-history__waiting,.timecard-waiting { color:#6b4a00; font-weight:650; }
 .user-management__supervisors { grid-column:1 / -1; }
 .user-management__search { margin-top:1.25rem; max-width:520px; }
+.student-comparison__grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+.student-comparison__card { min-width:0; padding:1rem; border:1px solid var(--border); border-radius:10px; background:var(--surface,#fff); overflow-wrap:anywhere; }
+.student-comparison__card h4 { margin:.75rem 0; font-size:1.1rem; }
+.student-comparison__details { margin:0; }
+.student-comparison__details > div { padding:.6rem 0; border-top:1px solid var(--border); }
+.student-comparison__details dt { font-weight:700; }
+.student-comparison__details dd { margin:.25rem 0 0; }
+.student-comparison__details dd > div + div { margin-top:.5rem; }
+.student-comparison__entries-heading { font-size:1rem; margin:1rem 0 .5rem; }
+.student-comparison__entries { max-height:24rem; overflow-y:auto; padding:.25rem; border:1px solid var(--border); border-radius:6px; }
+.student-comparison__entries ul { list-style:none; margin:0; padding:0; }
+.student-comparison__entries li { padding:.75rem; }
+.student-comparison__entries li + li { border-top:2px solid var(--border); }
+@media (max-width:600px) { .student-comparison__grid { grid-template-columns:1fr; } }
 .user-management__edit { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:.25rem 1rem; align-items:end; }
 .user-management__edit .button-row { grid-column:1 / -1; }
 .user-management tbody th { background:transparent; font-weight:700; color:var(--tt-purple-dark,#33205a); }
