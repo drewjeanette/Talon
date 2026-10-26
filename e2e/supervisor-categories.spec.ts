@@ -11,7 +11,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.getByLabel("Email").fill(ACCOUNTS.SUPERVISOR);
     await page.getByLabel("Password").fill(SEED_PASSWORD);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
-    await expect(page.locator(".supervisor-tool")).toHaveCount(5);
+    await expect(page.locator(".supervisor-tool")).toHaveCount(6);
     await expect(page.locator(".supervisor-tool[open]")).toHaveCount(0);
     await expectAccessible(page);
     await page.locator(".supervisor-tools").screenshot({ path: testInfo.outputPath(`supervisor-categories-${theme}.png`) });
@@ -88,15 +88,11 @@ test("supervisor to-dos open the matching category and remain until the work is 
   }
 });
 
-test("biweekly supervisors keep their own web clock inside a category", async ({ page }) => {
-  await page.route("**/api/auth/login", async (route) => {
-    const response = await route.fetch();
-    const body = await response.json();
-    await route.fulfill({ response, json: { ...body, user: { ...body.user, payType: "BIWEEKLY" } } });
-  });
+test("supervisors keep their own time entries in a category and clock above it", async ({ page }) => {
   await signInToDashboard(page, ACCOUNTS.SUPERVISOR);
-  await openSupervisorTool(page, "My Web Clock & Time Entries");
-  await expect(page.getByRole("button", { name: "Clock In", exact: true })).toBeVisible();
+  await expect(page.locator(".supervisor-organizer .clock-widget")).toBeVisible();
+  await openSupervisorTool(page, "My Time Entries");
+  await expect(page.locator(".clock-widget")).toHaveCount(1);
   await expect(page.getByRole("region", { name: "My recent time entries", exact: true })).toBeVisible();
   await expectAccessible(page);
 });
