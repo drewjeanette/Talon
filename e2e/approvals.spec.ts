@@ -1,5 +1,14 @@
 import { test, expect, type Page } from "@playwright/test";
-import { ACCOUNTS, PEOPLE, expectAccessible, openAdminTool, signInToDashboard, switchUser } from "./helpers";
+import { ACCOUNTS, PEOPLE, SEED_PASSWORD, expectAccessible, openAdminTool, signInToDashboard, switchUser } from "./helpers";
+
+async function expectReviewedBy(page: Page, reason: string, name: string) {
+  const history = page.getByRole("region", { name: "Reviewed time change requests", exact: true });
+  const row = history.getByRole("row").filter({ hasText: reason });
+  await expect(history.getByRole("columnheader", { name: "Actions", exact: true })).toBeVisible();
+  await expect(row.getByRole("cell").last()).toContainText("Approved by");
+  await expect(row.getByRole("cell").last().locator(".approval-queue__reviewer-name")).toHaveText(name);
+  await expect(row.getByRole("cell", { name: "APPROVED", exact: true })).toBeVisible();
+}
 
 for (const role of ["ADMIN", "SUPERVISOR"] as const) {
   test(`${role.toLowerCase()} sees Student Job Title in time entry approvals`, async ({ page }) => {
@@ -51,12 +60,23 @@ test("a student sees their assigned supervisor before submitting and while await
   await expect(row).toContainText("Chris Student");
   await row.getByRole("button", { name: "Approve time correction for Chris Student", exact: true }).click();
   await expect(page.locator(".approval-queue > .status-message")).toHaveText("Correction request approved.");
+  await expectReviewedBy(page, reason, "Sabrina Supervisor");
+  await page.reload();
+  await expectReviewedBy(page, reason, "Sabrina Supervisor");
   await expectAccessible(page);
   await switchUser(page, ACCOUNTS.STUDENT);
   const request = page.locator(".student-time-tools").getByRole("listitem").filter({ hasText: reason });
   await expect(request).toContainText("Missed shift: APPROVED");
   await expect(request).toContainText("Reviewed by Sabrina");
   await expect(request).not.toContainText("Waiting for");
+  await page.waitForLoadState("networkidle");
+  await expectAccessible(page);
+  const scopedHistory = page.waitForResponse((response) => response.url().endsWith("/api/timeclock/correction-requests/reviewed") && response.status() === 200);
+  await switchUser(page, PEOPLE.SECOND_SUPERVISOR);
+  const otherStudentsHistory = await (await scopedHistory).json() as { reason: string }[];
+  expect(otherStudentsHistory.some((review) => review.reason === reason)).toBe(false);
+  await expect(page.getByRole("region", { name: "Reviewed time change requests", exact: true }).getByText(reason, { exact: true })).toHaveCount(0);
+  await page.waitForLoadState("networkidle");
   await expectAccessible(page);
 });
 
@@ -108,7 +128,8 @@ test("either of a student's supervisors can approve a correction, and the to-do 
   const row = supervisor.getByRole("row").filter({ hasText: reason });
   await row.getByRole("button", { name: /Approve time correction for Elizabeth \(Liz\) Park/ }).click();
   await expect(supervisor.locator(".approval-queue > .status-message")).toHaveText("Correction request approved.");
-  await expect(supervisor.getByRole("row").filter({ hasText: reason })).toHaveCount(0);
+  await expect(supervisor.getByRole("region", { name: "Time correction requests awaiting approval", exact: true }).getByRole("row").filter({ hasText: reason })).toHaveCount(0);
+  await expectReviewedBy(supervisor, reason, "Marcus Reyes");
   // Completing the work updates the to-do without a reload.
   if (before === 1) await expect(todos.getByRole("button", { name: /Review time corrections/ })).toHaveCount(0);
   else await expect(todos.getByRole("button", { name: /Review time corrections/ }).locator(".work-queue__count")).toHaveText(String(before - 1));
@@ -126,10 +147,23 @@ test("any admin can approve a correction", async ({ page }, testInfo) => {
   await expect(row).toContainText("Elizabeth (Liz) Park");
   await row.getByRole("button", { name: /Approve time correction/ }).click();
   await expect(admin.locator(".approval-queue > .status-message")).toHaveText("Correction request approved.");
+  await expectReviewedBy(admin, reason, "Renee Admin");
+  await admin.reload();
+  await openAdminTool(admin, "Time Entry Approvals");
+  await expectReviewedBy(admin, reason, "Renee Admin");
   await expectAccessible(admin);
+  await admin.getByRole("region", { name: "Reviewed time change requests", exact: true }).screenshot({ path: testInfo.outputPath("reviewer-actions.png") });
 
   await switchUser(page, PEOPLE.LIZ);
   await expect(page.locator(".student-time-tools").getByRole("listitem").filter({ hasText: reason })).toContainText("Missed shift: APPROVED");
+});
+
+test("students cannot access the staff time-change review history", async ({ request }) => {
+  const login = await request.post("/api/auth/login", { data: { email: ACCOUNTS.STUDENT, password: SEED_PASSWORD } });
+  expect(login.ok()).toBeTruthy();
+  const { accessToken } = await login.json();
+  const history = await request.get("/api/timeclock/correction-requests/reviewed", { headers: { Authorization: `Bearer ${accessToken}` } });
+  expect(history.status()).toBe(403);
 });
 
 test("a supervisor cannot see another supervisor's students", async ({ page }) => {

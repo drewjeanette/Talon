@@ -616,6 +616,7 @@ th.numeric,td.numeric { text-align:right; font-variant-numeric:tabular-nums; whi
 .student-time-tools__card { margin-top:.5rem; padding:1rem; border:2px solid var(--tt-purple,#4b2e83); border-radius:12px; background:#fff; }
 .student-time-tools__card h3 { margin-top:0; }
 .approval-queue__job { display:block; color:var(--text-muted,#625c6b); font-size:.82rem; }
+.approval-queue__reviewer-name { display:block; margin-top:.25rem; }
 .approval-queue__change { margin-top:.35rem; min-height:32px; padding:.3rem .6rem; font-size:.85rem; }
 .approval-queue__move { display:grid; gap:.4rem; min-width:220px; margin-top:.5rem; padding:.6rem; border:1px solid var(--border); border-radius:8px; background:#fff; }
 .approval-split-view { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; margin:1rem 0 1.25rem; }
