@@ -404,3 +404,91 @@ html[data-theme="dark"] .status-message:not(:empty),
 html[data-theme="dark"] .talon-notification__bell { background:var(--tt-purple-soft); color:var(--tt-purple-dark); }
 html[data-theme="dark"] .talon-notification__dismiss { background:#21182d; }
 html[data-theme="dark"] .talon-notification__dismiss:hover:not(:disabled) { background:#352230; }
+
+/* Expandable supervisor categories keep the overview compact. */
+.supervisor-tools > h2 { margin:0 0 1rem; font-size:1.35rem; }
+.supervisor-tool-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1.25rem; align-items:start; }
+.supervisor-tool {
+  min-width:0;
+  border:1px solid var(--border);
+  border-top:5px solid var(--tt-gold);
+  border-radius:14px;
+  background:var(--surface);
+  box-shadow:0 6px 18px #33205a12;
+}
+.supervisor-tool[open] { grid-column:1 / -1; }
+.supervisor-tool > summary {
+  display:flex;
+  align-items:center;
+  gap:1rem;
+  min-height:135px;
+  padding:1.25rem;
+  border-radius:9px;
+  color:var(--tt-purple-dark);
+  cursor:pointer;
+  list-style:none;
+}
+.supervisor-tool > summary::-webkit-details-marker { display:none; }
+.supervisor-tool > summary:hover,
+.supervisor-tool[open] > summary { background:var(--tt-purple-soft); }
+.supervisor-tool > summary:focus-visible { outline:3px solid var(--focus); outline-offset:3px; }
+.supervisor-tool__icon {
+  display:grid;
+  place-items:center;
+  flex:0 0 48px;
+  height:48px;
+  border:2px solid var(--tt-purple);
+  border-bottom:4px solid var(--tt-gold);
+  border-radius:12px;
+}
+.supervisor-tool__icon svg { width:27px; height:27px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.supervisor-tool__copy { display:grid; min-width:0; gap:.35rem; }
+.supervisor-tool__title { font-size:1.15rem; font-weight:800; }
+.supervisor-tool__description { color:var(--text-muted); font-size:.9rem; line-height:1.45; }
+.supervisor-tool__arrow { margin-left:auto; font-size:1.5rem; font-weight:800; }
+.supervisor-tool[open] .supervisor-tool__arrow { transform:rotate(180deg); }
+.supervisor-tool__content { display:grid; min-width:0; gap:1rem; padding:1rem; border-top:2px solid var(--tt-purple); }
+.supervisor-tool__content > .card { min-width:0; width:100%; grid-column:1 / -1; box-shadow:none; }
+.dashboard--supervisor :is(input:not([type="checkbox"],[type="radio"],[type="file"]),select,textarea) {
+  min-width:0;
+  border:2px solid var(--tt-purple);
+  box-shadow:inset 4px 0 0 var(--tt-gold);
+  padding-left:1rem;
+}
+.dashboard--supervisor :is(input:not([type="checkbox"],[type="radio"],[type="file"]),select,textarea):focus {
+  outline:3px solid var(--focus);
+  outline-offset:2px;
+  box-shadow:inset 4px 0 0 var(--tt-gold);
+}
+.dashboard--supervisor .person-search__field input { padding-left:2.4rem; }
+html[data-theme="dark"] .dashboard--supervisor :is(input:not([type="checkbox"],[type="radio"],[type="file"]),select,textarea) { border-color:#b99be5; }
+html[data-theme="dark"] .supervisor-tool { box-shadow:0 8px 22px #07030d66; }
+html[data-theme="dark"] .work-queue__open,
+html[data-theme="dark"] .work-queue__open:disabled { background:#241b32; color:var(--text); border-color:#9b85b6; }
+html[data-theme="dark"] .work-queue__open:hover:not(:disabled),
+html[data-theme="dark"] .work-queue__open:focus-visible,
+html[data-theme="dark"] .sort-button:hover:not(:disabled),
+html[data-theme="dark"] .person-search__chip button:hover:not(:disabled) { background:#39274d; color:var(--text); }
+html[data-theme="dark"] .person-search__list,
+html[data-theme="dark"] .pay-comparison,
+html[data-theme="dark"] .approval-rejection-form,
+html[data-theme="dark"] .approval-queue__move { background:var(--surface); color:var(--text); border-color:#9b85b6; }
+html[data-theme="dark"] .payroll-report__request,
+html[data-theme="dark"] .stub-flag--open,
+html[data-theme="dark"] .pay-comparison__cell--differs { background:#3c2e16; color:var(--text); }
+html[data-theme="dark"] .stub-flag { background:#30253f; color:var(--text); }
+html[data-theme="dark"] button.button--danger { background:#9b1c1c; color:#fff; }
+html[data-theme="dark"] button.button--danger:hover:not(:disabled) { background:#7b1717; }
+html[data-theme="dark"] .approval-queue__approve,
+html[data-theme="dark"] .talon-send-report { background:#247a3b; color:#fff; }
+html[data-theme="dark"] .approval-queue__approve:hover:not(:disabled),
+html[data-theme="dark"] .talon-send-report:hover:not(:disabled) { background:#195d2c; }
+@media (max-width:700px) {
+  .supervisor-tool-grid { grid-template-columns:minmax(0,1fr); gap:1rem; }
+  .supervisor-tool > summary { min-height:115px; gap:.75rem; padding:1rem; }
+  .supervisor-tool__content { padding:.65rem; }
+}
+@media (max-width:400px) {
+  .app-header { grid-template-columns:minmax(0,1fr); grid-template-areas:"brand" "nav" "user"; }
+  .app-header__user { width:100%; justify-content:space-between; flex-wrap:wrap; }
+}

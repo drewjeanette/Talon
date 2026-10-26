@@ -58,6 +58,13 @@ export async function openAdminTool(page: Page, title: string) {
   await expect(page.getByRole("heading", { level: 2, name: title, exact: true }).first()).toBeVisible();
 }
 
+/** Expands a supervisor category without closing another category or losing a draft. */
+export async function openSupervisorTool(page: Page, title: string) {
+  const category = page.locator(".supervisor-tool").filter({ has: page.locator(".supervisor-tool__title", { hasText: title }) });
+  if (await category.getAttribute("open") === null) await category.locator("summary").click();
+  await expect(category).toHaveAttribute("open", "");
+}
+
 /** The suggestions under a person search. */
 export function suggestions(page: Page, label: string) {
   return page.getByRole("listbox", { name: `${label} suggestions` }).getByRole("option");

@@ -3,13 +3,13 @@ import { useAuth } from "../context/AuthContext";
 import { ClockWidget } from "../components/ClockWidget";
 import { TimesheetTable } from "../components/TimesheetTable";
 import { ApprovalQueue } from "../components/ApprovalQueue";
-import { PayrollReport } from "../components/PayrollReport";
 import { PayPeriodManager } from "../components/PayPeriodManager";
 import { UserManagement } from "../components/UserManagement";
 import { DepartmentManagement } from "../components/DepartmentManagement";
 import { ChargeAccountManagement } from "../components/ChargeAccountManagement";
 import { PayStubList } from "../components/PayStubList";
 import { SupervisorOrganizer } from "../components/SupervisorOrganizer";
+import { SupervisorTools } from "../components/SupervisorTools";
 import { AdminLaunchpad } from "../components/AdminLaunchpad";
 import { ProfilePhotoButton } from "../components/ProfilePhotoButton";
 import { StudentTimeTools } from "../components/StudentTimeTools";
@@ -84,7 +84,10 @@ export function DashboardPage() {
       <h1 className="dashboard__title"><ProfilePhotoButton userId={user.id} onStatus={setPhotoStatus} /><span>{greeting}, {user.preferredName || user.firstName}</span></h1>
       {photoStatus && <p className="dashboard__photo-message" role="status">{photoStatus}</p>}
 
-      {user.role === "SUPERVISOR" && <SupervisorOrganizer />}
+      {user.role === "SUPERVISOR" && <>
+        <SupervisorOrganizer />
+        <SupervisorTools clocksIn={clocksIn} entries={entries} onEntriesChanged={loadEntries} />
+      </>}
       {user.role === "ADMIN" && (
         <>
           <AdminLaunchpad selected={adminSection} onSelect={selectAdminSection} />
@@ -97,8 +100,8 @@ export function DashboardPage() {
         </>
       )}
 
-      {(user.role !== "ADMIN" || adminSection) && <div className="dashboard-grid">
-        {clocksIn && user.role !== "ADMIN" && (
+      {(user.role === "STUDENT" || (user.role === "ADMIN" && adminSection)) && <div className="dashboard-grid">
+        {clocksIn && user.role === "STUDENT" && (
           <>
             <ClockWidget onChange={loadEntries} />
             {user.role === "STUDENT" && <WorkQueue title="To-Dos" className="card student-todos" onOpen={openStudentTodo} hideWhenEmpty />}
@@ -109,12 +112,10 @@ export function DashboardPage() {
         )}
 
         {user.role === "STUDENT" && <PayStubList />}
-        {(user.role === "SUPERVISOR" || adminSection === "approvals") && <ApprovalQueue />}
-        {(user.role === "SUPERVISOR" || adminSection === "approvals") && <TeamPayStubStatus />}
-        {(user.role === "SUPERVISOR" || adminSection === "approvals") && <PayRateManager />}
+        {adminSection === "approvals" && <ApprovalQueue />}
+        {adminSection === "approvals" && <TeamPayStubStatus />}
+        {adminSection === "approvals" && <PayRateManager />}
         {adminSection === "approvals" && <ReminderSender />}
-        {user.role === "SUPERVISOR" && <PayrollReport />}
-        {user.role === "SUPERVISOR" && <PayStubList />}
 
         {adminSection === "payroll" && <PayPeriodManager />}
         {adminSection === "users" && <UserManagement />}

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { ACCOUNTS, PEOPLE, expectAccessible, openAdminTool, pickPerson, signInToDashboard } from "./helpers";
+import { ACCOUNTS, PEOPLE, expectAccessible, openAdminTool, openSupervisorTool, pickPerson, signInToDashboard } from "./helpers";
 
 // The seed's previous bi-weekly period is generated: Chris and Sophie both earn
 // $11.50/hour, but Sophie worked 5 hours of overtime and is charged to the
@@ -117,6 +117,7 @@ test("monthly reports include hours worked", async ({ page }) => {
 
 test("supervisor's report only includes their students and can be marked reviewed", async ({ page }) => {
   await signInToDashboard(page, PEOPLE.SECOND_SUPERVISOR);
+  await openSupervisorTool(page, "Payroll Reports");
   const report = page.locator(".payroll-report");
   await expect(report.getByRole("rowheader", { name: "Robert Hale" })).toBeVisible();
   await expect(report.getByRole("rowheader", { name: "Elizabeth (Liz) Park" })).toBeVisible();
@@ -131,6 +132,7 @@ test("supervisor's report only includes their students and can be marked reviewe
     await expect(page.locator("#report-heading")).toBeFocused();
     await page.reload();
     await expect(todos.getByRole("button", { name: /Review the payroll report/ })).toBeVisible();
+    await todos.getByRole("button", { name: /Review the payroll report/ }).click();
     await page.locator(".payroll-report").getByRole("button", { name: "Mark report reviewed" }).click();
     await expect(todos.getByRole("button", { name: /Review the payroll report/ })).toHaveCount(0);
   }

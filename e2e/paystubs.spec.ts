@@ -64,6 +64,8 @@ test("a question flagged on a pay stub goes to the student's supervisor until an
   await switchUser(page, PEOPLE.SECOND_SUPERVISOR);
   const todos = page.getByRole("region", { name: "To-Dos" });
   await expect(todos.getByRole("button", { name: /Answer pay stub questions/ })).toBeVisible();
+  await todos.getByRole("button", { name: /Answer pay stub questions/ }).click();
+  await expect(page.locator("#team-paystubs-heading")).toBeFocused();
   const stubs = page.locator(".team-pay-stubs");
   await stubs.getByLabel("Show reviewed stubs").check();
   await stubs.getByRole("button", { name: "Answer question on Robert Hale's pay stub" }).click();

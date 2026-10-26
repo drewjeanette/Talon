@@ -42,6 +42,7 @@ interface ReviewedCorrection extends PendingCorrection {
 
 export function ApprovalQueue() {
   const { user } = useAuth();
+  const showReviewed = user?.role === "ADMIN";
   const [entries, setEntries] = useState<PendingEntry[]>([]);
   const [corrections, setCorrections] = useState<PendingCorrection[]>([]);
   const [reviewedCorrections, setReviewedCorrections] = useState<ReviewedCorrection[]>([]);
@@ -57,7 +58,7 @@ export function ApprovalQueue() {
     const [pendingEntries, pendingCorrections, reviewed] = await Promise.all([
       api.get<PendingEntry[]>("/timeclock/pending"),
       api.get<PendingCorrection[]>("/timeclock/correction-requests/pending"),
-      api.get<ReviewedCorrection[]>("/timeclock/correction-requests/reviewed"),
+      showReviewed ? api.get<ReviewedCorrection[]>("/timeclock/correction-requests/reviewed") : Promise.resolve([]),
     ]);
     setEntries(pendingEntries);
     setCorrections(pendingCorrections);
@@ -289,7 +290,7 @@ export function ApprovalQueue() {
           </tbody>
         </table>
       </div>
-      <h3>Reviewed time changes</h3>
+      {showReviewed && <><h3>Reviewed time changes</h3>
       <p>The latest 100 reviewed time-change requests. The reviewer is shown under Actions.</p>
       <div className="table-scroll" role="region" aria-label="Reviewed time change requests" tabIndex={0}>
         <table>
@@ -311,6 +312,7 @@ export function ApprovalQueue() {
           </tbody>
         </table>
       </div>
+      </>}
       <p role="status" aria-live="polite" className="status-message">{message}</p>
       {attribution && <p className="talon-action-attribution">{attribution.action} <span className="talon-action-signature">{attribution.name}</span></p>}
     </section>

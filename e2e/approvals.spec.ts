@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { ACCOUNTS, PEOPLE, SEED_PASSWORD, expectAccessible, openAdminTool, signInToDashboard, switchUser } from "./helpers";
+import { ACCOUNTS, PEOPLE, SEED_PASSWORD, expectAccessible, openAdminTool, openSupervisorTool, signInToDashboard, switchUser } from "./helpers";
 
 async function expectReviewedBy(page: Page, reason: string, name: string) {
   const history = page.getByRole("region", { name: "Reviewed time change requests", exact: true });
@@ -14,6 +14,7 @@ for (const role of ["ADMIN", "SUPERVISOR"] as const) {
   test(`${role.toLowerCase()} sees Student Job Title in time entry approvals`, async ({ page }) => {
     await signInToDashboard(page, ACCOUNTS[role]);
     if (role === "ADMIN") await openAdminTool(page, "Time Entry Approvals");
+    else await openSupervisorTool(page, "Time Entry Approvals");
     const entries = page.getByRole("region", { name: "Time entries awaiting approval", exact: true });
     await expect(entries.getByRole("columnheader", { name: "Student Job Title", exact: true })).toBeVisible();
     await expectAccessible(page);
@@ -56,13 +57,15 @@ test("a student sees their assigned supervisor before submitting and while await
   const reason = `Named supervisor (${testInfo.project.name})`;
   await requestMissedShift(page, reason, 5, ACCOUNTS.STUDENT);
   await switchUser(page, ACCOUNTS.SUPERVISOR);
+  await openSupervisorTool(page, "Time Entry Approvals");
   const row = page.getByRole("row").filter({ hasText: reason });
   await expect(row).toContainText("Chris Student");
   await row.getByRole("button", { name: "Approve time correction for Chris Student", exact: true }).click();
   await expect(page.locator(".approval-queue > .status-message")).toHaveText("Correction request approved.");
-  await expectReviewedBy(page, reason, "Sabrina Supervisor");
+  await expect(page.getByRole("region", { name: "Reviewed time change requests", exact: true })).toHaveCount(0);
   await page.reload();
-  await expectReviewedBy(page, reason, "Sabrina Supervisor");
+  await openSupervisorTool(page, "Time Entry Approvals");
+  await expect(page.getByRole("heading", { name: "Reviewed time changes", exact: true })).toHaveCount(0);
   await expectAccessible(page);
   await switchUser(page, ACCOUNTS.STUDENT);
   const request = page.locator(".student-time-tools").getByRole("listitem").filter({ hasText: reason });
@@ -71,9 +74,13 @@ test("a student sees their assigned supervisor before submitting and while await
   await expect(request).not.toContainText("Waiting for");
   await page.waitForLoadState("networkidle");
   await expectAccessible(page);
-  const scopedHistory = page.waitForResponse((response) => response.url().endsWith("/api/timeclock/correction-requests/reviewed") && response.status() === 200);
   await switchUser(page, PEOPLE.SECOND_SUPERVISOR);
-  const otherStudentsHistory = await (await scopedHistory).json() as { reason: string }[];
+  // The staff history API remains scoped even though it is no longer a supervisor dashboard section.
+  const login = await page.request.post("/api/auth/login", { data: { email: PEOPLE.SECOND_SUPERVISOR, password: SEED_PASSWORD } });
+  const { accessToken } = await login.json();
+  const history = await page.request.get("/api/timeclock/correction-requests/reviewed", { headers: { Authorization: `Bearer ${accessToken}` } });
+  expect(history.ok()).toBeTruthy();
+  const otherStudentsHistory = await history.json() as { reason: string }[];
   expect(otherStudentsHistory.some((review) => review.reason === reason)).toBe(false);
   await expect(page.getByRole("region", { name: "Reviewed time change requests", exact: true }).getByText(reason, { exact: true })).toHaveCount(0);
   await page.waitForLoadState("networkidle");
@@ -124,12 +131,13 @@ test("either of a student's supervisors can approve a correction, and the to-do 
   await expect(supervisor.locator("#approvals-heading")).toBeFocused();
   await supervisor.reload();
   expect(await correctionsCount(supervisor)).toBe(before);
+  await openSupervisorTool(supervisor, "Time Entry Approvals");
 
   const row = supervisor.getByRole("row").filter({ hasText: reason });
   await row.getByRole("button", { name: /Approve time correction for Elizabeth \(Liz\) Park/ }).click();
   await expect(supervisor.locator(".approval-queue > .status-message")).toHaveText("Correction request approved.");
   await expect(supervisor.getByRole("region", { name: "Time correction requests awaiting approval", exact: true }).getByRole("row").filter({ hasText: reason })).toHaveCount(0);
-  await expectReviewedBy(supervisor, reason, "Marcus Reyes");
+  await expect(supervisor.getByRole("heading", { name: "Reviewed time changes", exact: true })).toHaveCount(0);
   // Completing the work updates the to-do without a reload.
   if (before === 1) await expect(todos.getByRole("button", { name: /Review time corrections/ })).toHaveCount(0);
   else await expect(todos.getByRole("button", { name: /Review time corrections/ }).locator(".work-queue__count")).toHaveText(String(before - 1));
@@ -168,6 +176,7 @@ test("students cannot access the staff time-change review history", async ({ req
 
 test("a supervisor cannot see another supervisor's students", async ({ page }) => {
   await signInToDashboard(page, ACCOUNTS.SUPERVISOR);
+  await openSupervisorTool(page, "Time Entry Approvals");
   const queue = page.locator(".approval-queue");
   await expect(queue.getByRole("rowheader", { name: "Chris Student" }).first()).toBeVisible();
   await expect(queue.getByRole("rowheader", { name: "Robert Hale" })).toHaveCount(0);
