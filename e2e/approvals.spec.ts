@@ -12,15 +12,18 @@ for (const role of ["ADMIN", "SUPERVISOR"] as const) {
 }
 
 /** A missed shift Liz asks to add, unique to this test run. */
-async function requestMissedShift(page: Page, reason: string, daysAgo: number) {
-  await signInToDashboard(page, PEOPLE.LIZ);
+async function requestMissedShift(page: Page, reason: string, daysAgo: number, student: string = PEOPLE.LIZ) {
+  await signInToDashboard(page, student);
   const day = new Date(Date.now() - daysAgo * 86_400_000);
   const local = (hour: number) => `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}T${String(hour).padStart(2, "0")}:00`;
   const form = page.locator(".student-time-tools");
   await form.getByRole("button", { name: "Fix a missed clock-in or clock-out" }).click();
+  await expect(form.locator(".correction-recipient")).toHaveText(student === PEOPLE.LIZ
+    ? "Sent to: Marcus Reyes, Sabrina Supervisor. Any assigned supervisor can approve."
+    : "Sent to: Sabrina Supervisor");
   await form.getByLabel("Shift to correct").selectOption("new");
   // Liz has two jobs, so a missed shift says which one.
-  await form.getByLabel("Job", { exact: true }).selectOption({ label: "Math Tutor" });
+  if (student === PEOPLE.LIZ) await form.getByLabel("Job", { exact: true }).selectOption({ label: "Math Tutor" });
   await form.getByLabel("Correct clock-in").fill(local(9));
   await form.getByLabel("Correct clock-out").fill(local(11));
   // Every date/time picker explains the same commit step.
@@ -28,11 +31,54 @@ async function requestMissedShift(page: Page, reason: string, daysAgo: number) {
   await form.getByLabel("Reason for the correction").fill(reason);
   await form.getByRole("button", { name: "Send for approval" }).click();
   await expect(form.getByRole("status")).toHaveText("Correction sent for approval. Any of your supervisors can approve it.");
-  // Pending student requests no longer name a supervisor; reviewer details appear after review.
+  // The pending request names the currently assigned approvers.
   const request = form.getByRole("listitem").filter({ hasText: reason });
   await expect(request).toContainText("Missed shift: PENDING");
-  await expect(request).not.toContainText("Waiting on");
+  await expect(request).toContainText(student === PEOPLE.LIZ
+    ? "Waiting for approval from Marcus Reyes, Sabrina Supervisor. Any assigned supervisor can approve."
+    : "Waiting for Sabrina Supervisor’s approval.");
   await expectAccessible(page);
+}
+
+test("a student sees their assigned supervisor before submitting and while awaiting approval", async ({ page }, testInfo) => {
+  const reason = `Named supervisor (${testInfo.project.name})`;
+  await requestMissedShift(page, reason, 5, ACCOUNTS.STUDENT);
+  await switchUser(page, ACCOUNTS.SUPERVISOR);
+  const row = page.getByRole("row").filter({ hasText: reason });
+  await expect(row).toContainText("Chris Student");
+  await row.getByRole("button", { name: "Approve time correction for Chris Student", exact: true }).click();
+  await expect(page.locator(".approval-queue > .status-message")).toHaveText("Correction request approved.");
+  await expectAccessible(page);
+  await switchUser(page, ACCOUNTS.STUDENT);
+  const request = page.locator(".student-time-tools").getByRole("listitem").filter({ hasText: reason });
+  await expect(request).toContainText("Missed shift: APPROVED");
+  await expect(request).toContainText("Reviewed by Sabrina");
+  await expect(request).not.toContainText("Waiting for");
+  await expectAccessible(page);
+});
+
+for (const unavailable of [false, true]) {
+  test(`student correction form explains ${unavailable ? "a supervisor lookup failure" : "a missing supervisor assignment"}`, async ({ page }) => {
+    await page.route("**/api/users/me/approvers", (route) => route.fulfill({
+      status: unavailable ? 503 : 200,
+      json: unavailable ? { error: "Unavailable" } : { supervisors: [] },
+    }));
+    if (!unavailable) await page.route("**/api/timeclock/correction-requests/mine", async (route) => {
+      const response = await route.fetch();
+      const requests = await response.json() as { waitingOn: string[] }[];
+      await route.fulfill({ response, json: requests.map((request) => ({ ...request, waitingOn: [] })) });
+    });
+    await signInToDashboard(page, unavailable ? ACCOUNTS.STUDENT : PEOPLE.SOPHIE);
+    const tools = page.locator(".student-time-tools");
+    await tools.getByRole("button", { name: "Fix a missed clock-in or clock-out" }).click();
+    await expect(tools.locator(".correction-recipient")).toHaveText(unavailable
+      ? "Could not load your assigned supervisor. Your request will still be available to your assigned supervisors and admins."
+      : "No supervisor assigned. An admin can review your request.");
+    await expect(tools.getByRole("button", { name: "Send for approval", exact: true })).toBeEnabled();
+    if (!unavailable) await expect(tools.getByRole("listitem").filter({ hasText: "Missed shift: PENDING" }).first())
+      .toContainText("Waiting for an admin’s approval. No supervisor is assigned.");
+    await expectAccessible(page);
+  });
 }
 
 async function correctionsCount(page: Page) {
