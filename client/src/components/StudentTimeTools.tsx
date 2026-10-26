@@ -43,7 +43,9 @@ export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryO
   const [supervisorsError, setSupervisorsError] = useState(false);
 
   async function loadRequests() {
-    setRequests(await api.get<CorrectionRequest[]>("/timeclock/correction-requests/mine"));
+    const data = await api.get<CorrectionRequest[]>("/timeclock/correction-requests/mine");
+    setRequests(data);
+    return data;
   }
 
   useEffect(() => {
@@ -100,21 +102,28 @@ export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryO
       return;
     }
     setBusy(true);
+    let submitted = false;
     try {
-      await api.post("/timeclock/correction-requests", {
+      const created = await api.post<{ id: number }>("/timeclock/correction-requests", {
         timeEntryId: target === "new" ? null : Number(target),
         ...(target === "new" && jobId ? { jobId: Number(jobId) } : {}),
         clockIn: new Date(clockIn).toISOString(),
         clockOut: new Date(clockOut).toISOString(),
         reason: reason.trim(),
       });
-      setMessage("Correction sent for approval. Any of your supervisors can approve it.");
+      submitted = true;
+      setMessage("Correction sent for approval.");
       closeForm();
-      await loadRequests();
+      const updatedRequests = await loadRequests();
+      const approvers = updatedRequests.find((request) => request.id === created.id)?.waitingOn;
+      if (approvers) setMessage(approvers.length
+        ? `Correction sent to ${approvers.join(", ")} for approval.${approvers.length > 1 ? " Any assigned supervisor can approve it." : ""}`
+        : "Correction sent to a payroll administrator for approval.");
       onSubmitted();
       notifyWorkChanged();
     } catch (error) {
-      setMessage(error instanceof ApiError ? error.message : "Could not submit the correction.");
+      setMessage(submitted ? "Correction sent for approval, but the updated request could not be loaded. Refresh the page to see its status."
+        : error instanceof ApiError ? error.message : "Could not submit the correction.");
     } finally {
       setBusy(false);
     }
