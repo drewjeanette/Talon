@@ -1,9 +1,9 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "../db/index.js";
-import { chargeAccounts, departments, refreshTokens, studentJobs, studentSupervisors, users } from "../db/schema.js";
+import { auditLogs, chargeAccounts, departments, refreshTokens, studentJobs, studentSupervisors, users } from "../db/schema.js";
 import { generateTempPassword, hashPassword } from "../lib/password.js";
 import { centsToDollarString, dollarsToCents } from "../lib/money.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
@@ -265,11 +265,14 @@ userRoutes.patch("/:id/jobs/:jobId", requireRole("ADMIN"), async (c) => {
 
 userRoutes.patch("/:id/deactivate", requireRole("ADMIN"), async (c) => {
   const id = Number(c.req.param("id"));
-  if (!Number.isInteger(id)) throw new HTTPException(400, { message: "Invalid user id." });
+  if (!Number.isSafeInteger(id) || id <= 0) throw new HTTPException(400, { message: "Invalid user id." });
+  if (id === c.get("user").id) throw new HTTPException(409, { message: "You cannot deactivate your own account." });
 
   const db = getDb(c.env.DB);
+  const target = await db.query.users.findFirst({ where: eq(users.id, id), columns: { id: true } });
+  if (!target) throw new HTTPException(404, { message: "User not found." });
   await db.batch([
-    db.update(users).set({ isActive: false }).where(eq(users.id, id)),
+    db.update(users).set({ isActive: false, updatedAt: new Date() }).where(eq(users.id, id)),
     db
       .update(refreshTokens)
       .set({ revokedAt: new Date() })
@@ -277,5 +280,42 @@ userRoutes.patch("/:id/deactivate", requireRole("ADMIN"), async (c) => {
   ]);
 
   await writeAuditLog(c, "USER_DEACTIVATE", "User", id);
+  return c.body(null, 204);
+});
+
+userRoutes.patch("/:id/reactivate", requireRole("ADMIN"), async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isSafeInteger(id) || id <= 0) throw new HTTPException(400, { message: "Invalid user id." });
+  const db = getDb(c.env.DB);
+  const [target] = await db.update(users).set({ isActive: true, updatedAt: new Date() })
+    .where(eq(users.id, id)).returning({ id: users.id });
+  if (!target) throw new HTTPException(404, { message: "User not found." });
+  await writeAuditLog(c, "USER_REACTIVATE", "User", id);
+  return c.body(null, 204);
+});
+
+/** Remove unused accounts; payroll records and review attribution must survive. */
+userRoutes.delete("/:id", requireRole("ADMIN"), async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isSafeInteger(id) || id <= 0) throw new HTTPException(400, { message: "Invalid user id." });
+  if (id === c.get("user").id) throw new HTTPException(409, { message: "You cannot remove your own account." });
+  const db = getDb(c.env.DB);
+  const target = await db.query.users.findFirst({ where: eq(users.id, id), columns: { id: true } });
+  if (!target) throw new HTTPException(404, { message: "User not found." });
+
+  // Keep the history guard inside the batch's statements so a concurrent
+  // clock-in or review cannot slip between checking history and deleting.
+  const noHistory = sql`NOT EXISTS (SELECT 1 FROM time_entries WHERE user_id = ${id} OR edited_by_id = ${id})
+    AND NOT EXISTS (SELECT 1 FROM pay_stubs WHERE user_id = ${id} OR finalized_by_id = ${id} OR reviewed_by_id = ${id} OR flagged_by_id = ${id})
+    AND NOT EXISTS (SELECT 1 FROM time_entry_change_requests WHERE user_id = ${id} OR reviewer_id = ${id})
+    AND NOT EXISTS (SELECT 1 FROM report_runs WHERE requested_by_id = ${id})
+    AND NOT EXISTS (SELECT 1 FROM app_settings WHERE updated_by_id = ${id})`;
+  const [, removed] = await db.batch([
+    // Retain audit events and their entity IDs without a dangling actor FK.
+    db.update(auditLogs).set({ userId: null }).where(and(eq(auditLogs.userId, id), noHistory)),
+    db.delete(users).where(and(eq(users.id, id), noHistory)).returning({ id: users.id }),
+  ]);
+  if (!removed.length) throw new HTTPException(409, { message: "This account has payroll or administrative history and cannot be removed. Deactivate it instead." });
+  await writeAuditLog(c, "USER_REMOVE", "User", id);
   return c.body(null, 204);
 });

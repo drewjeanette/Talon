@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "../api/client";
 import { displayName } from "../lib/nameSearch";
 import { PersonSearch } from "./PersonSearch";
 import { StudentComparisonEntries } from "./StudentComparisonEntries";
+import { useAuth } from "../context/AuthContext";
 
 interface OrgUser {
   id: number;
@@ -41,6 +42,7 @@ interface EditDraft {
 }
 
 export function UserManagement() {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<OrgUser[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [accounts, setAccounts] = useState<ChargeAccount[]>([]);
@@ -64,6 +66,10 @@ export function UserManagement() {
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<EditDraft | null>(null);
+  const [changingStatus, setChangingStatus] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const removeButtonRef = useRef<HTMLButtonElement>(null);
 
   async function load() {
     const [u, d, a] = await Promise.all([
@@ -122,6 +128,7 @@ export function UserManagement() {
   }
 
   function startEdit(user: OrgUser) {
+    setConfirmRemove(false);
     setEditingId(user.id);
     setDraft({
       preferredName: user.preferredName ?? "",
@@ -175,14 +182,39 @@ export function UserManagement() {
     }
   }
 
-  async function handleDeactivate(user: OrgUser) {
+  async function changeActiveStatus(user: OrgUser) {
+    if (changingStatus) return;
+    setChangingStatus(true);
     setMessage(null);
     try {
-      await api.patch(`/users/${user.id}/deactivate`);
-      setMessage(`Deactivated ${displayName(user)}.`);
+      await api.patch(`/users/${user.id}/${user.isActive ? "deactivate" : "reactivate"}`);
+      setMessage(`${user.isActive ? "Deactivated" : "Reactivated"} ${displayName(user)}.`);
       await load();
     } catch (err) {
-      setMessage(err instanceof ApiError ? err.message : "Could not deactivate user.");
+      setMessage(err instanceof ApiError ? err.message : "Could not change the user's active status.");
+    } finally {
+      setChangingStatus(false);
+    }
+  }
+
+  async function removeUser(user: OrgUser) {
+    if (changingStatus) return;
+    setChangingStatus(true);
+    setMessage(null);
+    try {
+      await api.delete(`/users/${user.id}`);
+      setUsers((current) => current.filter((person) => person.id !== user.id));
+      setFilter((current) => current.filter((id) => id !== user.id));
+      setComparison((current) => current.map((id) => id === user.id ? null : id));
+      setEditingId(null);
+      setDraft(null);
+      setConfirmRemove(false);
+      setMessage(`Removed ${displayName(user)}.`);
+      searchRef.current?.querySelector<HTMLInputElement>("input")?.focus();
+    } catch (err) {
+      setMessage(err instanceof ApiError ? err.message : "Could not remove the user.");
+    } finally {
+      setChangingStatus(false);
     }
   }
 
@@ -297,7 +329,7 @@ export function UserManagement() {
       </form>
       <p className="form-help">Change hourly rates later in Time Entry Approvals → Student Hourly Pay Rates.</p>
 
-      <div className="user-management__search">
+      <div className="user-management__search" ref={searchRef}>
         <PersonSearch label="Find people" people={people} value={filter} onChange={setFilter} multiple />
       </div>
 
@@ -360,9 +392,29 @@ export function UserManagement() {
                       <PersonSearch label="Supervisors" people={supervisorChoices} value={draft.supervisorIds} onChange={(ids) => setDraft({ ...draft, supervisorIds: ids })} multiple />
                     )}
                     <div className="button-row">
-                      <button type="button" onClick={() => saveEdit(u)}>Save changes</button>
-                      <button type="button" className="button--secondary" onClick={() => { setEditingId(null); setDraft(null); }}>Cancel</button>
+                      <button type="button" disabled={changingStatus} onClick={() => saveEdit(u)}>Save changes</button>
+                      <button type="button" disabled={changingStatus} className="button--secondary" onClick={() => { setEditingId(null); setDraft(null); }}>Cancel</button>
                     </div>
+                    <fieldset className="user-management__account-actions">
+                      <legend>Account access</legend>
+                      <p>{u.isActive ? "Active. Deactivating prevents sign-in and keeps payroll history." : "Inactive. Reactivating allows this user to sign in again."}</p>
+                      {u.id === currentUser?.id && <p>You cannot deactivate or remove your own account.</p>}
+                      <div className="button-row">
+                        <button type="button" className={u.isActive ? "button--danger" : "button--secondary"}
+                          disabled={changingStatus || u.id === currentUser?.id} onClick={() => changeActiveStatus(u)}>
+                          {u.isActive ? "Deactivate" : "Reactivate"}
+                        </button>
+                        <button type="button" ref={removeButtonRef} className="button--danger" disabled={changingStatus || u.id === currentUser?.id}
+                          aria-expanded={confirmRemove} aria-controls={`remove-user-${u.id}`} onClick={() => setConfirmRemove(true)}>Remove</button>
+                      </div>
+                      <div id={`remove-user-${u.id}`} hidden={!confirmRemove}>
+                        <p>Permanently remove {displayName(u)}? This cannot be undone. Accounts with payroll or administrative history cannot be removed.</p>
+                        <div className="button-row">
+                          <button type="button" className="button--danger" disabled={changingStatus} onClick={() => removeUser(u)}>Permanently remove</button>
+                          <button type="button" className="button--secondary" disabled={changingStatus} onClick={() => { setConfirmRemove(false); removeButtonRef.current?.focus(); }}>Cancel removal</button>
+                        </div>
+                      </div>
+                    </fieldset>
                   </div>
                 </td>
               </tr>
@@ -380,9 +432,6 @@ export function UserManagement() {
                 <td>
                   <div className="button-row">
                     <button type="button" onClick={() => startEdit(u)} aria-label={`Edit ${displayName(u)}`}>Edit</button>
-                    <button type="button" onClick={() => handleDeactivate(u)} disabled={!u.isActive} className="button--danger" aria-label={`Deactivate ${displayName(u)}`}>
-                      Deactivate
-                    </button>
                   </div>
                 </td>
               </tr>
