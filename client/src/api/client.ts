@@ -71,6 +71,7 @@ export const api = {
     request<T>(path, { method: "POST", body: body !== undefined ? JSON.stringify(body) : undefined }),
   patch: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PATCH", body: body !== undefined ? JSON.stringify(body) : undefined }),
+  delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
   getPhoto: () => request<Blob | undefined>("/auth/profile-photo"),
   getPhotoView: () => request<ProfilePhotoView>("/auth/profile-photo/view"),
   savePhotoView: (view: ProfilePhotoView) => request<ProfilePhotoView>("/auth/profile-photo/view", {

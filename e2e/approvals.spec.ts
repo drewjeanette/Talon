@@ -1,6 +1,16 @@
 import { test, expect, type Page } from "@playwright/test";
 import { ACCOUNTS, PEOPLE, expectAccessible, openAdminTool, signInToDashboard, switchUser } from "./helpers";
 
+for (const role of ["ADMIN", "SUPERVISOR"] as const) {
+  test(`${role.toLowerCase()} sees Student Job Title in time entry approvals`, async ({ page }) => {
+    await signInToDashboard(page, ACCOUNTS[role]);
+    if (role === "ADMIN") await openAdminTool(page, "Time Entry Approvals");
+    const entries = page.getByRole("region", { name: "Time entries awaiting approval", exact: true });
+    await expect(entries.getByRole("columnheader", { name: "Student Job Title", exact: true })).toBeVisible();
+    await expectAccessible(page);
+  });
+}
+
 /** A missed shift Liz asks to add, unique to this test run. */
 async function requestMissedShift(page: Page, reason: string, daysAgo: number) {
   await signInToDashboard(page, PEOPLE.LIZ);
