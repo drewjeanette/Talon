@@ -137,8 +137,8 @@ h2 {
   height:48px;
 }
 
-/* Purple outlines and gold trim for payroll entry and report filters. */
-.pay-period-manager :is(input:not([type="checkbox"]):not([type="radio"]), select) {
+/* Purple outlines and gold trim for payroll fields, reports, and calendar settings. */
+:is(.pay-period-manager,.payroll-calendar) :is(input:not([type="checkbox"]):not([type="radio"]), select) {
   min-height:46px;
   border:2px solid #694293;
   border-bottom:3px solid #9a6b00;
@@ -147,23 +147,23 @@ h2 {
   background-color:#fcf9ff;
   box-shadow:0 2px 5px #33205a0d;
 }
-.pay-period-manager :is(input:not([type="checkbox"]):not([type="radio"]), select):hover:not(:disabled) {
+:is(.pay-period-manager,.payroll-calendar) :is(input:not([type="checkbox"]):not([type="radio"]), select):hover:not(:disabled) {
   border-color:#4b2e83;
   border-bottom-color:#9a6b00;
 }
-.pay-period-manager :is(input:not([type="checkbox"]):not([type="radio"]), select):focus-visible {
+:is(.pay-period-manager,.payroll-calendar) :is(input:not([type="checkbox"]):not([type="radio"]), select):focus-visible {
   outline:3px solid var(--focus);
   outline-offset:3px;
   border-color:var(--tt-purple);
   box-shadow:0 0 0 2px var(--surface);
 }
-html[data-theme="dark"] .pay-period-manager :is(input:not([type="checkbox"]):not([type="radio"]), select) {
+html[data-theme="dark"] :is(.pay-period-manager,.payroll-calendar) :is(input:not([type="checkbox"]):not([type="radio"]), select) {
   color:var(--text);
   background-color:#21182d;
   border-color:#b692e0;
   border-bottom-color:#ffd766;
 }
-html[data-theme="dark"] .pay-period-manager :is(input:not([type="checkbox"]):not([type="radio"]), select):hover:not(:disabled) {
+html[data-theme="dark"] :is(.pay-period-manager,.payroll-calendar) :is(input:not([type="checkbox"]):not([type="radio"]), select):hover:not(:disabled) {
   border-color:#d6bcf2;
   border-bottom-color:#ffd766;
 }

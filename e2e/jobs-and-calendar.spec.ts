@@ -80,12 +80,15 @@ test("admin gives a student a second job and ends it", async ({ page }, testInfo
   await expect(page.locator(".user-management > .status-message")).toHaveText(`Ended ${title} for Katherine Diaz. Past shifts keep it.`);
 });
 
-test("admin changes payroll reminder times in Settings", async ({ page }) => {
+for (const theme of ["light", "dark"] as const) {
+test(`admin changes payroll reminder times in Settings in ${theme} mode`, async ({ page }, testInfo) => {
+  await page.addInitScript((value) => localStorage.setItem("talon-theme", value), theme);
   await signInToDashboard(page, ACCOUNTS.ADMIN);
   await page.goto("/settings?tab=payroll-calendar");
   await expect(page.getByRole("heading", { name: "Payroll Calendar" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Next scheduled emails" })).toBeVisible();
   await expectAccessible(page);
+  await page.locator(".payroll-calendar").screenshot({ path: testInfo.outputPath(`payroll-calendar-${theme}.png`) });
 
   const save = page.getByRole("button", { name: "Save payroll calendar" });
   const biweekly = page.getByRole("group", { name: "Bi-weekly (period closes Sunday)" });
@@ -106,7 +109,9 @@ test("admin changes payroll reminder times in Settings", async ({ page }) => {
   await page.getByRole("group", { name: "Bi-weekly (period closes Sunday)" }).getByLabel("Deadline-day escalation at").fill("10:00");
   await page.getByRole("button", { name: "Save payroll calendar" }).click();
   await expect(page.locator(".settings-card__status")).toHaveText("Payroll calendar saved.");
+  await expectAccessible(page);
 });
+}
 
 test("only admins see the payroll calendar", async ({ page }) => {
   await signInToDashboard(page, ACCOUNTS.SUPERVISOR);
