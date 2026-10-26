@@ -11,6 +11,16 @@ test("admin can use the trimmed payroll fields with keyboard focus", async ({ pa
   await signInToDashboard(page, ACCOUNTS.ADMIN);
   await openAdminTool(page, "Generate Payroll and Pay Periods");
   const form = page.locator(".pay-period-manager__form");
+  const fieldLabels = ["Type", "Start date", "End date", "Pay date"];
+  for (const label of fieldLabels) {
+    const field = form.getByLabel(label, { exact: true });
+    await expect(field).toHaveCSS("height", "48px");
+    await expect(field).toHaveCSS("border-bottom-color", "rgb(154, 107, 0)");
+  }
+  if (testInfo.project.name === "desktop") {
+    const tops = await form.locator("input, select").evaluateAll((fields) => fields.map((field) => field.getBoundingClientRect().top));
+    expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(1);
+  }
   await form.getByLabel("Type", { exact: true }).selectOption("MONTHLY");
   await form.getByLabel("Type", { exact: true }).press("Tab");
   await expect(form.getByLabel("Start date", { exact: true })).toBeFocused();

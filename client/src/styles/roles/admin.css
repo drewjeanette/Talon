@@ -129,6 +129,14 @@ h2 {
 .pay-period-manager__form {
 }
 
+.pay-period-manager .pay-period-manager__form { align-items:start; }
+.pay-period-manager .pay-period-manager__form > button { align-self:end; }
+.pay-period-manager .pay-period-manager__form :is(input, select) {
+  box-sizing:border-box;
+  width:100%;
+  height:48px;
+}
+
 /* Purple outlines and gold trim for payroll entry and report filters. */
 .pay-period-manager :is(input:not([type="checkbox"]):not([type="radio"]), select) {
   min-height:46px;
