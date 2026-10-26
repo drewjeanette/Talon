@@ -33,10 +33,18 @@ interface PendingCorrection {
 
 type RejectTarget = { kind: "entry" | "correction"; id: number } | null;
 
+interface ReviewedCorrection extends PendingCorrection {
+  status: "APPROVED" | "REJECTED";
+  reviewerName: string | null;
+  reviewerReason: string | null;
+  reviewedAt: string | null;
+}
+
 export function ApprovalQueue() {
   const { user } = useAuth();
   const [entries, setEntries] = useState<PendingEntry[]>([]);
   const [corrections, setCorrections] = useState<PendingCorrection[]>([]);
+  const [reviewedCorrections, setReviewedCorrections] = useState<ReviewedCorrection[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [attribution, setAttribution] = useState<{ action: string; name: string } | null>(null);
   const [rejectTarget, setRejectTarget] = useState<RejectTarget>(null);
@@ -46,12 +54,14 @@ export function ApprovalQueue() {
   const [moving, setMoving] = useState<{ entryId: number; accountId: string } | null>(null);
 
   async function load() {
-    const [pendingEntries, pendingCorrections] = await Promise.all([
+    const [pendingEntries, pendingCorrections, reviewed] = await Promise.all([
       api.get<PendingEntry[]>("/timeclock/pending"),
       api.get<PendingCorrection[]>("/timeclock/correction-requests/pending"),
+      api.get<ReviewedCorrection[]>("/timeclock/correction-requests/reviewed"),
     ]);
     setEntries(pendingEntries);
     setCorrections(pendingCorrections);
+    setReviewedCorrections(reviewed);
   }
 
   useEffect(() => {
@@ -78,12 +88,13 @@ export function ApprovalQueue() {
 
   const students = useMemo(() => {
     const map = new Map<number, Person>();
-    for (const item of [...entries, ...corrections]) map.set(item.user.id, item.user);
+    for (const item of [...entries, ...corrections, ...reviewedCorrections]) map.set(item.user.id, item.user);
     return [...map.values()];
-  }, [entries, corrections]);
+  }, [entries, corrections, reviewedCorrections]);
   const showEntry = (item: { user: Person }) => !studentFilter.length || studentFilter.includes(item.user.id);
   const shownEntries = entries.filter(showEntry);
   const shownCorrections = corrections.filter(showEntry);
+  const shownReviewedCorrections = reviewedCorrections.filter(showEntry);
   const splitStudents = studentFilter.length === 2
     ? studentFilter.map((id) => students.find((student) => student.id === id)).filter((student): student is Person => Boolean(student))
     : [];
@@ -274,6 +285,28 @@ export function ApprovalQueue() {
               <td>{request.reason}{request.jobTitle && <small className="approval-queue__job">Job: {request.jobTitle}</small>}</td>
               <td>{statusFor(request.submittedAt)}</td>
               <td>{correctionActions(request)}</td>
+            </tr>)}
+          </tbody>
+        </table>
+      </div>
+      <h3>Reviewed time changes</h3>
+      <p>The latest 100 reviewed time-change requests. The reviewer is shown under Actions.</p>
+      <div className="table-scroll" role="region" aria-label="Reviewed time change requests" tabIndex={0}>
+        <table>
+          <caption className="sr-only">Reviewed time change requests</caption>
+          <thead><tr><th scope="col">Employee</th><th scope="col">Requested shift</th><th scope="col">Student reason</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
+          <tbody>
+            {shownReviewedCorrections.length === 0 && <tr><td colSpan={5}>No reviewed time changes to show.</td></tr>}
+            {shownReviewedCorrections.map((request) => <tr key={request.id}>
+              <th scope="row">{request.user.fullName}</th>
+              <td>{new Date(request.requestedClockIn).toLocaleString()}<br />{new Date(request.requestedClockOut).toLocaleString()}</td>
+              <td>{request.reason}{request.jobTitle && <small className="approval-queue__job">Job: {request.jobTitle}</small>}</td>
+              <td>{request.status}{request.reviewerReason && <p>Reason: {request.reviewerReason}</p>}</td>
+              <td>
+                <span>{request.status === "APPROVED" ? "Approved by" : "Denied by"}</span>
+                <strong className="approval-queue__reviewer-name">{request.reviewerName ?? "Reviewer unavailable"}</strong>
+                {request.reviewedAt && <small className="approval-queue__job">{new Date(request.reviewedAt).toLocaleString()}</small>}
+              </td>
             </tr>)}
           </tbody>
         </table>

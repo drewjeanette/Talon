@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Handler } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -377,46 +377,64 @@ timeclockRoutes.get("/correction-requests/mine", async (c) => {
   })));
 });
 
-timeclockRoutes.get("/correction-requests/pending", requireRole("SUPERVISOR"), async (c) => {
-  const db = getDb(c.env.DB);
-  const me = c.get("user");
-  const conditions = [eq(timeEntryChangeRequests.status, "PENDING" as const)];
-  if (me.role !== "ADMIN") conditions.push(inArray(users.id, supervisedStudentIds(db, me.id)));
+function correctionRequestList(reviewed: boolean): Handler<AppEnv> {
+  return async (c) => {
+    const db = getDb(c.env.DB);
+    const me = c.get("user");
+    const conditions = [reviewed ? sql`${timeEntryChangeRequests.status} <> 'PENDING'` : eq(timeEntryChangeRequests.status, "PENDING" as const)];
+    if (me.role !== "ADMIN") conditions.push(inArray(users.id, supervisedStudentIds(db, me.id)));
 
-  const rows = await db.select({
-    id: timeEntryChangeRequests.id,
-    timeEntryId: timeEntryChangeRequests.timeEntryId,
-    requestedClockIn: timeEntryChangeRequests.requestedClockIn,
-    requestedClockOut: timeEntryChangeRequests.requestedClockOut,
-    reason: timeEntryChangeRequests.reason,
-    createdAt: timeEntryChangeRequests.createdAt,
-    currentClockIn: timeEntries.clockIn,
-    currentClockOut: timeEntries.clockOut,
-    userId: users.id,
-    firstName: users.firstName,
-    lastName: users.lastName,
-    preferredName: users.preferredName,
-    jobTitle: studentJobs.title,
-  }).from(timeEntryChangeRequests)
-    .innerJoin(users, eq(timeEntryChangeRequests.userId, users.id))
-    .leftJoin(timeEntries, eq(timeEntryChangeRequests.timeEntryId, timeEntries.id))
-    .leftJoin(studentJobs, eq(studentJobs.id, sql`coalesce(${timeEntryChangeRequests.jobId}, ${timeEntries.jobId})`))
-    .where(and(...conditions))
-    .orderBy(timeEntryChangeRequests.createdAt);
+    const query = db.select({
+      id: timeEntryChangeRequests.id,
+      timeEntryId: timeEntryChangeRequests.timeEntryId,
+      requestedClockIn: timeEntryChangeRequests.requestedClockIn,
+      requestedClockOut: timeEntryChangeRequests.requestedClockOut,
+      reason: timeEntryChangeRequests.reason,
+      createdAt: timeEntryChangeRequests.createdAt,
+      status: timeEntryChangeRequests.status,
+      reviewerId: timeEntryChangeRequests.reviewerId,
+      reviewerReason: timeEntryChangeRequests.reviewerReason,
+      reviewedAt: timeEntryChangeRequests.reviewedAt,
+      currentClockIn: timeEntries.clockIn,
+      currentClockOut: timeEntries.clockOut,
+      userId: users.id,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      preferredName: users.preferredName,
+      jobTitle: studentJobs.title,
+    }).from(timeEntryChangeRequests)
+      .innerJoin(users, eq(timeEntryChangeRequests.userId, users.id))
+      .leftJoin(timeEntries, eq(timeEntryChangeRequests.timeEntryId, timeEntries.id))
+      .leftJoin(studentJobs, eq(studentJobs.id, sql`coalesce(${timeEntryChangeRequests.jobId}, ${timeEntries.jobId})`))
+      .where(and(...conditions))
+      .orderBy(reviewed ? desc(timeEntryChangeRequests.reviewedAt) : timeEntryChangeRequests.createdAt, desc(timeEntryChangeRequests.id));
+    const rows = reviewed ? await query.limit(100) : await query;
+    const reviewerIds = [...new Set(rows.map((row) => row.reviewerId).filter((id): id is number => id !== null))];
+    const reviewers = reviewerIds.length ? await db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName, preferredName: users.preferredName })
+      .from(users).where(inArray(users.id, reviewerIds)) : [];
+    const reviewerNames = new Map(reviewers.map((reviewer) => [reviewer.id, fullName(reviewer)]));
 
-  return c.json(rows.map((row) => ({
-    id: row.id,
-    timeEntryId: row.timeEntryId,
-    requestedClockIn: row.requestedClockIn,
-    requestedClockOut: row.requestedClockOut,
-    reason: row.reason,
-    submittedAt: row.createdAt,
-    jobTitle: row.jobTitle,
-    currentClockIn: row.currentClockIn,
-    currentClockOut: row.currentClockOut,
-    user: { id: row.userId, firstName: row.firstName, lastName: row.lastName, preferredName: row.preferredName, fullName: fullName(row) },
-  })));
-});
+    return c.json(rows.map((row) => ({
+      id: row.id,
+      timeEntryId: row.timeEntryId,
+      requestedClockIn: row.requestedClockIn,
+      requestedClockOut: row.requestedClockOut,
+      reason: row.reason,
+      submittedAt: row.createdAt,
+      status: row.status,
+      reviewerName: row.reviewerId ? reviewerNames.get(row.reviewerId) ?? null : null,
+      reviewerReason: row.reviewerReason,
+      reviewedAt: row.reviewedAt,
+      jobTitle: row.jobTitle,
+      currentClockIn: row.currentClockIn,
+      currentClockOut: row.currentClockOut,
+      user: { id: row.userId, firstName: row.firstName, lastName: row.lastName, preferredName: row.preferredName, fullName: fullName(row) },
+    })));
+  };
+}
+
+timeclockRoutes.get("/correction-requests/pending", requireRole("SUPERVISOR"), correctionRequestList(false));
+timeclockRoutes.get("/correction-requests/reviewed", requireRole("SUPERVISOR"), correctionRequestList(true));
 
 const changeRequestDecisionSchema = z.object({
   status: z.enum(["APPROVED", "REJECTED"]),
