@@ -584,6 +584,8 @@ th.numeric,td.numeric { text-align:right; font-variant-numeric:tabular-nums; whi
 @media (max-width:600px) { .student-comparison__grid { grid-template-columns:1fr; } }
 .user-management__edit { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:.25rem 1rem; align-items:end; }
 .user-management__edit .button-row { grid-column:1 / -1; }
+.user-management__account-actions { grid-column:1 / -1; margin-top:1rem; min-width:0; padding:1rem; border:1px solid var(--border); border-radius:10px; }
+.user-management__account-actions legend { font-weight:700; }
 .user-management tbody th { background:transparent; font-weight:700; color:var(--tt-purple-dark,#33205a); }
 .approval-queue tbody th,.charge-accounts tbody th { background:transparent; font-weight:700; color:var(--tt-purple-dark,#33205a); }
 .approval-queue__actions { align-items:stretch; }

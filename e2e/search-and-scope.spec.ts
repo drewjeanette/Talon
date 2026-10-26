@@ -38,7 +38,9 @@ test.describe("person search behaves the same everywhere", () => {
     await expect(first.getByRole("heading", { name: "Sophia (Sophie) Wells", exact: true })).toBeVisible();
     await expect(second.getByRole("status").filter({ hasText: "Could not load time entries." })).toBeVisible();
     await expect(second.getByRole("region", { name: "Shift history for Elizabeth (Liz) Park", exact: true })).toHaveCount(0);
+    const retriedHistory = page.waitForResponse((response) => /\/timeclock\/students\/\d+\/entries$/.test(response.url()) && response.status() === 200);
     await second.getByRole("button", { name: "Retry time entries" }).click();
+    await retriedHistory;
     await expect(second.getByRole("region", { name: "Shift history for Robert Hale", exact: true })).toBeVisible();
     await expect(page).toHaveURL(/\/$/);
     await expectAccessible(page);
