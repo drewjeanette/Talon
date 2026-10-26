@@ -14,8 +14,8 @@ test("forgot password gives the same answer for unknown emails", async ({ page }
   await page.goto("/forgot-password");
   await page.getByLabel("Email").fill("nobody-here@tntech.edu");
   await page.getByRole("button", { name: "Send reset link" }).click();
-  await expect(page.getByRole("status")).toContainText("Email sent successfully. The link will expire in 2 minutes.");
-  await expect(page.getByRole("timer")).toContainText(/Time remaining: (2:00|1:59)/);
+  await expect(page.getByRole("status")).toContainText("Email sent. It may take a couple of minutes to arrive. The link will expire in 30 minutes.");
+  await expect(page.getByRole("timer")).toContainText(/Time remaining: (30:00|29:59)/);
 });
 
 test("an invalid reset link is rejected", async ({ page }) => {
