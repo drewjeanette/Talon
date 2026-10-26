@@ -342,7 +342,7 @@ export function UserManagement() {
               <th scope="col">Email</th>
               <th scope="col">Role</th>
               <th scope="col">Home department</th>
-              <th scope="col">Jobs / charge account</th>
+              <th scope="col">Title</th>
               <th scope="col">Supervisors</th>
               <th scope="col">Active</th>
               <th scope="col">Actions</th>

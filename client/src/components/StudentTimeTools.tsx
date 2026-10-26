@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api, ApiError } from "../api/client";
-import { notifyWorkChanged } from "../lib/work";
+import { notifyWorkChanged, waitingFor } from "../lib/work";
 import { DateField } from "./DateField";
 import type { Job } from "./ClockWidget";
 
@@ -19,6 +19,7 @@ interface CorrectionRequest {
   status: "PENDING" | "APPROVED" | "REJECTED";
   reviewerName: string | null;
   reviewerReason: string | null;
+  waitingOn: string[];
   createdAt: string;
 }
 
@@ -185,9 +186,9 @@ export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryO
             <span>{new Date(request.requestedClockIn).toLocaleString()} – {new Date(request.requestedClockOut).toLocaleString()}</span>
             <span>Reason: {request.reason}</span>
             {request.status === "PENDING" && <span className="correction-history__waiting">{request.waitingOn.length === 1
-              ? `Waiting for ${request.waitingOn[0]}'s approval.`
+              ? `Waiting for ${request.waitingOn[0]}’s approval.`
               : request.waitingOn.length > 1 ? `Waiting for approval from ${request.waitingOn.join(", ")}. Any assigned supervisor can approve.`
-              : "Waiting for an admin's approval. No supervisor is assigned."} · pending {waitingFor(request.createdAt)}</span>}
+              : "Waiting for an admin’s approval. No supervisor is assigned."} · pending {waitingFor(request.createdAt)}</span>}
             {request.reviewerName && <span>Reviewed by {request.reviewerName}</span>}
             {request.reviewerReason && <span>Supervisor response: {request.reviewerReason}</span>}
           </li>)}

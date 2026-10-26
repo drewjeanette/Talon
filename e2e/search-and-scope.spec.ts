@@ -73,6 +73,7 @@ test.describe("person search behaves the same everywhere", () => {
     await search.press("Enter");
     await expect(page.getByRole("list", { name: "Selected for Find people" })).toContainText("Chris Student");
     const table = page.getByRole("region", { name: "All users" });
+    await expect(table.getByRole("columnheader", { name: "Title", exact: true })).toBeVisible();
     await expect(table.getByRole("rowheader")).toHaveText(["Chris Student"]);
     await expectAccessible(page);
 
