@@ -12,7 +12,7 @@ import { PayStubList } from "../components/PayStubList";
 import { SupervisorOrganizer } from "../components/SupervisorOrganizer";
 import { AdminLaunchpad } from "../components/AdminLaunchpad";
 import { ProfilePhotoButton } from "../components/ProfilePhotoButton";
-import { StudentTimeTools, approverList } from "../components/StudentTimeTools";
+import { StudentTimeTools } from "../components/StudentTimeTools";
 import { PayRateManager } from "../components/PayRateManager";
 import { TeamPayStubStatus } from "../components/TeamPayStubStatus";
 import { StudentTimecards } from "../components/StudentTimecards";
@@ -36,7 +36,6 @@ export function DashboardPage() {
   const [hour, setHour] = useState(() => new Date().getHours());
   const [adminSection, setAdminSection] = useState<AdminToolKey | null>(null);
   const [photoStatus, setPhotoStatus] = useState<string | null>(null);
-  const [approvers, setApprovers] = useState<string[]>([]);
 
   async function loadEntries() {
     const data = await api.get<TimeEntry[]>("/timeclock/my-entries");
@@ -46,11 +45,6 @@ export function DashboardPage() {
   useEffect(() => {
     loadEntries();
   }, []);
-
-  useEffect(() => {
-    if (user?.role !== "STUDENT") return;
-    api.get<{ supervisors: string[] }>("/users/me/approvers").then((data) => setApprovers(data.supervisors)).catch(() => setApprovers([]));
-  }, [user?.role]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setHour(new Date().getHours()), 60_000);
@@ -110,7 +104,7 @@ export function DashboardPage() {
             {user.role === "STUDENT" && <WorkQueue title="To-Dos" className="card student-todos" onOpen={openStudentTodo} hideWhenEmpty />}
             {user.role === "STUDENT" && <StudentTimeTools entries={entries} onSubmitted={loadEntries} />}
             <TimesheetTable entries={entries} caption="My recent time entries" />
-            {user.role === "STUDENT" && <StudentTimecards entries={entries} waitingOn={approverList(approvers)} />}
+            {user.role === "STUDENT" && <StudentTimecards entries={entries} />}
           </>
         )}
 
