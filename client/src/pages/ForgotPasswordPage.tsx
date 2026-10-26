@@ -4,7 +4,7 @@ import { useAuth, ApiError } from "../context/AuthContext";
 import { api } from "../api/client";
 import ttuLogo from "../assets/ttu-logo.png";
 
-const RESET_LINK_SECONDS = 2 * 60;
+const RESET_LINK_SECONDS = 30 * 60;
 
 function formatCountdown(seconds: number) {
   const minutes = Math.floor(seconds / 60);

@@ -45,7 +45,7 @@ function TimecardTable({ entries, caption }: { entries: TimeEntry[]; caption: st
   </table></div>;
 }
 
-export function StudentTimecards({ entries, waitingOn }: { entries: TimeEntry[]; waitingOn: string }) {
+export function StudentTimecards({ entries }: { entries: TimeEntry[] }) {
   const [stubs, setStubs] = useState<PayStub[]>([]);
 
   useEffect(() => {

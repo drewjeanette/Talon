@@ -34,6 +34,7 @@ async function requestMissedShift(page: Page, reason: string, daysAgo: number, s
   // The pending request names the currently assigned approvers.
   const request = form.getByRole("listitem").filter({ hasText: reason });
   await expect(request).toContainText("Missed shift: PENDING");
+  await expect(request.locator(".correction-history__waiting")).toContainText(/· pending \d+ (minute|hour|day)s?/);
   await expect(request).toContainText(student === PEOPLE.LIZ
     ? "Waiting for approval from Marcus Reyes, Sabrina Supervisor. Any assigned supervisor can approve."
     : "Waiting for Sabrina Supervisor’s approval.");

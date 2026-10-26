@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api, ApiError } from "../api/client";
-import { notifyWorkChanged, waitingFor } from "../lib/work";
+import { notifyWorkChanged } from "../lib/work";
 import { DateField } from "./DateField";
 import type { Job } from "./ClockWidget";
 
@@ -19,14 +19,7 @@ interface CorrectionRequest {
   status: "PENDING" | "APPROVED" | "REJECTED";
   reviewerName: string | null;
   reviewerReason: string | null;
-  waitingOn: string[];
   createdAt: string;
-}
-
-/** "Sabrina Supervisor or Marcus Reyes" (any of them can approve). */
-export function approverList(names: string[]): string {
-  if (names.length === 0) return "a payroll administrator";
-  return names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}`;
 }
 
 function toLocalInput(value: string): string {

@@ -24,6 +24,9 @@ const WCAG_22_AA = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 
 /** Fails the test on any WCAG 2.2 A/AA violation axe can detect on the current page. */
 export async function expectAccessible(page: Page) {
+  // Let data finish loading first: a scan that overlaps a load can catch a
+  // button mid-way from disabled to enabled and report false contrast failures.
+  await page.waitForLoadState("networkidle");
   const results = await new AxeBuilder({ page }).withTags(WCAG_22_AA).analyze();
   const summary = results.violations.map((v) => `${v.id}: ${v.help} (${v.nodes.length})`);
   expect(summary, "WCAG 2.2 AA violations").toEqual([]);
