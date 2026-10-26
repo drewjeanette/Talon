@@ -12,6 +12,7 @@ export interface CurrentUser {
   role: Role;
   payType: "BIWEEKLY" | "MONTHLY";
   mustResetPw: boolean;
+  theme: "light" | "dark";
   department: { id: number; name: string; college: { id: number; name: string } | null } | null;
 }
 

@@ -31,11 +31,18 @@ const resetUsers = ["e2e.reset.desktop@tntech.edu", "e2e.reset.mobile@tntech.edu
   .map((email) => `INSERT INTO users (email, password_hash, first_name, last_name, hourly_rate_cents)
     SELECT '${email}', password_hash, 'Reset', 'Tester', hourly_rate_cents FROM users WHERE email = 'student@tntech.edu';`)
   .join(" ");
+// Throwaway accounts for the dark-mode test, one per role and project, so the
+// shared demo logins stay in light mode while other tests run.
+const themeUsers = ["desktop", "mobile"]
+  .flatMap((project) => ["student", "supervisor", "admin"].map((role) => `INSERT INTO users (email, password_hash, first_name, last_name, role, must_reset_pw)
+    SELECT 'e2e.theme.${role}.${project}@tntech.edu', password_hash, 'Theme', 'Tester', role, 0 FROM users WHERE email = '${role}@tntech.edu';`))
+  .join(" ");
 
 for (const args of [
   ["d1", "migrations", "apply", "talon-db", "--local", "--persist-to", state],
   ["d1", "execute", "talon-db", "--local", "--persist-to", state, `--file=${seed}`],
   ["d1", "execute", "talon-db", "--local", "--persist-to", state, `--command="${resetUsers.replace(/\s+/g, " ")}"`],
+  ["d1", "execute", "talon-db", "--local", "--persist-to", state, `--command="${themeUsers.replace(/\s+/g, " ")}"`],
 ]) {
   const result = wrangler(args, { env: { ...process.env, CI: "1" } });
   if (result.status !== 0) process.exit(result.status ?? 1);

@@ -4,7 +4,7 @@ import loginCss from "./login.css?inline";
 import adminCss from "./roles/admin.css?inline";
 import studentCss from "./roles/student.css?inline";
 import supervisorCss from "./roles/supervisor.css?inline";
-import { initializeTheme } from "./theme";
+import { applyTheme, type ThemePreference } from "./theme";
 
 const stylesByRole: Record<Role, string> = {
   STUDENT: studentCss,
@@ -14,10 +14,10 @@ const stylesByRole: Record<Role, string> = {
 
 const styleElementId = "talon-role-styles";
 
-export function useRoleStylesheet(role?: Role, pathname = "/"): void {
+export function useRoleStylesheet(role?: Role, pathname = "/", theme: ThemePreference = "light"): void {
   useLayoutEffect(() => {
     const isPolicyPage = pathname === "/privacy" || pathname === "/accessibility";
-    initializeTheme();
+    applyTheme(role ? theme : "light");
     document.documentElement.dataset.role = role?.toLowerCase() ?? (isPolicyPage ? "public" : "login");
 
     let element = document.getElementById(styleElementId);
@@ -28,5 +28,5 @@ export function useRoleStylesheet(role?: Role, pathname = "/"): void {
     }
 
     element.textContent = role ? stylesByRole[role] : (isPolicyPage ? "" : loginCss);
-  }, [role, pathname]);
+  }, [role, pathname, theme]);
 }

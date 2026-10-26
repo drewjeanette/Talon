@@ -78,6 +78,7 @@ export const users = sqliteTable(
 
     isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
     mustResetPw: integer("must_reset_pw", { mode: "boolean" }).notNull().default(true),
+    theme: text("theme", { enum: ["light", "dark"] }).notNull().default("light"),
     lastLoginAt: integer("last_login_at", { mode: "timestamp" }),
     ...timestamps,
   },
