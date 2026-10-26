@@ -1,10 +1,32 @@
 import { readFileSync } from "node:fs";
 import { test, expect } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 import { ACCOUNTS, PEOPLE, expectAccessible, openAdminTool, pickPerson, signInToDashboard } from "./helpers";
 
 // The seed's previous bi-weekly period is generated: Chris and Sophie both earn
 // $11.50/hour, but Sophie worked 5 hours of overtime and is charged to the
 // NSF grant (G21047) even though her home department is Computer Science.
+
+test("admin can use the trimmed payroll fields with keyboard focus", async ({ page }, testInfo) => {
+  await signInToDashboard(page, ACCOUNTS.ADMIN);
+  await openAdminTool(page, "Generate Payroll and Pay Periods");
+  const form = page.locator(".pay-period-manager__form");
+  await form.getByLabel("Type", { exact: true }).selectOption("MONTHLY");
+  await form.getByLabel("Type", { exact: true }).press("Tab");
+  await expect(form.getByLabel("Start date", { exact: true })).toBeFocused();
+  await form.getByLabel("Start date", { exact: true }).fill("2027-01-01");
+  await form.getByLabel("End date", { exact: true }).fill("2027-01-31");
+  await form.getByLabel("Pay date", { exact: true }).fill("2027-02-05");
+  await expectAccessible(page);
+  await form.screenshot({ path: testInfo.outputPath("payroll-fields.png") });
+  await page.evaluate(() => { document.documentElement.dataset.theme = "dark"; });
+  const darkFields = await new AxeBuilder({ page })
+    .include(".pay-period-manager input:not([type='checkbox'])")
+    .include(".pay-period-manager select")
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
+  expect(darkFields.violations).toEqual([]);
+  await form.screenshot({ path: testInfo.outputPath("payroll-fields-dark.png") });
+});
 
 test("admin compares two students side by side and sees which line items differ", async ({ page }) => {
   await signInToDashboard(page, ACCOUNTS.ADMIN);
