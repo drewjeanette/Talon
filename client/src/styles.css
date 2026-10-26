@@ -470,6 +470,45 @@ html[data-theme="dark"] .settings-list .settings-switch:checked::after {
   background: #241932;
 }
 
+html[data-theme="dark"] .work-queue__open,
+html[data-theme="dark"] .work-queue__open:disabled {
+  background: var(--tt-purple-soft);
+  color: var(--text);
+}
+
+html[data-theme="dark"] .work-queue__open:hover:not(:disabled) {
+  background: #3a2c50;
+}
+
+html[data-theme="dark"] .payroll-report__request {
+  background: #3a2f14;
+  color: var(--text);
+}
+
+/* Button fills, not --success/--danger: those stay light for status text on dark cards.
+   Both keep white labels at 4.5:1 or better. */
+html[data-theme="dark"] .approval-queue__approve,
+html[data-theme="dark"] .clock-widget__in,
+html[data-theme="dark"] .talon-send-report,
+html[data-theme="dark"] :is(.pay-period-manager, .user-management, .department-management) button[type="submit"] {
+  background: #2e8045;
+}
+
+html[data-theme="dark"] .approval-queue__approve:hover:not(:disabled),
+html[data-theme="dark"] .clock-widget__in:hover:not(:disabled),
+html[data-theme="dark"] .talon-send-report:hover:not(:disabled),
+html[data-theme="dark"] :is(.pay-period-manager, .user-management, .department-management) button[type="submit"]:hover:not(:disabled) {
+  background: #256b39;
+}
+
+html[data-theme="dark"] button.button--danger {
+  background: #c62828;
+}
+
+html[data-theme="dark"] button.button--danger:hover:not(:disabled) {
+  background: #a31f1f;
+}
+
 @media (max-width:700px) {
   .settings-layout { grid-template-columns:1fr; }
   .settings-tabs { position:static; flex-direction:row; overflow-x:auto; }

@@ -18,7 +18,7 @@ const AccessibilityPage = lazy(() => import("./pages/AccessibilityPage").then((m
 export default function App() {
   const { user, loading } = useAuth();
   const location = useLocation();
-  useRoleStylesheet(user?.role, location.pathname);
+  useRoleStylesheet(user?.role, location.pathname, user?.theme);
 
   useEffect(() => {
     const titles: Record<string, string> = {

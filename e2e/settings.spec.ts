@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { ACCOUNTS, expectAccessible, signIn, type Role } from "./helpers";
+import { ACCOUNTS, expectAccessible, signIn, signInToDashboard, type Role } from "./helpers";
 
 const EXPECTED_TYPES: Record<Role, string[]> = {
   STUDENT: ["Time that needs fixing"],
@@ -67,5 +67,57 @@ for (const role of Object.keys(ACCOUNTS) as Role[]) {
       await page.getByRole("button", { name: "Change password" }).click();
       await expect(page.getByRole("alert")).toHaveText("New passwords do not match.");
     });
+  });
+}
+
+for (const role of Object.keys(ACCOUNTS) as Role[]) {
+  test(`${role.toLowerCase()} dark mode follows the account, not the browser`, async ({ page, browser }, testInfo) => {
+    // Its own account, so the shared demo logins stay light for other tests.
+    const email = `e2e.theme.${role.toLowerCase()}.${testInfo.project.name}@tntech.edu`;
+    const html = page.locator("html");
+    await signIn(page, email);
+    await expect(page).toHaveURL(/\/$/);
+    await expect(html).toHaveAttribute("data-theme", "light");
+    await page.goto("/settings?tab=appearance");
+    await Promise.all([
+      page.waitForResponse((r) => r.url().endsWith("/api/settings/appearance") && r.ok()),
+      page.getByRole("switch", { name: "Dark mode" }).click(),
+    ]);
+    await expect(html).toHaveAttribute("data-theme", "dark");
+    await expectAccessible(page);
+
+    // Signing out returns to the light sign-in page.
+    await page.getByRole("button", { name: "Log out" }).click();
+    await expect(page.getByRole("heading", { name: "Talon Sign In" })).toBeVisible();
+    await expect(html).toHaveAttribute("data-theme", "light");
+    await expectAccessible(page);
+
+    // A different browser picks the setting up from the account.
+    const otherContext = await browser.newContext();
+    const other = await otherContext.newPage();
+    await signIn(other, email);
+    await expect(other).toHaveURL(/\/$/);
+    await expect(other.locator("html")).toHaveAttribute("data-theme", "dark");
+    await other.goto("/settings?tab=appearance");
+    await expect(other.getByRole("switch", { name: "Light mode" })).toBeChecked();
+    await expectAccessible(other);
+    await otherContext.close();
+  });
+}
+
+for (const role of Object.keys(ACCOUNTS) as Role[]) {
+  test(`${role.toLowerCase()} dashboard meets contrast in dark mode`, async ({ page }) => {
+    // Dark only in this browser: the demo account's saved theme is never touched,
+    // and its dashboard has the to-dos and approval buttons worth checking.
+    await page.route(/\/api\/auth\/(login|me)$/, async (route) => {
+      const response = await route.fetch();
+      const body = await response.json();
+      if (body.user) body.user.theme = "dark";
+      else body.theme = "dark";
+      await route.fulfill({ response, json: body });
+    });
+    await signInToDashboard(page, ACCOUNTS[role]);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await expectAccessible(page);
   });
 }

@@ -3,7 +3,7 @@ import { HTTPException } from "hono/http-exception";
 import { asc, eq, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "../db/index.js";
-import { appSettings, notificationPreferences, payPeriods } from "../db/schema.js";
+import { appSettings, notificationPreferences, payPeriods, users } from "../db/schema.js";
 import { PAYROLL_CALENDAR_KEY, payrollCalendarSchema, type PayrollCalendar } from "../lib/payroll-calendar.js";
 import { loadPayrollCalendar, reminderSchedule } from "../services/reminder.service.js";
 import { notificationTypesFor } from "../lib/notification-types.js";
@@ -59,6 +59,15 @@ settingsRoutes.patch("/notifications", async (c) => {
   await writeAuditLog(c, "NOTIFICATION_SETTINGS_UPDATE", "User", me.id, {
     off: preferences.filter((p) => !p.emailEnabled).map((p) => p.type),
   });
+  return c.body(null, 204);
+});
+
+const updateAppearanceSchema = z.object({ theme: z.enum(["light", "dark"]) });
+
+/** Light or dark mode, saved on the account so it follows the person across browsers. */
+settingsRoutes.patch("/appearance", async (c) => {
+  const { theme } = updateAppearanceSchema.parse(await c.req.json());
+  await getDb(c.env.DB).update(users).set({ theme, updatedAt: new Date() }).where(eq(users.id, c.get("user").id));
   return c.body(null, 204);
 });
 

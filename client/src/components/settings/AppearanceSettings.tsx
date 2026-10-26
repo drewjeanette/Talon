@@ -1,13 +1,27 @@
 import { useState } from "react";
-import { applyTheme, getStoredTheme, type ThemePreference } from "../../styles/theme";
+import { api } from "../../api/client";
+import { useAuth } from "../../context/AuthContext";
+import { applyTheme, type ThemePreference } from "../../styles/theme";
 
 export function AppearanceSettings() {
-  const [theme, setTheme] = useState<ThemePreference>(() => getStoredTheme());
+  const { user, refreshUser } = useAuth();
+  const [theme, setTheme] = useState<ThemePreference>(user?.theme ?? "light");
+  const [error, setError] = useState<string | null>(null);
   const toggleLabel = theme === "dark" ? "Light mode" : "Dark mode";
 
-  function changeTheme(nextTheme: ThemePreference) {
+  async function changeTheme(nextTheme: ThemePreference) {
+    const previous = theme;
     setTheme(nextTheme);
     applyTheme(nextTheme);
+    setError(null);
+    try {
+      await api.patch("/settings/appearance", { theme: nextTheme });
+      await refreshUser();
+    } catch {
+      setTheme(previous);
+      applyTheme(previous);
+      setError("Couldn't save your appearance setting. Try again.");
+    }
   }
 
   return (
@@ -26,10 +40,11 @@ export function AppearanceSettings() {
             checked={theme === "dark"}
             aria-checked={theme === "dark"}
             aria-label={toggleLabel}
-            onChange={(event) => changeTheme(event.target.checked ? "dark" : "light")}
+            onChange={(event) => void changeTheme(event.target.checked ? "dark" : "light")}
           />
         </div>
       </div>
+      {error && <p role="alert">{error}</p>}
     </div>
   );
 }

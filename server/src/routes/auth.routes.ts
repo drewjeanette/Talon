@@ -73,6 +73,7 @@ interface UserWithDepartment {
   role: "STUDENT" | "SUPERVISOR" | "ADMIN";
   payType: "BIWEEKLY" | "MONTHLY";
   mustResetPw: boolean;
+  theme: "light" | "dark";
   department: { id: number; name: string; college: { id: number; name: string } | null } | null;
 }
 
@@ -91,6 +92,7 @@ function serializeUser(user: UserWithDepartment) {
     role: user.role,
     payType: user.payType,
     mustResetPw: user.mustResetPw,
+    theme: user.theme,
     department: user.department
       ? {
           id: user.department.id,
