@@ -207,7 +207,7 @@ export function ApprovalQueue() {
             <dl>
               <div><dt>Clock In</dt><dd>{new Date(entry.clockIn).toLocaleString()}</dd></div>
               <div><dt>Clock Out</dt><dd>{entry.clockOut ? new Date(entry.clockOut).toLocaleString() : "In progress"}</dd></div>
-              <div><dt>Charge account</dt><dd>{entry.chargeAccount?.code ?? "Unassigned"}{entry.jobTitle ? ` - ${entry.jobTitle}` : ""}</dd></div>
+              <div><dt>Student Job Title</dt><dd>{entry.chargeAccount?.code ?? "Unassigned"}{entry.jobTitle ? ` - ${entry.jobTitle}` : ""}</dd></div>
               <div><dt>Status</dt><dd>{statusFor(entry.submittedAt, !entry.clockOut)}</dd></div>
             </dl>
             {entryActions(entry)}
@@ -245,7 +245,7 @@ export function ApprovalQueue() {
       <div className="table-scroll" role="region" aria-label="Time entries awaiting approval" tabIndex={0}>
         <table>
           <caption className="sr-only">Time entries awaiting approval</caption>
-          <thead><tr><th scope="col">Employee</th><th scope="col">Clock In</th><th scope="col">Clock Out</th><th scope="col">Charge account</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
+          <thead><tr><th scope="col">Employee</th><th scope="col">Clock In</th><th scope="col">Clock Out</th><th scope="col">Student Job Title</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
           <tbody>
             {shownEntries.length === 0 && <tr><td colSpan={6}>There are no regular time entries waiting for approval.</td></tr>}
             {shownEntries.map((entry) => <tr key={entry.id}>
