@@ -50,11 +50,14 @@ for (const payType of ["MONTHLY", "BIWEEKLY"] as const) {
         expect(clockBox.x).toBeCloseTo(titleBox.x, 0);
         expect(clockBox.y).toBeGreaterThanOrEqual(titleBox.y + titleBox.height);
         expect(clockBox.y).toBeLessThanOrEqual(todosBox.y + 1);
-        expect(clockBox.y).toBeLessThanOrEqual(calendarBox.y + 1);
+        expect(calendarBox.x).toBeCloseTo(clockBox.x, 0);
+        expect(calendarBox.width).toBeCloseTo(clockBox.width, 0);
+        expect(calendarBox.y).toBeGreaterThan(clockBox.y + clockBox.height);
         expect(clockBox.width).toBeGreaterThan(250);
         if (width === 1280) {
           expect(clockBox.x + clockBox.width).toBeLessThanOrEqual(todosBox.x);
-          expect(todosBox.x + todosBox.width).toBeLessThanOrEqual(calendarBox.x);
+        } else if (width <= 800) {
+          expect(todosBox.y).toBeGreaterThan(calendarBox.y + calendarBox.height);
         }
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
         await page.locator(".supervisor-organizer").screenshot({ path: testInfo.outputPath(`clock-${theme}-${width}.png`) });
