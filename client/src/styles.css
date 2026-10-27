@@ -386,6 +386,14 @@ textarea { width:100%; min-height:84px; padding:.55rem; border:1px solid var(--b
   box-shadow:inset 4px 0 0 var(--tt-gold);
 }
 html[data-theme="dark"] .dashboard .pay-rate-manager input { border-color:#b99be5; }
+
+/* Frame the month calendar consistently for every role that displays it. */
+.dashboard :is(.admin-calendar,.supervisor-calendar) {
+  border:2px solid var(--tt-purple);
+  border-radius:14px;
+}
+.dashboard .admin-calendar { padding:1rem; }
+html[data-theme="dark"] .dashboard :is(.admin-calendar,.supervisor-calendar) { border-color:#b99be5; }
 @media (max-width:650px) {
   .pay-rate-row { grid-template-columns:1fr; gap:.35rem; }
   .pay-rate-row__controls button { width:100%; }
