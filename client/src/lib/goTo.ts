@@ -20,6 +20,8 @@ export function goTo(selector: string) {
     // Dashboard categories must be expanded before their heading can receive focus.
     let category = element.closest("details");
     while (category) {
+      // Native toggle handlers reveal the matching supervisor section.
+      category.hidden = false;
       category.open = true;
       category = category.parentElement?.closest("details") ?? null;
     }

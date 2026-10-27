@@ -50,7 +50,7 @@ for (const email of [ACCOUNTS.SUPERVISOR, PEOPLE.SECOND_SUPERVISOR]) {
 }
 
 for (const theme of ["light", "dark"] as const) {
-  test(`supervisor categories expand with keyboard and retain drafts in ${theme} mode`, async ({ page }, testInfo) => {
+  test(`supervisor categories open focused views with keyboard and retain drafts in ${theme} mode`, async ({ page }, testInfo) => {
     test.setTimeout(90_000);
     await mockAccountTheme(page, theme);
     await page.goto("/login");
@@ -68,6 +68,11 @@ for (const theme of ["light", "dark"] as const) {
     const summary = approvals.locator("summary");
     await summary.focus();
     await summary.press("Enter");
+    const back = page.getByRole("button", { name: "Back to Overview", exact: true });
+    await expect(back).toBeVisible();
+    await expect(page.locator("#supervisor-section-heading")).toBeFocused();
+    await expect(page.locator(".supervisor-tool > summary:visible")).toHaveCount(0);
+    await expect(page.locator(".supervisor-tool[open]")).toHaveCount(1);
     await expect(page.getByRole("heading", { name: "Missed punches & correction requests", exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Reviewed time changes", exact: true })).toHaveCount(0);
     await approvals.getByRole("button", { name: "Deny time entry for Chris Student", exact: true }).first().click();
@@ -75,25 +80,33 @@ for (const theme of ["light", "dark"] as const) {
     await expect(reason).toBeFocused();
     await reason.fill("Please check the clock-out time.");
     await expectAccessible(page);
-    await summary.focus();
-    await summary.press("Space");
+    await back.focus();
+    await back.press("Space");
     await expect(reason).toBeHidden();
+    await expect(summary).toBeFocused();
+    await expect(page.locator(".supervisor-tool > summary:visible")).toHaveCount(6);
     await summary.press("Enter");
     await expect(reason).toHaveValue("Please check the clock-out time.");
     await expect(reason).toBeVisible();
     await reason.focus();
     await approvals.screenshot({ path: testInfo.outputPath(`supervisor-input-trim-${theme}.png`) });
     await approvals.getByRole("button", { name: "Cancel", exact: true }).click();
-    await summary.click();
+    await back.click();
 
     for (const title of ["Student Pay Stubs", "Student Hourly Pay Rates", "Payroll Reports", "My Pay Stubs"]) {
       await openSupervisorTool(page, title);
       await expectAccessible(page);
+      if (title === "Payroll Reports") {
+        await page.getByRole("button", { name: "Mark report reviewed", exact: true }).hover();
+        await expectAccessible(page);
+      }
       if (title === "Student Hourly Pay Rates") {
         await page.getByRole("button", { name: "View all students", exact: true }).click();
+        await page.getByRole("button", { name: "Search students only", exact: true }).hover();
+        await expectAccessible(page);
         const rate = page.getByRole("spinbutton", { name: /^Chris Student/ });
         await rate.fill("12.75");
-        await page.locator(".supervisor-tool > summary").filter({ hasText: title }).click();
+        await back.click();
         await openSupervisorTool(page, title);
         await expect(rate).toHaveValue("12.75");
       }
@@ -104,7 +117,7 @@ for (const theme of ["light", "dark"] as const) {
         ]);
         expect(readFileSync(await download.path()).subarray(0, 5).toString()).toBe("%PDF-");
       }
-      await page.locator(".supervisor-tool > summary").filter({ hasText: title }).click();
+      await back.click();
     }
 
     await page.setViewportSize({ width: 320, height: 900 });
@@ -132,16 +145,26 @@ test("supervisor to-dos open the matching category and remain until the work is 
     await todo.click();
     await expect(page.locator(heading)).toBeFocused();
     await expect(page.locator(heading)).toBeVisible();
+    await expect(page.locator(".supervisor-tool[open]")).toHaveCount(1);
+    await expect(page.locator(".supervisor-tool > summary:visible")).toHaveCount(0);
     await expect(todo).toBeEnabled();
     await expectAccessible(page);
   }
+  await page.getByRole("button", { name: "Back to Overview", exact: true }).click();
+  await expect(page.locator(".supervisor-tool > summary:visible")).toHaveCount(6);
+  await expect(page.locator("#supervisor-reports-trigger")).toBeFocused();
+  await expectAccessible(page);
 });
 
-test("supervisors keep their own time entries in a category and clock above it", async ({ page }) => {
+test("supervisors keep their own time entries in a category and clock above it", async ({ page }, testInfo) => {
   await signInToDashboard(page, ACCOUNTS.SUPERVISOR);
   await expect(page.locator(".supervisor-organizer .clock-widget")).toBeVisible();
   await openSupervisorTool(page, "My Time Entries");
   await expect(page.locator(".clock-widget")).toHaveCount(1);
   await expect(page.getByRole("region", { name: "My recent time entries", exact: true })).toBeVisible();
+  await expectAccessible(page);
+  await page.locator(".supervisor-tools").screenshot({ path: testInfo.outputPath("supervisor-focused-section.png") });
+  await page.getByRole("button", { name: "Back to Overview", exact: true }).click();
+  await expect(page.locator(".supervisor-tool > summary:visible")).toHaveCount(6);
   await expectAccessible(page);
 });

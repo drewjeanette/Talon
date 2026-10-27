@@ -73,10 +73,14 @@ export async function openAdminTool(page: Page, title: string) {
   await expect(page.getByRole("heading", { level: 2, name: title, exact: true }).first()).toBeVisible();
 }
 
-/** Expands a supervisor category without closing another category or losing a draft. */
+/** Opens a focused supervisor category, returning to the overview if needed. */
 export async function openSupervisorTool(page: Page, title: string) {
   const category = page.locator(".supervisor-tool").filter({ has: page.locator(".supervisor-tool__title", { hasText: title }) });
-  if (await category.getAttribute("open") === null) await category.locator("summary").click();
+  if (await category.getAttribute("open") === null) {
+    const back = page.getByRole("button", { name: "Back to Overview", exact: true });
+    if (await back.isVisible()) await back.click();
+    await category.locator("summary").click();
+  }
   await expect(category).toHaveAttribute("open", "");
 }
 
