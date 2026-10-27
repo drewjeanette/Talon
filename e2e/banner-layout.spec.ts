@@ -21,6 +21,10 @@ for (const profile of [
       await expectAccessible(page);
       await signInToDashboard(page, profile.email);
       const banner = page.getByRole("banner");
+      const roleLabel = banner.locator(".app-header__role");
+      await expect(roleLabel).toHaveText(profile.role.toUpperCase());
+      await expect(roleLabel).toHaveCSS("color", "rgb(255, 255, 255)");
+      await expect(roleLabel).toHaveCSS("font-weight", "800");
       for (const width of [1366, 1024, 900, 768, 600, 393, 320]) {
         await page.setViewportSize({ width, height: 900 });
         const bounds = (await banner.boundingBox())!;

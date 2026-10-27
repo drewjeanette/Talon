@@ -437,7 +437,7 @@ header.app-header .app-header__user {
 }
 header.app-header .app-header__name { display:flex; justify-content:flex-end; align-items:center; gap:.25rem; min-width:0; white-space:nowrap; }
 header.app-header .app-header__person { min-width:0; overflow:hidden; text-overflow:ellipsis; }
-header.app-header .app-header__role { flex-shrink:0; }
+header.app-header .app-header__role { flex-shrink:0; color:#fff; font-weight:800; }
 header.app-header .app-header__logout { height:44px; min-height:44px; padding:.6rem .9rem; line-height:1.2; white-space:nowrap; }
 @media (max-width:900px) {
   header.app-header { height:112px; min-height:112px; grid-template-columns:minmax(0,1fr) minmax(0,3fr); grid-template-areas:"brand user" "nav nav"; grid-template-rows:44px 24px; gap:.5rem 1rem; }
