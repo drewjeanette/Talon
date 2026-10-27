@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "../api/client";
 import { useAuth } from "../context/AuthContext";
-import { notifyWorkChanged, waitingFor } from "../lib/work";
+import { notifyWorkChanged, useWorkChanged, waitingFor } from "../lib/work";
 import { PersonSearch } from "./PersonSearch";
 
 interface Person { id: number; firstName: string; lastName: string; preferredName: string | null; fullName: string }
@@ -31,7 +31,7 @@ interface PendingCorrection {
 
 type RejectTarget = { kind: "entry" | "correction"; id: number } | null;
 
-export function ApprovalQueue() {
+export function ApprovalQueue({ active = true }: { active?: boolean }) {
   const { user } = useAuth();
   const [entries, setEntries] = useState<PendingEntry[]>([]);
   const [corrections, setCorrections] = useState<PendingCorrection[]>([]);
@@ -50,9 +50,16 @@ export function ApprovalQueue() {
     setCorrections(pendingCorrections);
   }
 
-  useEffect(() => {
+  function refresh() {
     load().catch(() => setMessage("Could not load pending time requests."));
-  }, []);
+  }
+
+  // Supervisor sections stay mounted while closed. Refresh on opening and on
+  // the same work/focus/poll events as the to-do count.
+  useEffect(() => {
+    if (active) refresh();
+  }, [active]);
+  useWorkChanged(refresh);
 
   const students = useMemo(() => {
     const map = new Map<number, Person>();

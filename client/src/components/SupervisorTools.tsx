@@ -66,7 +66,7 @@ export function SupervisorTools({ entries }: {
       </div>
       <div className="supervisor-tool-grid">
         <Category {...navigation} id="supervisor-approvals" title="Time Entry Approvals" description="Review clock entries, missed punches, and time corrections." icon="M20 6 9 17l-5-5">
-          <ApprovalQueue />
+          <ApprovalQueue active={selected === "supervisor-approvals"} />
         </Category>
         <Category {...navigation} id="supervisor-stubs" title="Student Pay Stubs" description="Review student pay stubs and answer payroll questions." icon="M6 3h9l3 3v15H6z M14 3v4h4 M9 11h6 M9 15h6">
           <TeamPayStubStatus />
