@@ -35,8 +35,10 @@ export function NavBar() {
       </nav>
       <div className="app-header__user">
         <span className="app-header__name">
-          {user.preferredName || user.firstName} &middot; {user.role === "ADMIN"
-            ? user.role
+          <span className="app-header__person" title={user.preferredName || user.firstName}>{user.preferredName || user.firstName}</span>
+          <span aria-hidden="true">&middot;</span>
+          {user.role === "ADMIN"
+            ? <span className="app-header__role">{user.role}</span>
             : <strong className="app-header__role">{user.role}</strong>}
         </span>
         <button type="button" onClick={handleLogout} className="app-header__logout">

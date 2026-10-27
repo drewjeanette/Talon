@@ -409,6 +409,45 @@ html[data-theme="dark"] .dashboard :is(.admin-calendar,.supervisor-calendar) { b
 .app-header__settings svg { width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 .app-header__logout { font-weight:800; }
 
+/* Keep the banner dimensions independent of account names and role styles. */
+header.app-header {
+  box-sizing:border-box;
+  width:100%;
+  height:80px;
+  min-height:80px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  grid-template-areas:"brand nav user";
+  align-content:center;
+  align-items:center;
+  gap:1rem;
+  padding:.75rem clamp(1rem,4vw,2.5rem);
+}
+header.app-header .app-header__brand { grid-area:brand; justify-self:start; }
+header.app-header .app-header__nav { grid-area:nav; justify-self:center; }
+header.app-header .app-header__user {
+  grid-area:user;
+  justify-self:stretch;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto auto;
+  align-items:center;
+  gap:.75rem;
+  min-width:0;
+  width:100%;
+}
+header.app-header .app-header__name { display:flex; justify-content:flex-end; align-items:center; gap:.25rem; min-width:0; white-space:nowrap; }
+header.app-header .app-header__person { min-width:0; overflow:hidden; text-overflow:ellipsis; }
+header.app-header .app-header__role { flex-shrink:0; }
+header.app-header .app-header__logout { height:44px; min-height:44px; padding:.6rem .9rem; line-height:1.2; white-space:nowrap; }
+@media (max-width:900px) {
+  header.app-header { height:112px; min-height:112px; grid-template-columns:minmax(0,1fr) minmax(0,3fr); grid-template-areas:"brand user" "nav nav"; grid-template-rows:44px 24px; gap:.5rem 1rem; }
+}
+@media (max-width:600px) {
+  header.app-header { height:160px; min-height:160px; padding:.75rem 1rem; grid-template-columns:minmax(0,1fr); grid-template-areas:"brand" "nav" "user"; grid-template-rows:36px 24px 44px; gap:.5rem; }
+  header.app-header .app-header__name { justify-content:flex-start; font-size:.85rem; }
+  header.app-header .app-header__user { gap:.5rem; }
+}
+
 /* Settings page, shared by every role. */
 .settings-page { width:100%; max-width:1080px; margin-inline:auto; padding:2rem clamp(1rem,3vw,2rem) 3rem; }
 .settings-page__title { margin:0 0 1.25rem; }
