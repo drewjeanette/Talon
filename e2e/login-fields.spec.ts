@@ -3,6 +3,7 @@ import { ACCOUNTS, SEED_PASSWORD, expectAccessible } from "./helpers";
 
 test("sign-in fields have no blue outline and retain a neutral keyboard focus cue", async ({ page }, testInfo) => {
   await page.goto("/login");
+  await expect(page.locator(".login-card")).toHaveCSS("border-top-color", "rgb(255, 202, 40)");
   await expectAccessible(page);
   const email = page.getByLabel("Email", { exact: true });
   const password = page.getByLabel("Password", { exact: true });
