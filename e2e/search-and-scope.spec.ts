@@ -115,6 +115,7 @@ test.describe("supervisors only see their own students; admins see everyone", ()
   test("first supervisor sees Computer Science students, including the shared one", async ({ page }) => {
     await signInToDashboard(page, ACCOUNTS.SUPERVISOR);
     await openSupervisorTool(page, "Student Hourly Pay Rates");
+    await page.getByRole("button", { name: "View all students", exact: true }).click();
     const rate = (name: string) => page.getByRole("spinbutton", { name: new RegExp(`^${name.replace(/[()]/g, "\\$&")}`) });
     await expect(rate("Chris Student")).toBeVisible();
     await expect(rate("Elizabeth (Liz) Park")).toBeVisible();
@@ -129,6 +130,7 @@ test.describe("supervisors only see their own students; admins see everyone", ()
   test("second supervisor sees Mathematics students and the shared student", async ({ page }) => {
     await signInToDashboard(page, PEOPLE.SECOND_SUPERVISOR);
     await openSupervisorTool(page, "Student Hourly Pay Rates");
+    await page.getByRole("button", { name: "View all students", exact: true }).click();
     const rate = (name: string) => page.getByRole("spinbutton", { name: new RegExp(`^${name.replace(/[()]/g, "\\$&")}`) });
     await expect(rate("Robert Hale")).toBeVisible();
     await expect(rate("Elizabeth (Liz) Park")).toBeVisible();
@@ -139,6 +141,7 @@ test.describe("supervisors only see their own students; admins see everyone", ()
   test("admin sees students from every department", async ({ page }) => {
     await signInToDashboard(page, ACCOUNTS.ADMIN);
     await openAdminTool(page, "Time Entry Approvals");
+    await page.getByRole("button", { name: "View all students", exact: true }).click();
     await expect(page.getByRole("spinbutton", { name: /^Chris Student/ })).toBeVisible();
     await expect(page.getByRole("spinbutton", { name: /^Robert Hale/ })).toBeVisible();
     await expectAccessible(page);

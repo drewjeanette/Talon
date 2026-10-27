@@ -90,6 +90,7 @@ for (const theme of ["light", "dark"] as const) {
       await openSupervisorTool(page, title);
       await expectAccessible(page);
       if (title === "Student Hourly Pay Rates") {
+        await page.getByRole("button", { name: "View all students", exact: true }).click();
         const rate = page.getByRole("spinbutton", { name: /^Chris Student/ });
         await rate.fill("12.75");
         await page.locator(".supervisor-tool > summary").filter({ hasText: title }).click();

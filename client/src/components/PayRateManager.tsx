@@ -17,6 +17,8 @@ interface Student {
   chargeAccount: { code: string } | null;
 }
 
+const PAGE_SIZE = 10;
+
 /**
  * Hourly rates for student workers. Admins can change any student's rate;
  * supervisors can change the rates of students assigned to them. Changes
@@ -27,6 +29,8 @@ export function PayRateManager() {
   const [students, setStudents] = useState<Student[]>([]);
   const [rates, setRates] = useState<Record<number, string>>({});
   const [filter, setFilter] = useState<number[]>([]);
+  const [showAll, setShowAll] = useState(false);
+  const [page, setPage] = useState(0);
   const [message, setMessage] = useState("");
   const [savingId, setSavingId] = useState<number | null>(null);
 
@@ -43,7 +47,17 @@ export function PayRateManager() {
     ...student,
     detail: [student.department?.name, student.chargeAccount?.code].filter(Boolean).join(" · "),
   })), [students]);
-  const shown = filter.length ? students.filter((student) => filter.includes(student.id)) : students;
+  const sortedStudents = useMemo(() => [...students].sort((a, b) => displayName(a).localeCompare(displayName(b))), [students]);
+  const pageCount = Math.ceil(students.length / PAGE_SIZE);
+  const shown = filter.length
+    ? sortedStudents.filter((student) => filter.includes(student.id))
+    : showAll ? sortedStudents.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE) : [];
+
+  function selectStudents(ids: number[]) {
+    setFilter(ids);
+    setShowAll(false);
+    setPage(0);
+  }
 
   async function save(student: Student) {
     const value = Number(rates[student.id]);
@@ -71,7 +85,19 @@ export function PayRateManager() {
       <p className="pay-rate-manager__intro">
         {user?.role === "ADMIN" ? "Change any student's hourly rate." : "Change the hourly rate for students assigned to you."} New rates apply the next time pay stubs are generated.
       </p>
-      {students.length > 0 && <PersonSearch label="Find students" people={people} value={filter} onChange={setFilter} multiple />}
+      {students.length > 0 && <>
+        <PersonSearch label="Find students" people={people} value={filter} onChange={selectStudents} multiple />
+        <div className="pay-rate-manager__browse">
+          <button type="button" className="button--secondary" aria-expanded={showAll} aria-controls="pay-rate-results" onClick={() => { setShowAll(!showAll); setFilter([]); setPage(0); }}>
+            {showAll ? "Search students only" : "View all students"}
+          </button>
+          <p role="status">{showAll
+            ? `Showing ${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, students.length)} of ${students.length} students.`
+            : filter.length ? `${shown.length} student${shown.length === 1 ? "" : "s"} selected.`
+              : "Search and select students to view or edit their hourly rates."}</p>
+        </div>
+      </>}
+      <div id="pay-rate-results">
       {students.length === 0 ? <p>No student employees are assigned to you.</p> : shown.map((student) => {
         const changed = (rates[student.id] ?? "") !== (student.hourlyRate ?? "");
         return (
@@ -89,6 +115,12 @@ export function PayRateManager() {
           </div>
         );
       })}
+      </div>
+      {showAll && pageCount > 1 && <nav className="pay-rate-manager__browse" aria-label="Pay rate pages">
+        <button type="button" className="button--secondary" disabled={page === 0} onClick={() => setPage((current) => current - 1)}>Previous page</button>
+        <span>Page {page + 1} of {pageCount}</span>
+        <button type="button" className="button--secondary" disabled={page + 1 >= pageCount} onClick={() => setPage((current) => current + 1)}>Next page</button>
+      </nav>}
       <p className="status-message" role="status" aria-live="polite">{message}</p>
     </section>
   );

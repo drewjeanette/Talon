@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { test, expect } from "@playwright/test";
-import { ACCOUNTS, PEOPLE, expectAccessible, latestEmailLink, openAdminTool, signInToDashboard, switchUser } from "./helpers";
+import { ACCOUNTS, PEOPLE, expectAccessible, latestEmailLink, openAdminTool, pickPerson, signInToDashboard, switchUser } from "./helpers";
 
 test("admin's own pay stubs are a plain list with a PDF download", async ({ page }) => {
   await signInToDashboard(page, ACCOUNTS.ADMIN);
@@ -79,6 +79,7 @@ test("a question flagged on a pay stub goes to the student's supervisor until an
 test("admin changes a student's hourly rate from the approvals area", async ({ page }) => {
   await signInToDashboard(page, ACCOUNTS.ADMIN);
   await openAdminTool(page, "Time Entry Approvals");
+  await pickPerson(page, "Find students", "katherine", "Katherine Diaz", page.locator(".pay-rate-manager"));
   const rate = page.getByRole("spinbutton", { name: /^Katherine Diaz/ });
   const row = page.locator(".pay-rate-row").filter({ has: rate });
   await rate.fill("11.25");
