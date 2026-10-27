@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { ACCOUNTS, expectAccessible, signIn, signInToDashboard, type Role } from "./helpers";
+import { ACCOUNTS, expectAccessible, mockAccountTheme, signIn, signInToDashboard, type Role } from "./helpers";
 
 const EXPECTED_TYPES: Record<Role, string[]> = {
   STUDENT: ["Time that needs fixing"],
@@ -109,13 +109,7 @@ for (const role of Object.keys(ACCOUNTS) as Role[]) {
   test(`${role.toLowerCase()} dashboard meets contrast in dark mode`, async ({ page }) => {
     // Dark only in this browser: the demo account's saved theme is never touched,
     // and its dashboard has the to-dos and approval buttons worth checking.
-    await page.route(/\/api\/auth\/(login|me)$/, async (route) => {
-      const response = await route.fetch();
-      const body = await response.json();
-      if (body.user) body.user.theme = "dark";
-      else body.theme = "dark";
-      await route.fulfill({ response, json: body });
-    });
+    await mockAccountTheme(page, "dark");
     await signInToDashboard(page, ACCOUNTS[role]);
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     await expectAccessible(page);

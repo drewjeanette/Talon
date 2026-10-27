@@ -1,17 +1,18 @@
 import { readFileSync } from "node:fs";
 import { test, expect } from "@playwright/test";
-import { ACCOUNTS, PEOPLE, SEED_PASSWORD, expectAccessible, openSupervisorTool, signInToDashboard } from "./helpers";
+import { ACCOUNTS, PEOPLE, SEED_PASSWORD, expectAccessible, mockAccountTheme, openSupervisorTool, signInToDashboard } from "./helpers";
 
 for (const theme of ["light", "dark"] as const) {
   test(`supervisor categories expand with keyboard and retain drafts in ${theme} mode`, async ({ page }, testInfo) => {
     test.setTimeout(90_000);
-    await page.addInitScript((value) => localStorage.setItem("talon-theme", value), theme);
+    await mockAccountTheme(page, theme);
     await page.goto("/login");
     await expectAccessible(page);
     await page.getByLabel("Email").fill(ACCOUNTS.SUPERVISOR);
     await page.getByLabel("Password").fill(SEED_PASSWORD);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(page.locator(".supervisor-tool")).toHaveCount(6);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     await expect(page.locator(".supervisor-tool[open]")).toHaveCount(0);
     await expectAccessible(page);
     await page.locator(".supervisor-tools").screenshot({ path: testInfo.outputPath(`supervisor-categories-${theme}.png`) });

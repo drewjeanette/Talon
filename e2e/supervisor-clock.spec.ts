@@ -1,19 +1,18 @@
 import { test, expect } from "@playwright/test";
-import { ACCOUNTS, PEOPLE, SEED_PASSWORD, expectAccessible, openSupervisorTool } from "./helpers";
+import { ACCOUNTS, PEOPLE, SEED_PASSWORD, expectAccessible, mockAccountTheme, openSupervisorTool } from "./helpers";
 
 for (const payType of ["MONTHLY", "BIWEEKLY"] as const) {
   for (const theme of ["light", "dark"] as const) {
     test(`${payType.toLowerCase()} supervisor has a top-left live web clock in ${theme} mode`, async ({ page }, testInfo) => {
       test.setTimeout(60_000);
-      await page.addInitScript((value) => localStorage.setItem("talon-theme", value), theme);
       const email = payType === "MONTHLY" ? ACCOUNTS.SUPERVISOR : PEOPLE.SECOND_SUPERVISOR;
       // Exercise both account settings without changing the demo accounts' payroll setup.
       await page.route(/\/api\/auth\/(login|me)$/, async (route) => {
         const response = await route.fetch();
         const body = await response.json();
         const json = route.request().url().endsWith("/login")
-          ? { ...body, user: { ...body.user, payType } }
-          : { ...body, payType };
+          ? { ...body, user: { ...body.user, payType, theme } }
+          : { ...body, payType, theme };
         await route.fulfill({ response, json });
       });
       await page.goto("/login");
@@ -25,6 +24,7 @@ for (const payType of ["MONTHLY", "BIWEEKLY"] as const) {
       const clockIn = clock.getByRole("button", { name: "Clock In", exact: true });
       const clockOut = clock.getByRole("button", { name: "Clock Out", exact: true });
       await expect(clock).toBeVisible();
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
       await expect(clockIn).toBeEnabled();
       await expect(clockOut).toBeDisabled();
       await clockIn.click();
@@ -77,7 +77,7 @@ for (const payType of ["MONTHLY", "BIWEEKLY"] as const) {
 }
 
 test("supervisor Clock Out remains readable on hover in dark mode", async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem("talon-theme", "dark"));
+  await mockAccountTheme(page, "dark");
   await page.route("**/api/timeclock/my-entries", (route) => route.fulfill({ json: [{
     id: 90001, clockIn: new Date(Date.now() - 60_000).toISOString(), clockOut: null, status: "PENDING",
   }] }));
@@ -88,6 +88,7 @@ test("supervisor Clock Out remains readable on hover in dark mode", async ({ pag
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   const clockOut = page.getByRole("region", { name: "Web Clock", exact: true }).getByRole("button", { name: "Clock Out", exact: true });
   await expect(clockOut).toBeEnabled();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await clockOut.hover();
   await expectAccessible(page);
 });

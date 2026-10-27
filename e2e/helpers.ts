@@ -22,6 +22,21 @@ export const PEOPLE = {
 
 const WCAG_22_AA = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 
+/** Exercise account-based themes without changing a shared demo account's saved preference. */
+export async function mockAccountTheme(page: Page, theme: "light" | "dark") {
+  await page.route(/\/api\/auth\/(login|me)$/, async (route) => {
+    const response = await route.fetch();
+    if (!response.ok()) {
+      await route.fulfill({ response });
+      return;
+    }
+    const body = await response.json();
+    if (body.user) body.user.theme = theme;
+    else body.theme = theme;
+    await route.fulfill({ response, json: body });
+  });
+}
+
 /** Fails the test on any WCAG 2.2 A/AA violation axe can detect on the current page. */
 export async function expectAccessible(page: Page) {
   // Let data finish loading first: a scan that overlaps a load can catch a

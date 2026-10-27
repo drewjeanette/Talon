@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { ACCOUNTS, PEOPLE, expectAccessible, openAdminTool, openSupervisorTool, pickPerson, signInToDashboard } from "./helpers";
+import { ACCOUNTS, PEOPLE, expectAccessible, mockAccountTheme, openAdminTool, openSupervisorTool, pickPerson, signInToDashboard } from "./helpers";
 
 // Liz (elizabeth.park@) has two jobs in the seed: CS Lab Assistant (110245) and
 // Math Tutor (120310). Everyone else has one.
@@ -83,8 +83,9 @@ test("admin gives a student a second job and ends it", async ({ page }, testInfo
 
 for (const theme of ["light", "dark"] as const) {
 test(`admin changes payroll reminder times in Settings in ${theme} mode`, async ({ page }, testInfo) => {
-  await page.addInitScript((value) => localStorage.setItem("talon-theme", value), theme);
+  await mockAccountTheme(page, theme);
   await signInToDashboard(page, ACCOUNTS.ADMIN);
+  await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
   await page.goto("/settings?tab=payroll-calendar");
   await expect(page.getByRole("heading", { name: "Payroll Calendar" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Next scheduled emails" })).toBeVisible();

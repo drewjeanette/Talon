@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { ACCOUNTS, expectAccessible, openAdminTool, pickPerson, signInToDashboard } from "./helpers";
+import { ACCOUNTS, expectAccessible, mockAccountTheme, openAdminTool, pickPerson, signInToDashboard } from "./helpers";
 
 test("admin dark mode keeps notifications and every admin tool readable", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
-  await page.addInitScript(() => localStorage.setItem("talon-theme", "dark"));
+  await mockAccountTheme(page, "dark");
   await signInToDashboard(page, ACCOUNTS.ADMIN);
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   const todos = page.getByRole("region", { name: "Work to Do", exact: true });

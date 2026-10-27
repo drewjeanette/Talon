@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { PEOPLE, SEED_PASSWORD, expectAccessible } from "./helpers";
+import { PEOPLE, SEED_PASSWORD, expectAccessible, mockAccountTheme } from "./helpers";
 
 for (const theme of ["light", "dark"] as const) {
   test(`student correction fields remain usable with trim in ${theme} mode`, async ({ page }, testInfo) => {
-    await page.addInitScript((value) => localStorage.setItem("talon-theme", value), theme);
+    await mockAccountTheme(page, theme);
     await page.goto("/login");
     await expectAccessible(page);
     await page.getByLabel("Email").fill(PEOPLE.LIZ);
@@ -17,6 +17,7 @@ for (const theme of ["light", "dark"] as const) {
     const clockOut = form.getByLabel("Correct clock-out", { exact: true });
     const reason = form.getByLabel("Reason for the correction");
     await expect(shift).toBeFocused();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     await expect(job).toBeVisible();
     await shift.press("Tab");
     await expect(job).toBeFocused();

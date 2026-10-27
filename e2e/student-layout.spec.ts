@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { PEOPLE, SEED_PASSWORD, expectAccessible } from "./helpers";
+import { PEOPLE, SEED_PASSWORD, expectAccessible, mockAccountTheme } from "./helpers";
 
 for (const theme of ["light", "dark"] as const) {
   test(`student dashboard keeps clock and to-dos compact in ${theme} mode`, async ({ page }, testInfo) => {
-    await page.addInitScript((value) => localStorage.setItem("talon-theme", value), theme);
+    await mockAccountTheme(page, theme);
     // A long current timecard reproduces the stretched clock in the reported layout.
     await page.route("**/api/timeclock/my-entries", (route) => route.fulfill({ json:
       Array.from({ length: 12 }, (_, index) => ({
@@ -26,6 +26,7 @@ for (const theme of ["light", "dark"] as const) {
     const todos = page.getByRole("region", { name: "To-Dos", exact: true });
     const timecard = page.getByRole("region", { name: "Current Timecard", exact: true });
     await expect(timecard.locator("tbody tr")).toHaveCount(12);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
 
     for (const width of [1280, 640, 320]) {
       await page.setViewportSize({ width, height: 900 });
