@@ -13,6 +13,7 @@ import { SupervisorTools } from "../components/SupervisorTools";
 import { AdminLaunchpad } from "../components/AdminLaunchpad";
 import { ProfilePhotoButton } from "../components/ProfilePhotoButton";
 import { StudentTimeTools } from "../components/StudentTimeTools";
+import { StudentTimeNotifications } from "../components/StudentTimeNotifications";
 import { PayRateManager } from "../components/PayRateManager";
 import { TeamPayStubStatus } from "../components/TeamPayStubStatus";
 import { StudentTimecards } from "../components/StudentTimecards";
@@ -102,6 +103,7 @@ export function DashboardPage() {
       {(user.role === "STUDENT" || (user.role === "ADMIN" && adminSection)) && <div className="dashboard-grid">
         {user.role === "STUDENT" && (
           <>
+            <StudentTimeNotifications />
             <ClockWidget onChange={loadEntries} />
             {user.role === "STUDENT" && <WorkQueue title="To-Dos" className="card student-todos" onOpen={openStudentTodo} hideWhenEmpty />}
             {user.role === "STUDENT" && <StudentTimeTools entries={entries} onSubmitted={loadEntries} />}

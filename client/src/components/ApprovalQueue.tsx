@@ -142,7 +142,7 @@ export function ApprovalQueue({ active = true }: { active?: boolean }) {
     return <>
       <div className="button-row approval-queue__actions">
         <button type="button" onClick={() => decideEntry(entry.id, "APPROVED")} className="approval-queue__approve" aria-label={`Approve time entry for ${entry.user.fullName}`}>Approve</button>
-        <button type="button" onClick={() => openReject("entry", entry.id)} className="button--danger approval-queue__reject" aria-label={`Deny time entry for ${entry.user.fullName}`}>Deny</button>
+        <button type="button" onClick={() => openReject("entry", entry.id)} className="button--danger approval-queue__reject" aria-expanded={rejectTarget?.kind === "entry" && rejectTarget.id === entry.id} aria-label={`Deny time entry for ${entry.user.fullName}`}>Deny</button>
       </div>
       {rejectionForm("entry", entry.id)}
     </>;
@@ -152,7 +152,7 @@ export function ApprovalQueue({ active = true }: { active?: boolean }) {
     return <>
       <div className="button-row approval-queue__actions">
         <button type="button" onClick={() => decideCorrection(request.id, "APPROVED")} className="approval-queue__approve" aria-label={`Approve time correction for ${request.user.fullName}`}>Approve</button>
-        <button type="button" onClick={() => openReject("correction", request.id)} className="button--danger approval-queue__reject" aria-label={`Deny time correction for ${request.user.fullName}`}>Deny</button>
+        <button type="button" onClick={() => openReject("correction", request.id)} className="button--danger approval-queue__reject" aria-expanded={rejectTarget?.kind === "correction" && rejectTarget.id === request.id} aria-label={`Deny time correction for ${request.user.fullName}`}>Deny</button>
       </div>
       {rejectionForm("correction", request.id)}
     </>;

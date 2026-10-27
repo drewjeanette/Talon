@@ -315,6 +315,10 @@ th:last-child { border-radius: 0 8px 8px 0; }
 .dashboard--student .dashboard-grid:not(:has(.student-todos)) > .clock-widget { grid-column:1 / -1; }
 .dashboard--student .student-todos { grid-column:span 6; order:2; margin:0; border-top:5px solid var(--tt-gold); }
 .dashboard--student .dashboard-grid > .card { min-width:0; }
+.student-time-notifications { grid-column:1 / -1; order:0; border-top:5px solid var(--tt-gold); }
+.student-time-notifications ul { list-style:none; padding:0; margin:0; }
+.student-time-notifications li { padding:1rem 0; overflow-wrap:anywhere; }
+.student-time-notifications li + li { border-top:1px solid var(--border); }
 .dashboard--student .student-time-tools { grid-column:1 / -1; order:6; border-top:5px solid var(--tt-gold); }
 .talon-current-timecard { grid-column:1 / -1; order:3; }
 .talon-student-paystubs { grid-column:1 / -1; order:4; border-top:5px solid var(--tt-purple); }

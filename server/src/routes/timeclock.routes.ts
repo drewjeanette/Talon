@@ -4,7 +4,7 @@ import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { minutesBetween } from "../lib/money.js";
 import { getDb } from "../db/index.js";
-import { chargeAccounts, studentJobs, timeEntries, timeEntryChangeRequests, users } from "../db/schema.js";
+import { chargeAccounts, notifications, studentJobs, timeEntries, timeEntryChangeRequests, users } from "../db/schema.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { writeAuditLog } from "../services/audit.service.js";
 import { activeJobFor, jobsByUser } from "../services/jobs.service.js";
@@ -208,6 +208,18 @@ const decisionSchema = z.object({
   }
 });
 
+function decisionNotice(studentId: number, reviewerId: number, kind: "entry" | "correction", status: "APPROVED" | "REJECTED", clockIn: Date, reason?: string) {
+  const label = kind === "entry" ? "Time entry" : "Time correction";
+  const shift = clockIn.toLocaleString("en-US", { timeZone: "America/Chicago", dateStyle: "medium", timeStyle: "short" });
+  return {
+    recipientUserId: studentId,
+    senderUserId: reviewerId,
+    type: `TIME_${kind === "entry" ? "ENTRY" : "CORRECTION"}_${status}`,
+    title: `${label} ${status === "APPROVED" ? "approved" : "denied"}`,
+    body: `${label} for ${shift} (Central time) was ${status === "APPROVED" ? "approved" : "denied"}.${status === "REJECTED" ? ` Reason: ${reason}` : ""}`,
+  };
+}
+
 timeclockRoutes.patch("/:id/decision", requireRole("SUPERVISOR"), async (c) => {
   const id = Number(c.req.param("id"));
   if (!Number.isInteger(id)) throw new HTTPException(400, { message: "Invalid entry id." });
@@ -221,7 +233,7 @@ timeclockRoutes.patch("/:id/decision", requireRole("SUPERVISOR"), async (c) => {
   if (entry.status !== "PENDING") throw new HTTPException(409, { message: "This time entry has already been reviewed." });
   await assertCanManageStudent(db, me, entry.userId);
 
-  const [updated] = await db
+  const [updated] = await db.batch([db
     .update(timeEntries)
     .set({
       status,
@@ -230,10 +242,12 @@ timeclockRoutes.patch("/:id/decision", requireRole("SUPERVISOR"), async (c) => {
       updatedAt: new Date(),
     })
     .where(eq(timeEntries.id, id))
-    .returning();
+    .returning(),
+    db.insert(notifications).values(decisionNotice(entry.userId, me.id, "entry", status, entry.clockIn, rejectionReason)),
+  ]);
 
   await writeAuditLog(c, `TIME_ENTRY_${status}`, "TimeEntry", id);
-  return c.json(updated);
+  return c.json(updated[0]);
 });
 
 const correctionSchema = z.object({
@@ -468,6 +482,8 @@ timeclockRoutes.patch("/correction-requests/:id/decision", requireRole("SUPERVIS
     updatedAt: new Date(),
   } as const;
 
+  const notice = () => db.insert(notifications).values(decisionNotice(request.userId, me.id, "correction", body.status, request.requestedClockIn, body.reviewerReason));
+
   if (body.status === "APPROVED") {
     const entryValues = {
       clockIn: request.requestedClockIn,
@@ -484,15 +500,20 @@ timeclockRoutes.patch("/correction-requests/:id/decision", requireRole("SUPERVIS
       await db.batch([
         db.update(timeEntries).set(entryValues).where(and(eq(timeEntries.id, request.timeEntryId), eq(timeEntries.userId, request.userId))),
         db.update(timeEntryChangeRequests).set(review).where(eq(timeEntryChangeRequests.id, id)),
+        notice(),
       ]);
     } else {
       await db.batch([
         db.insert(timeEntries).values({ userId: request.userId, jobId: request.jobId, chargeAccountId: job?.chargeAccountId ?? owner.chargeAccountId, ...entryValues }),
         db.update(timeEntryChangeRequests).set(review).where(eq(timeEntryChangeRequests.id, id)),
+        notice(),
       ]);
     }
   } else {
-    await db.update(timeEntryChangeRequests).set(review).where(eq(timeEntryChangeRequests.id, id));
+    await db.batch([
+      db.update(timeEntryChangeRequests).set(review).where(eq(timeEntryChangeRequests.id, id)),
+      notice(),
+    ]);
   }
 
   await writeAuditLog(c, `TIME_CORRECTION_${body.status}`, "TimeEntryChangeRequest", id, { reason: body.reviewerReason ?? null });
