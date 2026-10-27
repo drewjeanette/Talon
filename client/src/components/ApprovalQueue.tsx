@@ -16,8 +16,6 @@ interface PendingEntry {
   user: Person;
 }
 
-interface ChargeAccount { id: number; code: string; name: string; isActive: boolean }
-
 interface PendingCorrection {
   id: number;
   timeEntryId: number | null;
@@ -42,8 +40,6 @@ export function ApprovalQueue() {
   const [rejectTarget, setRejectTarget] = useState<RejectTarget>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [studentFilter, setStudentFilter] = useState<number[]>([]);
-  const [accounts, setAccounts] = useState<ChargeAccount[]>([]);
-  const [moving, setMoving] = useState<{ entryId: number; accountId: string } | null>(null);
 
   async function load() {
     const [pendingEntries, pendingCorrections] = await Promise.all([
@@ -56,25 +52,7 @@ export function ApprovalQueue() {
 
   useEffect(() => {
     load().catch(() => setMessage("Could not load pending time requests."));
-    api.get<ChargeAccount[]>("/org/charge-accounts").then((data) => setAccounts(data.filter((account) => account.isActive))).catch(() => setAccounts([]));
   }, []);
-
-  async function moveAccount(entry: PendingEntry) {
-    if (!moving?.accountId) {
-      setMessage("Choose the charge account for this shift.");
-      return;
-    }
-    setMessage(null);
-    try {
-      const result = await api.patch<{ chargeAccount: { code: string } }>(`/timeclock/${entry.id}/charge-account`, { chargeAccountId: Number(moving.accountId) });
-      setMessage(`Shift for ${entry.user.fullName} moved to ${result.chargeAccount.code}.`);
-      setMoving(null);
-      await load();
-      notifyWorkChanged();
-    } catch (error) {
-      setMessage(error instanceof ApiError ? error.message : "Could not move the shift.");
-    }
-  }
 
   const students = useMemo(() => {
     const map = new Map<number, Person>();
@@ -177,21 +155,6 @@ export function ApprovalQueue() {
     return <td>
       <span title={entry.chargeAccount?.name}>{entry.chargeAccount?.code ?? "Unassigned"}</span>
       {entry.jobTitle && <small className="approval-queue__job">{entry.jobTitle}</small>}
-      {moving?.entryId === entry.id ? (
-        <div className="approval-queue__move">
-          <label htmlFor={`move-account-${entry.id}`}>Charge this shift to</label>
-          <select id={`move-account-${entry.id}`} value={moving.accountId} onChange={(event) => setMoving({ entryId: entry.id, accountId: event.target.value })}>
-            <option value="">Choose an account</option>
-            {accounts.filter((account) => account.id !== entry.chargeAccount?.id).map((account) => <option key={account.id} value={account.id}>{account.code} – {account.name}</option>)}
-          </select>
-          <div className="button-row">
-            <button type="button" onClick={() => moveAccount(entry)}>Move shift</button>
-            <button type="button" className="button--secondary" onClick={() => setMoving(null)}>Cancel</button>
-          </div>
-        </div>
-      ) : (
-        <button type="button" className="button--secondary approval-queue__change" onClick={() => setMoving({ entryId: entry.id, accountId: "" })} aria-label={`Change charge account for ${entry.user.fullName}'s shift`}>Change account</button>
-      )}
     </td>;
   }
 
@@ -207,7 +170,7 @@ export function ApprovalQueue() {
             <dl>
               <div><dt>Clock In</dt><dd>{new Date(entry.clockIn).toLocaleString()}</dd></div>
               <div><dt>Clock Out</dt><dd>{entry.clockOut ? new Date(entry.clockOut).toLocaleString() : "In progress"}</dd></div>
-              <div><dt>Student Job Title</dt><dd>{entry.chargeAccount?.code ?? "Unassigned"}{entry.jobTitle ? ` - ${entry.jobTitle}` : ""}</dd></div>
+              <div><dt>Job Title</dt><dd>{entry.chargeAccount?.code ?? "Unassigned"}{entry.jobTitle ? ` - ${entry.jobTitle}` : ""}</dd></div>
               <div><dt>Status</dt><dd>{statusFor(entry.submittedAt, !entry.clockOut)}</dd></div>
             </dl>
             {entryActions(entry)}
@@ -245,7 +208,7 @@ export function ApprovalQueue() {
       <div className="table-scroll" role="region" aria-label="Time entries awaiting approval" tabIndex={0}>
         <table>
           <caption className="sr-only">Time entries awaiting approval</caption>
-          <thead><tr><th scope="col">Employee</th><th scope="col">Clock In</th><th scope="col">Clock Out</th><th scope="col">Student Job Title</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
+          <thead><tr><th scope="col">Employee</th><th scope="col">Clock In</th><th scope="col">Clock Out</th><th scope="col">Job Title</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
           <tbody>
             {shownEntries.length === 0 && <tr><td colSpan={6}>There are no regular time entries waiting for approval.</td></tr>}
             {shownEntries.map((entry) => <tr key={entry.id}>

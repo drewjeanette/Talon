@@ -2,12 +2,15 @@ import { test, expect, type Page } from "@playwright/test";
 import { ACCOUNTS, PEOPLE, SEED_PASSWORD, expectAccessible, openAdminTool, openSupervisorTool, signInToDashboard, switchUser } from "./helpers";
 
 for (const role of ["ADMIN", "SUPERVISOR"] as const) {
-  test(`${role.toLowerCase()} sees Student Job Title in time entry approvals`, async ({ page }) => {
+  test(`${role.toLowerCase()} sees Job Title without charge account editing in time entry approvals`, async ({ page }) => {
     await signInToDashboard(page, ACCOUNTS[role]);
     if (role === "ADMIN") await openAdminTool(page, "Time Entry Approvals");
     else await openSupervisorTool(page, "Time Entry Approvals");
     const entries = page.getByRole("region", { name: "Time entries awaiting approval", exact: true });
-    await expect(entries.getByRole("columnheader", { name: "Student Job Title", exact: true })).toBeVisible();
+    await expect(entries.getByRole("columnheader", { name: "Job Title", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Change charge account/ })).toHaveCount(0);
+    await expect(entries.getByRole("button", { name: /^Approve time entry/ }).first()).toBeVisible();
+    await expect(entries.getByRole("button", { name: /^Deny time entry/ }).first()).toBeVisible();
     await expect(page.getByRole("heading", { name: "Reviewed time changes", exact: true })).toHaveCount(0);
     await expect(page.getByRole("region", { name: "Reviewed time change requests", exact: true })).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "Missed punches & correction requests", exact: true })).toBeVisible();

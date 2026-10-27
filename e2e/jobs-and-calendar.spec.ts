@@ -50,17 +50,16 @@ test("a student with one job just clocks in, and the missed-punch form opens as 
   await expect(tools.getByRole("button", { name: "Fix a missed clock-in or clock-out" })).toBeVisible();
 });
 
-test("a supervisor moves a pending shift to a different charge account", async ({ page }) => {
+test("a supervisor sees the pending shift's account and job without an account editor", async ({ page }) => {
   await signInToDashboard(page, ACCOUNTS.SUPERVISOR);
   await openSupervisorTool(page, "Time Entry Approvals");
   const queue = page.locator(".approval-queue");
   const row = queue.getByRole("row").filter({ has: page.getByRole("rowheader", { name: "Chris Student" }) }).first();
-  await row.getByRole("button", { name: /Change charge account/ }).click();
-  const target = await row.getByLabel("Charge this shift to").locator("option", { hasText: "G21047" }).count() ? "G21047" : "110245";
-  await row.getByLabel("Charge this shift to").selectOption({ label: target === "G21047" ? "G21047 – NSF REU Research Grant" : "110245 – Computer Science Student Workers" });
+  await expect(row).toContainText("110245");
+  await expect(row).toContainText("Computer Science Student Workers");
+  await expect(row.getByRole("button", { name: /Change charge account/ })).toHaveCount(0);
+  await expect(row.getByLabel("Charge this shift to")).toHaveCount(0);
   await expectAccessible(page);
-  await row.getByRole("button", { name: "Move shift" }).click();
-  await expect(queue.locator(":scope > .status-message")).toHaveText(`Shift for Chris Student moved to ${target}.`);
 });
 
 test("admin gives a student a second job and ends it", async ({ page }, testInfo) => {
