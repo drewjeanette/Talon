@@ -1,10 +1,11 @@
+import type { ReactNode } from "react";
 import { goToTodo } from "../lib/goTo";
 import { RoleCalendar } from "./RoleCalendar";
 import { WorkQueue } from "./WorkQueue";
 import { ClockWidget } from "./ClockWidget";
 
-/** Every supervisor's calendar sits beneath their clock, beside the to-do list. */
-export function SupervisorOrganizer({ onClockChange }: { onClockChange: () => void }) {
+/** Keep the clock and calendar beside the supervisor's tasks and categories. */
+export function SupervisorOrganizer({ onClockChange, children }: { onClockChange: () => void; children: ReactNode }) {
   return (
     <div className="supervisor-organizer">
       <div className="supervisor-clock-column">
@@ -13,7 +14,10 @@ export function SupervisorOrganizer({ onClockChange }: { onClockChange: () => vo
           <RoleCalendar role="supervisor" />
         </section>
       </div>
-      <WorkQueue title="To-Dos" className="supervisor-todos" onOpen={goToTodo} />
+      <div className="supervisor-work-column">
+        <WorkQueue title="To-Dos" className="supervisor-todos" onOpen={goToTodo} />
+        {children}
+      </div>
     </div>
   );
 }

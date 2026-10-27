@@ -82,10 +82,11 @@ export function DashboardPage() {
       <h1 className="dashboard__title"><ProfilePhotoButton userId={user.id} onStatus={setPhotoStatus} /><span>{greeting}, {user.preferredName || user.firstName}</span></h1>
       {photoStatus && <p className="dashboard__photo-message" role="status">{photoStatus}</p>}
 
-      {user.role === "SUPERVISOR" && <>
-        <SupervisorOrganizer onClockChange={loadEntries} />
-        <SupervisorTools entries={entries} />
-      </>}
+      {user.role === "SUPERVISOR" && (
+        <SupervisorOrganizer onClockChange={loadEntries}>
+          <SupervisorTools entries={entries} />
+        </SupervisorOrganizer>
+      )}
       {user.role === "ADMIN" && (
         <>
           <AdminLaunchpad selected={adminSection} onSelect={selectAdminSection} />

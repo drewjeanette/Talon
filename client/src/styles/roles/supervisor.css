@@ -253,6 +253,15 @@ th:last-child { border-radius:0 8px 8px 0; }
 .supervisor-organizer > * { min-width:0; }
 .supervisor-clock-column { display:grid; gap:1.35rem; min-width:0; }
 .supervisor-clock-column > * { min-width:0; }
+.supervisor-work-column { display:grid; gap:1.35rem; min-width:0; }
+.supervisor-work-column > * { min-width:0; }
+.supervisor-todos.work-queue--complete { padding:.85rem 1rem; background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--tt-gold); box-shadow:0 6px 18px #33205a12; }
+.supervisor-todos .work-queue__clear { display:flex; gap:.85rem; min-height:48px; width:100%; text-align:left; }
+.supervisor-todos .work-queue__clear p { font-size:1rem; }
+.supervisor-todos .work-queue__clear p::after { display:none; }
+.supervisor-todos .work-queue__success { flex:0 0 44px; width:44px; height:44px; border-width:2px; box-shadow:none; }
+.supervisor-todos .work-queue__success svg { width:26px; height:26px; }
+.supervisor-todos .work-queue__success::before,.supervisor-todos .work-queue__success::after { display:none; }
 .supervisor-organizer .clock-widget { border-top:5px solid var(--tt-gold); display:flex; flex-direction:column; }
 .clock-widget__status { align-self:flex-start; max-width:100%; margin:.15rem 0 1.25rem; padding:.45rem .75rem; border-radius:999px; background:var(--tt-purple-soft); color:var(--tt-purple-dark); font-weight:700; }
 .clock-widget__elapsed { margin:0 0 1.15rem; color:var(--text-muted); font-size:.92rem; }
@@ -498,6 +507,9 @@ html[data-theme="dark"] .clock-widget__in:not(:disabled) { background:#247a3b; c
 html[data-theme="dark"] .approval-queue__approve:hover:not(:disabled),
 html[data-theme="dark"] .talon-send-report:hover:not(:disabled),
 html[data-theme="dark"] .clock-widget__in:hover:not(:disabled) { background:#195d2c; }
+@media (min-width:801px) and (max-width:1150px) {
+  .supervisor-tool-grid { grid-template-columns:minmax(0,1fr); }
+}
 @media (max-width:700px) {
   .supervisor-tool-grid { grid-template-columns:minmax(0,1fr); gap:1rem; }
   .supervisor-tool > summary { min-height:115px; gap:.75rem; padding:1rem; }

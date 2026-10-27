@@ -2,6 +2,53 @@ import { readFileSync } from "node:fs";
 import { test, expect } from "@playwright/test";
 import { ACCOUNTS, PEOPLE, SEED_PASSWORD, expectAccessible, mockAccountTheme, openSupervisorTool, signInToDashboard } from "./helpers";
 
+for (const email of [ACCOUNTS.SUPERVISOR, PEOPLE.SECOND_SUPERVISOR]) {
+  for (const theme of ["light", "dark"] as const) {
+    test(`${email} keeps categories beside the clock and calendar in ${theme} mode`, async ({ page }, testInfo) => {
+      test.setTimeout(90_000);
+      await mockAccountTheme(page, theme);
+      await page.route("**/api/notifications/todos", (route) => route.fulfill({ json: [] }));
+      await page.goto("/login");
+      await expectAccessible(page);
+      await signInToDashboard(page, email);
+      await expect(page.getByRole("status").filter({ hasText: "All Clear For Now!" })).toBeVisible();
+
+      for (const width of [1366, 1024, 800, 320]) {
+        await page.setViewportSize({ width, height: 900 });
+        const clock = (await page.locator(".clock-widget").boundingBox())!;
+        const calendar = (await page.locator(".supervisor-calendar").boundingBox())!;
+        const todos = (await page.locator(".supervisor-todos").boundingBox())!;
+        const tools = (await page.locator(".supervisor-tools").boundingBox())!;
+        const cards = page.locator(".supervisor-tool");
+        const first = (await cards.nth(0).boundingBox())!;
+        const second = (await cards.nth(1).boundingBox())!;
+        expect(calendar.y).toBeGreaterThan(clock.y + clock.height);
+        expect(calendar.x).toBeCloseTo(clock.x, 0);
+        expect(tools.y).toBeGreaterThan(todos.y + todos.height);
+        if (width > 800) {
+          expect(tools.x).toBeGreaterThanOrEqual(clock.x + clock.width);
+          expect(todos.y).toBeCloseTo(clock.y, 0);
+          expect(first.y).toBeLessThan(calendar.y);
+          expect(todos.height).toBeLessThan(110);
+        } else {
+          expect(todos.y).toBeGreaterThan(calendar.y + calendar.height);
+        }
+        if (width === 1366) {
+          expect(clock.width).toBeCloseTo(380, 0);
+          expect(first.y).toBeCloseTo(second.y, 0);
+          expect(second.x).toBeGreaterThan(first.x);
+          await page.screenshot({ path: testInfo.outputPath(`supervisor-overview-${theme}.png`), fullPage: true });
+        }
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+        await expectAccessible(page);
+      }
+      await openSupervisorTool(page, "My Time Entries");
+      await expect(page.getByRole("region", { name: "My recent time entries", exact: true })).toBeVisible();
+      await expectAccessible(page);
+    });
+  }
+}
+
 for (const theme of ["light", "dark"] as const) {
   test(`supervisor categories expand with keyboard and retain drafts in ${theme} mode`, async ({ page }, testInfo) => {
     test.setTimeout(90_000);
