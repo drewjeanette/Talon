@@ -3,7 +3,7 @@ import { ACCOUNTS, expectAccessible, mockAccountTheme, signInToDashboard } from 
 
 for (const role of ["ADMIN", "SUPERVISOR"] as const) {
   for (const theme of ["light", "dark"] as const) {
-    test(`${role.toLowerCase()} calendar has purple trim and working month navigation in ${theme} mode`, async ({ page }, testInfo) => {
+    test(`${role.toLowerCase()} calendar has no added outline and working month navigation in ${theme} mode`, async ({ page }, testInfo) => {
       await mockAccountTheme(page, theme);
       await page.goto("/login");
       await expectAccessible(page);
@@ -12,9 +12,10 @@ for (const role of ["ADMIN", "SUPERVISOR"] as const) {
       await expect(calendar).toBeVisible();
       const border = await calendar.evaluate((element) => {
         const style = getComputedStyle(element);
-        return [style.borderTop, style.borderRight, style.borderBottom, style.borderLeft];
+        return { widths: [style.borderTopWidth, style.borderRightWidth, style.borderBottomWidth, style.borderLeftWidth], color: style.borderTopColor };
       });
-      expect(border).toEqual(Array(4).fill(`2px solid ${theme === "dark" ? "rgb(185, 155, 229)" : "rgb(81, 40, 136)"}`));
+      expect(border.widths).toEqual(role === "ADMIN" ? ["1px", "0px", "0px", "0px"] : Array(4).fill("1px"));
+      expect(border.color).not.toBe(theme === "dark" ? "rgb(185, 155, 229)" : "rgb(81, 40, 136)");
       const heading = calendar.getByRole("heading", { level: 3 });
       const currentMonth = await heading.innerText();
       const next = calendar.getByRole("button", { name: "Next month", exact: true });
@@ -25,7 +26,7 @@ for (const role of ["ADMIN", "SUPERVISOR"] as const) {
       await expect(heading).toHaveText(currentMonth);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       await expectAccessible(page);
-      await calendar.screenshot({ path: testInfo.outputPath(`calendar-trim-${role.toLowerCase()}-${theme}.png`) });
+      await calendar.screenshot({ path: testInfo.outputPath(`calendar-${role.toLowerCase()}-${theme}.png`) });
     });
   }
 }
