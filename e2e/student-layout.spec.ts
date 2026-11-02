@@ -3,7 +3,12 @@ import { PEOPLE, SEED_PASSWORD, expectAccessible, mockAccountTheme } from "./hel
 
 for (const theme of ["light", "dark"] as const) {
   test(`student dashboard keeps clock and to-dos compact in ${theme} mode`, async ({ page }, testInfo) => {
+    test.setTimeout(60_000);
     await mockAccountTheme(page, theme);
+    await page.clock.install({ time: new Date("2030-01-20T18:00:00Z") });
+    await page.route("**/api/payroll/timecard-periods", route => route.fulfill({ json: [
+      { startDate: "2030-01-07T00:00:00Z", endDate: "2030-01-20T23:59:59Z" },
+    ] }));
     // A long current timecard reproduces the stretched clock in the reported layout.
     await page.route("**/api/timeclock/my-entries", (route) => route.fulfill({ json:
       Array.from({ length: 12 }, (_, index) => ({

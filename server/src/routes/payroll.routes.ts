@@ -18,6 +18,14 @@ export const payrollRoutes = new Hono<AppEnv>();
 
 payrollRoutes.use("*", requireAuth);
 
+// Calendar dates only: students do not need access to staff payroll reports.
+payrollRoutes.get("/timecard-periods", async (c) => {
+  const periods = await getDb(c.env.DB).select({
+    startDate: payPeriods.startDate, endDate: payPeriods.endDate,
+  }).from(payPeriods).where(eq(payPeriods.type, "BIWEEKLY")).orderBy(desc(payPeriods.startDate));
+  return c.json(periods);
+});
+
 payrollRoutes.get("/periods", requireRole("SUPERVISOR"), async (c) => {
   const db = getDb(c.env.DB);
   const me = c.get("user");

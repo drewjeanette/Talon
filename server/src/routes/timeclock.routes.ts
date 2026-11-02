@@ -89,8 +89,7 @@ timeclockRoutes.get("/my-entries", async (c) => {
     .select()
     .from(timeEntries)
     .where(eq(timeEntries.userId, c.get("user").id))
-    .orderBy(desc(timeEntries.clockIn))
-    .limit(100);
+    .orderBy(desc(timeEntries.clockIn));
   const reviewerIds = [...new Set(entries.filter((entry) => entry.status !== "PENDING" && entry.editedById).map((entry) => entry.editedById!))];
   const reviewers = reviewerIds.length
     ? await db.select({ id: users.id, firstName: users.firstName }).from(users).where(inArray(users.id, reviewerIds))
