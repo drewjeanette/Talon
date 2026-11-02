@@ -721,6 +721,15 @@ th.numeric,td.numeric { text-align:right; font-variant-numeric:tabular-nums; whi
 .user-management__account-actions legend { font-weight:700; }
 .user-management tbody th { background:transparent; font-weight:700; color:var(--tt-purple-dark,#33205a); }
 .approval-queue tbody th,.charge-accounts tbody th { background:transparent; font-weight:700; color:var(--tt-purple-dark,#33205a); }
+/* Match the columns in both approval tables, including when either list is empty. */
+.approval-queue__table { table-layout:fixed; min-width:1000px; }
+.approval-queue__employee-column { width:16%; }
+.approval-queue__time-column { width:15%; }
+.approval-queue__detail-column { width:18%; }
+.approval-queue__status-column { width:12%; }
+.approval-queue__actions-column { width:24%; }
+.approval-queue__table :is(th,td) { vertical-align:top; overflow-wrap:anywhere; }
+.approval-queue__table .approval-rejection-form { min-width:0; }
 .approval-queue__actions { align-items:stretch; }
 .approval-queue__actions button { flex:1 1 92px; }
 .reminder-sender { grid-column:1 / -1; }

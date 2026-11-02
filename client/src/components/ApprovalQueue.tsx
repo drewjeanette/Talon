@@ -213,7 +213,8 @@ export function ApprovalQueue({ active = true }: { active?: boolean }) {
       )}
       <h3>Clock entries</h3>
       <div className="table-scroll" role="region" aria-label="Time entries awaiting approval" tabIndex={0}>
-        <table>
+        <table className="approval-queue__table">
+          <colgroup><col className="approval-queue__employee-column" /><col className="approval-queue__time-column" /><col className="approval-queue__time-column" /><col className="approval-queue__detail-column" /><col className="approval-queue__status-column" /><col className="approval-queue__actions-column" /></colgroup>
           <caption className="sr-only">Time entries awaiting approval</caption>
           <thead><tr><th scope="col">Employee</th><th scope="col">Clock In</th><th scope="col">Clock Out</th><th scope="col">Job Title</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
           <tbody>
@@ -232,7 +233,8 @@ export function ApprovalQueue({ active = true }: { active?: boolean }) {
 
       <h3>Missed punches &amp; correction requests</h3>
       <div className="table-scroll" role="region" aria-label="Time correction requests awaiting approval" tabIndex={0}>
-        <table>
+        <table className="approval-queue__table">
+          <colgroup><col className="approval-queue__employee-column" /><col className="approval-queue__time-column" /><col className="approval-queue__time-column" /><col className="approval-queue__detail-column" /><col className="approval-queue__status-column" /><col className="approval-queue__actions-column" /></colgroup>
           <caption className="sr-only">Student time correction requests awaiting approval</caption>
           <thead><tr><th scope="col">Employee</th><th scope="col">Current shift</th><th scope="col">Requested shift</th><th scope="col">Student reason</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
           <tbody>
