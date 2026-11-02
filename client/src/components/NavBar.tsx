@@ -25,9 +25,9 @@ export function NavBar() {
 
   return (
     <header className="app-header">
-      <div className="app-header__brand">
+      <Link to="/" className="app-header__brand" aria-label="Talon home">
         <span aria-hidden="true">🦅</span> Talon
-      </div>
+      </Link>
       <nav aria-label="Primary" className="app-header__nav">
         {user.role === "ADMIN" || pathname !== "/"
           ? <Link to="/">Dashboard</Link>
