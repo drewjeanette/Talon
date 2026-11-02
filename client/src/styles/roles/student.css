@@ -375,7 +375,7 @@ th:last-child { border-radius: 0 8px 8px 0; }
 }
 .correction-history { margin-top:1.25rem; }
 .correction-history h3 { color:#111; font-weight:850; }
-.correction-history ul { display:grid; gap:.8rem; margin:0; padding:0; list-style:none; }
+.correction-history ul { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr)); gap:.8rem; margin:0; padding:0; list-style:none; }
 .correction-history li { display:grid; gap:.35rem; padding:.9rem 1rem; border:1px solid #cabde0; border-left:5px solid var(--tt-purple); border-radius:12px; background:#fff; box-shadow:0 4px 14px #33205a10; }
 .correction-history li:nth-child(even) { border-left-color:var(--tt-gold); }
 .correction-history li strong { color:#111; font-weight:900; }

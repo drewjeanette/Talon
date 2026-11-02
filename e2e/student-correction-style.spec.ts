@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { PEOPLE, SEED_PASSWORD, expectAccessible, mockAccountTheme } from "./helpers";
+import { PEOPLE, SEED_PASSWORD, expectAccessible, mockAccountTheme, openStudentCategory } from "./helpers";
 
 for (const theme of ["light", "dark"] as const) {
   test(`student correction fields remain usable with trim in ${theme} mode`, async ({ page }, testInfo) => {
@@ -9,6 +9,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.getByLabel("Email").fill(PEOPLE.LIZ);
     await page.getByLabel("Password").fill(SEED_PASSWORD);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await openStudentCategory(page, "Correction Requests");
     await page.getByRole("button", { name: "Fix a missed clock-in or clock-out" }).click();
     const form = page.locator(".student-time-tools__card");
     const shift = form.getByLabel("Shift to correct");

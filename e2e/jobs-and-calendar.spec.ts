@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { ACCOUNTS, PEOPLE, expectAccessible, mockAccountTheme, openAdminTool, openSupervisorTool, pickPerson, signInToDashboard } from "./helpers";
+import { ACCOUNTS, PEOPLE, expectAccessible, mockAccountTheme, openAdminTool, openSupervisorTool, openStudentCategory, pickPerson, signInToDashboard } from "./helpers";
 
 // Liz (elizabeth.park@) has two jobs in the seed: CS Lab Assistant (110245) and
 // Math Tutor (120310). Everyone else has one.
@@ -40,6 +40,7 @@ test("a student with one job just clocks in, and the missed-punch form opens as 
   await expect(clock.getByRole("button", { name: "Clocked in for the wrong job?" })).toHaveCount(0);
 
   const tools = page.locator(".student-time-tools");
+  await openStudentCategory(page, "Correction Requests");
   await expect(tools.getByLabel("Reason for the correction")).toHaveCount(0);
   await tools.getByRole("button", { name: "Fix a missed clock-in or clock-out" }).click();
   await expect(tools.getByLabel("Shift to correct")).toBeFocused();

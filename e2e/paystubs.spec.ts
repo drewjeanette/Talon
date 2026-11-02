@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { test, expect } from "@playwright/test";
-import { ACCOUNTS, PEOPLE, expectAccessible, latestEmailLink, openAdminTool, pickPerson, signInToDashboard, switchUser } from "./helpers";
+import { ACCOUNTS, PEOPLE, expectAccessible, latestEmailLink, openAdminTool, openStudentCategory, pickPerson, signInToDashboard, switchUser } from "./helpers";
 
 test("admin's own pay stubs are a plain list with a PDF download", async ({ page }) => {
   await signInToDashboard(page, ACCOUNTS.ADMIN);
@@ -25,6 +25,7 @@ test("admin's own pay stubs are a plain list with a PDF download", async ({ page
 
 test("a student downloads their pay stub as a PDF", async ({ page }) => {
   await signInToDashboard(page, PEOPLE.SOPHIE);
+  await openStudentCategory(page, "Pay Stubs");
   const mine = page.locator(".pay-stubs");
   await expect(mine.getByRole("cell", { name: "$592.25" })).toBeVisible();
   const [download] = await Promise.all([page.waitForEvent("download"), mine.getByRole("button", { name: /Download PDF/ }).first().click()]);

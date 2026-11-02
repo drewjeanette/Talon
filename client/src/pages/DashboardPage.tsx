@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { ClockWidget } from "../components/ClockWidget";
-import { TimesheetTable } from "../components/TimesheetTable";
 import { ApprovalQueue } from "../components/ApprovalQueue";
 import { PayPeriodManager } from "../components/PayPeriodManager";
 import { UserManagement } from "../components/UserManagement";
@@ -17,6 +16,7 @@ import { StudentTimeNotifications } from "../components/StudentTimeNotifications
 import { PayRateManager } from "../components/PayRateManager";
 import { TeamPayStubStatus } from "../components/TeamPayStubStatus";
 import { StudentTimecards } from "../components/StudentTimecards";
+import { StudentCategory } from "../components/StudentCategory";
 import { ReminderSender } from "../components/ReminderSender";
 import { WorkQueue, type TodoItem } from "../components/WorkQueue";
 import type { AdminToolKey } from "../components/AdminLaunchpad";
@@ -74,6 +74,8 @@ export function DashboardPage() {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const selector = item.target === "time" ? ".student-time-tools" : ".talon-current-timecard";
     const target = document.querySelector(selector) as HTMLElement | null;
+    const category = target?.closest("details.student-category");
+    if (category instanceof HTMLDetailsElement) category.open = true;
     target?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
     target?.querySelector<HTMLElement>("h2, button, select, input, textarea")?.focus({ preventScroll: true });
   }
@@ -106,13 +108,14 @@ export function DashboardPage() {
             <StudentTimeNotifications />
             <ClockWidget onChange={loadEntries} />
             {user.role === "STUDENT" && <WorkQueue title="To-Dos" className="card student-todos" onOpen={openStudentTodo} hideWhenEmpty />}
-            {user.role === "STUDENT" && <StudentTimeTools entries={entries} onSubmitted={loadEntries} />}
-            <TimesheetTable entries={entries} caption="My recent time entries" />
             {user.role === "STUDENT" && <StudentTimecards entries={entries} />}
+            <StudentCategory title="Correction Requests" description="Fix a missed punch and view your requests." className="student-category--corrections">
+              <StudentTimeTools entries={entries} onSubmitted={loadEntries} />
+            </StudentCategory>
           </>
         )}
 
-        {user.role === "STUDENT" && <PayStubList />}
+        {user.role === "STUDENT" && <StudentCategory title="Pay Stubs" description="View and download your pay stubs." className="student-category--paystubs"><PayStubList /></StudentCategory>}
         {adminSection === "approvals" && <ApprovalQueue />}
         {adminSection === "approvals" && <TeamPayStubStatus />}
         {adminSection === "approvals" && <PayRateManager />}

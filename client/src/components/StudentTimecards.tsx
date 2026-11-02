@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import { payrollDay, timecardDate as date, timecardPeriods, type TimecardPeriod } from "../lib/timecards";
+import { StudentCategory } from "./StudentCategory";
 
 interface TimeEntry {
   id: number;
@@ -91,6 +92,7 @@ export function StudentTimecards({ entries }: { entries: TimeEntry[] }) {
       {!unavailable && <TimecardTable entries={currentEntries} caption="Current timecard" />}
     </section>
 
+    <StudentCategory title="Past Timecards" description="View timecards from completed pay periods." className="student-category--timecards">
     <section className="card talon-past-timecards" aria-labelledby="talon-past-timecards-heading">
       <h2 id="talon-past-timecards-heading">Past Timecards</h2>
       <p>View your time entries from completed biweekly pay periods. All times are Central.</p>
@@ -100,5 +102,6 @@ export function StudentTimecards({ entries }: { entries: TimeEntry[] }) {
         <TimecardTable entries={periodEntries} caption={`Timecard ${date(start)} through ${date(end)}`} />
       </details>)}
     </section>
+    </StudentCategory>
   </>;
 }

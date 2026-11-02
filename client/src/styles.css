@@ -443,6 +443,22 @@ header.app-header .app-header__logout { height:44px; min-height:44px; padding:.6
   header.app-header .app-header__user { gap:.5rem; }
 }
 
+/* Secondary student tools stay in closed category cards beneath the current timecard. */
+.dashboard--student .student-category { grid-column:span 4; order:4; align-self:start; min-width:0; margin:0; padding:0; background:var(--surface); }
+.dashboard--student .student-category[open] { grid-column:1 / -1; }
+.student-category > summary { display:flex; align-items:center; justify-content:space-between; gap:1rem; min-height:112px; padding:1rem; color:var(--tt-purple-dark); cursor:pointer; list-style:none; border-radius:8px; }
+.student-category > summary::-webkit-details-marker { display:none; }
+.student-category > summary:hover { background:var(--tt-purple-soft,#efecf5); }
+.student-category > summary:focus-visible { outline-offset:-4px; }
+.student-category__label { display:grid; gap:.35rem; }
+.student-category__label strong { font-size:1.1rem; }
+.student-category__label > span { color:var(--text); font-size:.9rem; }
+.student-category__arrow { flex:none; font-size:1.4rem; }
+.student-category[open] > summary .student-category__arrow { transform:rotate(180deg); }
+.student-category__body { border-top:1px solid var(--border); }
+.dashboard--student .student-category__body > .card { margin:0; padding:1rem; border:0; box-shadow:none; }
+@media (max-width:900px) { .dashboard--student .student-category { grid-column:1 / -1; } }
+
 /* Settings page, shared by every role. */
 .settings-page { width:100%; max-width:1080px; margin-inline:auto; padding:2rem clamp(1rem,3vw,2rem) 3rem; }
 .settings-page__title { margin:0 0 1.25rem; }

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { ACCOUNTS, expectAccessible, mockAccountTheme, SEED_PASSWORD, signInToDashboard } from "./helpers";
+import { ACCOUNTS, expectAccessible, mockAccountTheme, openStudentCategory, SEED_PASSWORD, signInToDashboard } from "./helpers";
 
 // Payroll follows Cookeville's calendar even when the student's browser is abroad.
 test.use({ timezoneId: "Asia/Tokyo" });
@@ -34,6 +34,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.goto("/login");
     await expectAccessible(page);
     await signInToDashboard(page, ACCOUNTS.STUDENT);
+    await openStudentCategory(page, "Past Timecards");
     const current = page.getByRole("region", { name: "Current Timecard", exact: true });
     const past = page.getByRole("region", { name: "Past Timecards", exact: true });
     await expect(current).toContainText("11/2/2026 – 11/15/2026 · 2.00 hrs");
@@ -66,6 +67,7 @@ for (const theme of ["light", "dark"] as const) {
     await expectAccessible(page);
     await past.screenshot({ path: testInfo.outputPath(`past-timecards-${theme}.png`) });
     await page.reload();
+    await openStudentCategory(page, "Past Timecards");
     await expect(current).toContainText("11/16/2026 – 11/29/2026");
     await expect(past.locator("details")).toHaveCount(3);
     await expectAccessible(page);

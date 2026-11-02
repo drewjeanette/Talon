@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { ACCOUNTS, PEOPLE, SEED_PASSWORD, expectAccessible, openAdminTool, openSupervisorTool, signInToDashboard, switchUser } from "./helpers";
+import { ACCOUNTS, PEOPLE, SEED_PASSWORD, expectAccessible, openAdminTool, openSupervisorTool, openStudentCategory, signInToDashboard, switchUser } from "./helpers";
 
 for (const role of ["ADMIN", "SUPERVISOR"] as const) {
   test(`${role.toLowerCase()} sees Job Title without charge account editing in time entry approvals`, async ({ page }) => {
@@ -21,6 +21,7 @@ for (const role of ["ADMIN", "SUPERVISOR"] as const) {
 /** A missed shift Liz asks to add, unique to this test run. */
 async function requestMissedShift(page: Page, reason: string, daysAgo: number, student: string = PEOPLE.LIZ) {
   await signInToDashboard(page, student);
+  await openStudentCategory(page, "Correction Requests");
   const day = new Date(Date.now() - daysAgo * 86_400_000);
   const local = (hour: number) => `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}T${String(hour).padStart(2, "0")}:00`;
   const form = page.locator(".student-time-tools");
@@ -65,6 +66,7 @@ test("a student sees their assigned supervisor before submitting and while await
   await expect(page.getByRole("heading", { name: "Reviewed time changes", exact: true })).toHaveCount(0);
   await expectAccessible(page);
   await switchUser(page, ACCOUNTS.STUDENT);
+  await openStudentCategory(page, "Correction Requests");
   const request = page.locator(".student-time-tools").getByRole("listitem").filter({ hasText: reason });
   await expect(request).toContainText("Missed shift: APPROVED");
   await expect(request).toContainText("Reviewed by Sabrina");
@@ -96,6 +98,7 @@ for (const unavailable of [false, true]) {
       await route.fulfill({ response, json: requests.map((request) => ({ ...request, waitingOn: [] })) });
     });
     await signInToDashboard(page, unavailable ? ACCOUNTS.STUDENT : PEOPLE.SOPHIE);
+    await openStudentCategory(page, "Correction Requests");
     const tools = page.locator(".student-time-tools");
     await tools.getByRole("button", { name: "Fix a missed clock-in or clock-out" }).click();
     await expect(tools.locator(".correction-recipient")).toHaveText(unavailable
@@ -163,6 +166,7 @@ test("any admin can approve a correction", async ({ page }, testInfo) => {
   await admin.locator(".approval-queue").screenshot({ path: testInfo.outputPath("pending-approvals.png") });
 
   await switchUser(page, PEOPLE.LIZ);
+  await openStudentCategory(page, "Correction Requests");
   const approvedRequest = page.locator(".student-time-tools").getByRole("listitem").filter({ hasText: reason });
   await expect(approvedRequest).toContainText("Missed shift: APPROVED");
   await expect(approvedRequest).toContainText("Reviewed by Renee");

@@ -67,6 +67,13 @@ export async function switchUser(page: Page, email: string) {
   await signInToDashboard(page, email);
 }
 
+/** Opens a secondary student category without changing its initial collapsed state. */
+export async function openStudentCategory(page: Page, title: string) {
+  const category = page.locator("details.student-category").filter({ has: page.locator(".student-category__label strong", { hasText: new RegExp(`^${title}$`) }) });
+  if (await category.getAttribute("open") === null) await category.locator(":scope > summary").click();
+  await expect(category).toHaveAttribute("open", "");
+}
+
 /** Opens an admin tool from the overview tiles. */
 export async function openAdminTool(page: Page, title: string) {
   await page.getByRole("button", { name: new RegExp(`^${title}`) }).click();
