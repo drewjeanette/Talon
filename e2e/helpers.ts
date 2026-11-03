@@ -43,7 +43,11 @@ export async function expectAccessible(page: Page) {
   // button mid-way from disabled to enabled and report false contrast failures.
   await page.waitForLoadState("networkidle");
   const results = await new AxeBuilder({ page }).withTags(WCAG_22_AA).analyze();
-  const summary = results.violations.map((v) => `${v.id}: ${v.help} (${v.nodes.length})`);
+  const summary = results.violations.map((v) => ({
+    rule: v.id,
+    help: v.help,
+    nodes: v.nodes.map(node => ({ target: node.target, detail: node.failureSummary })),
+  }));
   expect(summary, "WCAG 2.2 AA violations").toEqual([]);
 }
 
