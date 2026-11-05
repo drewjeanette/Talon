@@ -38,11 +38,22 @@ const themeUsers = ["desktop", "mobile"]
     SELECT 'e2e.theme.${role}.${project}@tntech.edu', password_hash, 'Theme', 'Tester', role, 0 FROM users WHERE email = '${role}@tntech.edu';`))
   .join(" ");
 
+// Isolated rejected-time flows must not resolve a shared demo student's work.
+const rejectionUsers = ["desktop", "mobile"].flatMap(project => ["light", "dark"].map(theme => {
+  const email = `e2e.rejection.${theme}.${project}@tntech.edu`;
+  return `INSERT INTO users (email, password_hash, first_name, last_name, role, must_reset_pw)
+    SELECT '${email}', password_hash, 'Rejected', 'Tester', 'STUDENT', 0 FROM users WHERE email = 'student@tntech.edu';
+    INSERT INTO student_supervisors (student_id, supervisor_id)
+    SELECT student.id, supervisor.id FROM users student, users supervisor
+    WHERE student.email = '${email}' AND supervisor.email = 'supervisor@tntech.edu';`;
+})).join(" ");
+
 for (const args of [
   ["d1", "migrations", "apply", "talon-db", "--local", "--persist-to", state],
   ["d1", "execute", "talon-db", "--local", "--persist-to", state, `--file=${seed}`],
   ["d1", "execute", "talon-db", "--local", "--persist-to", state, `--command="${resetUsers.replace(/\s+/g, " ")}"`],
   ["d1", "execute", "talon-db", "--local", "--persist-to", state, `--command="${themeUsers.replace(/\s+/g, " ")}"`],
+  ["d1", "execute", "talon-db", "--local", "--persist-to", state, `--command="${rejectionUsers.replace(/\s+/g, " ")}"`],
 ]) {
   const result = wrangler(args, { env: { ...process.env, CI: "1" } });
   if (result.status !== 0) process.exit(result.status ?? 1);

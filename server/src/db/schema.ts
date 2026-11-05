@@ -213,6 +213,7 @@ export const timeEntries = sqliteTable(
       .default("PENDING"),
     editedById: integer("edited_by_id").references(() => users.id),
     rejectionReason: text("rejection_reason"),
+    rejectionAcknowledgedAt: integer("rejection_acknowledged_at", { mode: "timestamp" }),
     ...timestamps,
   },
   (t) => [

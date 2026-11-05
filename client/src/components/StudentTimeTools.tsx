@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api, ApiError } from "../api/client";
-import { notifyWorkChanged, waitingFor } from "../lib/work";
+import { notifyWorkChanged, useWorkChanged, waitingFor } from "../lib/work";
 import { DateField } from "./DateField";
 import type { Job } from "./ClockWidget";
 
@@ -8,6 +8,8 @@ interface TimeEntryOption {
   id: number;
   clockIn: string;
   clockOut: string | null;
+  needsCorrection?: boolean;
+  rejectionReason?: string | null;
 }
 
 interface CorrectionRequest {
@@ -28,7 +30,7 @@ function toLocalInput(value: string): string {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 }
 
-export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryOption[]; onSubmitted: () => void }) {
+export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryOption[]; onSubmitted: () => void | Promise<void> }) {
   const [hourlyRate, setHourlyRate] = useState<string | null>(null);
   const [requests, setRequests] = useState<CorrectionRequest[]>([]);
   const [target, setTarget] = useState("new");
@@ -42,12 +44,18 @@ export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryO
   const [jobId, setJobId] = useState("");
   const [supervisors, setSupervisors] = useState<string[] | null>(null);
   const [supervisorsError, setSupervisorsError] = useState(false);
+  const [resolving, setResolving] = useState<number | null>(null);
+  const rejectedEntries = entries.filter(entry => entry.needsCorrection);
 
   async function loadRequests() {
     const data = await api.get<CorrectionRequest[]>("/timeclock/correction-requests/mine");
     setRequests(data);
     return data;
   }
+
+  useWorkChanged(() => {
+    void loadRequests().catch(() => setMessage("Could not refresh correction requests. Refresh the page to try again."));
+  });
 
   useEffect(() => {
     api.get<{ hourlyRate: string | null }>("/users/me/pay-rate")
@@ -91,6 +99,32 @@ export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryO
     }
   }
 
+  function correctRejectedShift(id: number) {
+    chooseShift(String(id));
+    setMessage("");
+    setOpen(true);
+    window.requestAnimationFrame(() => document.getElementById("correction-shift")?.focus());
+  }
+
+  async function acknowledgeRejection(id: number) {
+    setResolving(id);
+    setMessage("");
+    let resolved = false;
+    try {
+      await api.patch(`/timeclock/my-entries/${id}/acknowledge-rejection`, { acknowledged: true });
+      resolved = true;
+      notifyWorkChanged();
+      await onSubmitted();
+      setMessage("Rejected time resolved. No additional time was claimed. You can still request a correction later.");
+      document.getElementById("time-help-heading")?.focus();
+    } catch (error) {
+      setMessage(resolved ? "Rejected time resolved, but the updated list could not be loaded. Refresh the page to see its status."
+        : error instanceof ApiError ? error.message : "Could not resolve rejected time. Try again.");
+    } finally {
+      setResolving(null);
+    }
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     setMessage("");
@@ -113,6 +147,8 @@ export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryO
         reason: reason.trim(),
       });
       submitted = true;
+      notifyWorkChanged();
+      await onSubmitted();
       setMessage("Correction sent for approval.");
       closeForm();
       const updatedRequests = await loadRequests();
@@ -120,8 +156,6 @@ export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryO
       if (approvers) setMessage(approvers.length
         ? `Correction sent to ${approvers.join(", ")} for approval.${approvers.length > 1 ? " Any assigned supervisor can approve it." : ""}`
         : "Correction sent to a payroll administrator for approval.");
-      onSubmitted();
-      notifyWorkChanged();
     } catch (error) {
       setMessage(submitted ? "Correction sent for approval, but the updated request could not be loaded. Refresh the page to see its status."
         : error instanceof ApiError ? error.message : "Could not submit the correction.");
@@ -134,6 +168,20 @@ export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryO
     <section className="card student-time-tools" aria-labelledby="time-help-heading">
       <h2 id="time-help-heading" tabIndex={-1}>Pay &amp; Time Corrections</h2>
       <p className="student-pay-rate">Your hourly pay rate: <strong>{hourlyRate === null ? "Not set" : `$${hourlyRate} per hour`}</strong></p>
+      <section className="rejected-time" aria-labelledby="rejected-time-heading">
+        <h3 id="rejected-time-heading">Rejected time needing action</h3>
+        <p>Send the correct times for a shift you worked. If no time should be claimed, select “No correction needed” to resolve it. Opening this category does not resolve rejected time.</p>
+        {rejectedEntries.length === 0 ? <p>No rejected time needs action.</p> : <ul>
+          {rejectedEntries.map(entry => <li key={entry.id}>
+            <strong>{new Date(entry.clockIn).toLocaleString()} – {entry.clockOut ? new Date(entry.clockOut).toLocaleString() : "No clock-out"}</strong>
+            <span>Reason for rejection: {entry.rejectionReason || "No reason provided."}</span>
+            <div className="button-row">
+              <button type="button" onClick={() => correctRejectedShift(entry.id)} disabled={busy || resolving !== null}>Correct this shift</button>
+              <button type="button" className="button--secondary" onClick={() => acknowledgeRejection(entry.id)} disabled={busy || resolving !== null}>{resolving === entry.id ? "Resolving…" : "No correction needed"}</button>
+            </div>
+          </li>)}
+        </ul>}
+      </section>
       {!open && (
         <button type="button" className="student-time-tools__open" onClick={() => { setOpen(true); setMessage(""); }} aria-expanded={false} aria-controls="correction-card">
           Fix a missed clock-in or clock-out
@@ -146,7 +194,7 @@ export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryO
           <label htmlFor="correction-shift">Shift to correct</label>
           <select id="correction-shift" value={target} onChange={(event) => chooseShift(event.target.value)} autoFocus>
             <option value="new">New missed shift</option>
-            {entries.map((entry) => <option key={entry.id} value={entry.id}>{new Date(entry.clockIn).toLocaleString()}</option>)}
+            {entries.map((entry) => <option key={entry.id} value={entry.id}>{new Date(entry.clockIn).toLocaleString()}{entry.needsCorrection ? " — rejected, needs action" : ""}</option>)}
           </select>
         </div>
         {target === "new" && jobs.length > 1 && (
@@ -173,7 +221,7 @@ export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryO
             : "No supervisor assigned. An admin can review your request."}
         </p>
         <div className="button-row">
-          <button type="submit" disabled={busy}>{busy ? "Sending…" : "Send for approval"}</button>
+          <button type="submit" disabled={busy || resolving !== null}>{busy ? "Sending…" : "Send for approval"}</button>
           <button type="button" className="button--secondary" onClick={closeForm}>Cancel</button>
         </div>
       </form>}

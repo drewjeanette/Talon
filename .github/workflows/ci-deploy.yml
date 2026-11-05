@@ -19,7 +19,9 @@ jobs:
   test:
     name: Typecheck and Playwright
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # The full desktop/mobile suite includes accessibility scans on every page.
+    # Allow it to finish instead of cancelling a healthy run before deployment.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

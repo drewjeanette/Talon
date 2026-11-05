@@ -6,6 +6,7 @@ import { getDb } from "../db/index.js";
 import { notifications } from "../db/schema.js";
 import { requireAuth } from "../middleware/auth.js";
 import type { AppEnv } from "../types.js";
+import { unresolvedRejectedTime } from "../services/rejected-time.service.js";
 
 export const notificationRoutes = new Hono<AppEnv>();
 notificationRoutes.use("*", requireAuth);
@@ -69,16 +70,11 @@ notificationRoutes.get("/todos", async (c) => {
   const items: TodoItem[] = [];
 
   if (me.role === "STUDENT") {
-    const rejected = await db.prepare(`
-      SELECT COUNT(*) AS n, MIN(e.updated_at) AS since
-      FROM time_entries e
-      WHERE e.user_id = ? AND e.status = 'REJECTED' AND e.updated_at > unixepoch() - 60 * 86400
-        AND NOT EXISTS (SELECT 1 FROM time_entry_change_requests r WHERE r.time_entry_id = e.id AND r.created_at >= e.updated_at)
-    `).bind(me.id).first<{ n: number; since: number | null }>();
-    if (rejected?.n) items.push({
-      key: "rejected-time", target: "time", count: rejected.n, since: iso(rejected.since),
+    const rejected = await unresolvedRejectedTime(db, me.id);
+    if (rejected.length) items.push({
+      key: "rejected-time", target: "time", count: rejected.length, since: iso(Math.min(...rejected.map(entry => entry.updatedAt))),
       label: "Fix rejected time",
-      detail: `${plural(rejected.n, "time entry", "time entries")} ${rejected.n === 1 ? "was" : "were"} rejected. Send a correction with the right times.`,
+      detail: `${plural(rejected.length, "time entry", "time entries")} ${rejected.length === 1 ? "was" : "were"} rejected. Send a correction or confirm no correction is needed.`,
     });
     return c.json(items);
   }

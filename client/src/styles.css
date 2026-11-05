@@ -360,6 +360,10 @@ textarea { width:100%; min-height:84px; padding:.55rem; border:1px solid var(--b
 .correction-history ul { display:grid; gap:.65rem; margin:.5rem 0 0; padding:0; list-style:none; }
 .correction-history li { display:grid; gap:.15rem; padding:.7rem .8rem; border:1px solid var(--border); border-radius:6px; }
 .correction-history li span { font-size:.9rem; }
+.rejected-time { margin:1rem 0; }
+.rejected-time ul { display:grid; gap:.75rem; padding:0; list-style:none; }
+.rejected-time li { display:grid; gap:.5rem; padding:1rem; border:1px solid var(--border); border-left:4px solid var(--tt-gold); border-radius:8px; overflow-wrap:anywhere; }
+.rejected-time .button-row { flex-wrap:wrap; }
 .team-pay-stubs { grid-column:1 / -1; }
 .team-pay-stubs table { min-width:980px; }
 .review-status { min-width:190px; }

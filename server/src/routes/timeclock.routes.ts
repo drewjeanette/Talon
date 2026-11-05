@@ -8,6 +8,7 @@ import { chargeAccounts, notifications, studentJobs, timeEntries, timeEntryChang
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { writeAuditLog } from "../services/audit.service.js";
 import { activeJobFor, jobsByUser } from "../services/jobs.service.js";
+import { unresolvedRejectedTime } from "../services/rejected-time.service.js";
 import { assertCanManageStudent, fullName, supervisedStudentIds, supervisorsByStudent } from "../services/access.service.js";
 import type { AppEnv } from "../types.js";
 
@@ -97,11 +98,36 @@ timeclockRoutes.get("/my-entries", async (c) => {
   const reviewerNames = new Map(reviewers.map((reviewer) => [reviewer.id, reviewer.firstName]));
   const jobs = (await jobsByUser(db, [c.get("user").id], { includeInactive: true })).get(c.get("user").id) ?? [];
   const jobTitles = new Map(jobs.map((job) => [job.id, job.title]));
+  const needsCorrection = new Set(c.get("user").role === "STUDENT"
+    ? (await unresolvedRejectedTime(c.env.DB, c.get("user").id)).map(entry => entry.id) : []);
   return c.json(entries.map((entry) => ({
     ...entry,
+    needsCorrection: needsCorrection.has(entry.id),
     jobTitle: entry.jobId ? jobTitles.get(entry.jobId) ?? null : null,
     reviewedBy: entry.status === "PENDING" || !entry.editedById ? null : reviewerNames.get(entry.editedById) ?? null,
   })));
+});
+
+const acknowledgeRejectionSchema = z.object({ acknowledged: z.literal(true) });
+
+timeclockRoutes.patch("/my-entries/:id/acknowledge-rejection", async (c) => {
+  const me = c.get("user");
+  if (me.role !== "STUDENT") throw new HTTPException(403, { message: "Only students can resolve their own rejected time." });
+  const id = Number(c.req.param("id"));
+  if (!Number.isSafeInteger(id) || id <= 0) throw new HTTPException(400, { message: "Invalid entry id." });
+  acknowledgeRejectionSchema.parse(await c.req.json());
+  const db = getDb(c.env.DB);
+  const entry = await db.query.timeEntries.findFirst({ where: and(eq(timeEntries.id, id), eq(timeEntries.userId, me.id)) });
+  if (!entry) throw new HTTPException(404, { message: "Time entry not found." });
+  if (entry.status !== "REJECTED") throw new HTTPException(409, { message: "Only rejected time can be resolved this way." });
+  if (!entry.rejectionAcknowledgedAt) {
+    const [updated] = await db.update(timeEntries).set({ rejectionAcknowledgedAt: new Date() })
+      .where(and(eq(timeEntries.id, id), eq(timeEntries.userId, me.id), eq(timeEntries.status, "REJECTED"), isNull(timeEntries.rejectionAcknowledgedAt)))
+      .returning({ id: timeEntries.id });
+    if (!updated) throw new HTTPException(409, { message: "This time entry changed. Refresh and try again." });
+    await writeAuditLog(c, "TIME_REJECTION_ACKNOWLEDGED", "TimeEntry", id, { resolution: "No correction needed" });
+  }
+  return c.json({ success: true });
 });
 
 const jobChangeSchema = z.object({ jobId: z.number().int().positive() });
@@ -238,6 +264,7 @@ timeclockRoutes.patch("/:id/decision", requireRole("SUPERVISOR"), async (c) => {
       status,
       editedById: me.id,
       rejectionReason: status === "REJECTED" ? rejectionReason : null,
+      rejectionAcknowledgedAt: null,
       updatedAt: new Date(),
     })
     .where(eq(timeEntries.id, id))
@@ -355,7 +382,7 @@ timeclockRoutes.post("/correction-requests", async (c) => {
     jobId = body.jobId ? (await activeJobFor(db, me.id, body.jobId)).id : jobs[0]?.id ?? null;
   }
 
-  const [request] = await db.insert(timeEntryChangeRequests).values({
+  const insertRequest = db.insert(timeEntryChangeRequests).values({
     userId: me.id,
     timeEntryId: body.timeEntryId ?? null,
     jobId,
@@ -363,6 +390,11 @@ timeclockRoutes.post("/correction-requests", async (c) => {
     requestedClockOut: clockOut,
     reason: body.reason,
   }).returning();
+  // A later correction supersedes an earlier "no correction needed" choice.
+  const [request] = body.timeEntryId
+    ? (await db.batch([insertRequest, db.update(timeEntries).set({ rejectionAcknowledgedAt: null })
+      .where(and(eq(timeEntries.id, body.timeEntryId), eq(timeEntries.userId, me.id), eq(timeEntries.status, "REJECTED"))) ]))[0]
+    : await insertRequest;
 
   await writeAuditLog(c, "TIME_CORRECTION_REQUEST", "TimeEntryChangeRequest", request.id);
   return c.json(request, 201);

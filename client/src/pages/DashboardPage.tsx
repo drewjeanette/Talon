@@ -21,6 +21,7 @@ import { ReminderSender } from "../components/ReminderSender";
 import { WorkQueue, type TodoItem } from "../components/WorkQueue";
 import type { AdminToolKey } from "../components/AdminLaunchpad";
 import { api } from "../api/client";
+import { useWorkChanged } from "../lib/work";
 
 interface TimeEntry {
   id: number;
@@ -29,6 +30,7 @@ interface TimeEntry {
   status: "PENDING" | "APPROVED" | "REJECTED";
   reviewedBy?: string | null;
   rejectionReason?: string | null;
+  needsCorrection?: boolean;
 }
 
 export function DashboardPage() {
@@ -46,6 +48,7 @@ export function DashboardPage() {
   useEffect(() => {
     loadEntries();
   }, []);
+  useWorkChanged(loadEntries);
 
   useEffect(() => {
     const timer = window.setInterval(() => setHour(new Date().getHours()), 60_000);
@@ -109,7 +112,7 @@ export function DashboardPage() {
             <ClockWidget onChange={loadEntries} />
             {user.role === "STUDENT" && <WorkQueue title="To-Dos" className="card student-todos" onOpen={openStudentTodo} hideWhenEmpty />}
             {user.role === "STUDENT" && <StudentTimecards entries={entries} />}
-            <StudentCategory title="Correction Requests" description="Fix a missed punch and view your requests." className="student-category--corrections">
+            <StudentCategory title="Correction Requests" description="Resolve rejected time, fix a missed punch, and view your requests." className="student-category--corrections">
               <StudentTimeTools entries={entries} onSubmitted={loadEntries} />
             </StudentCategory>
           </>

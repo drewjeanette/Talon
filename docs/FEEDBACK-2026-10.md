@@ -48,6 +48,10 @@ This file tracks what came out of that review and where each item stands.
 7. **Status**: students see who a request waits on and how long it has been pending.
 8. **One to-do list** per role, computed from the work itself, so items leave only when the work is
    done (with the completion animation). The separate bell panel is gone.
+   Students open the **Correction Requests** category to review each rejected shift and send a
+   correction or select **No correction needed**. That resolution is recorded in the audit log;
+   it leaves the rejected shift and its times intact. A denied correction brings the shift back
+   for action. Unresolved rejected time does not silently expire after 60 days.
 9. **Pay stubs**: "My Pay Stubs" is a plain list. "Student Pay Stub Review" lists only student stubs,
    with individual or batch approval and a flag/answer question thread.
 10. **PDF**: every pay stub list has a Download PDF button.
