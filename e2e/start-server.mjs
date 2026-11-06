@@ -42,7 +42,7 @@ const themeUsers = ["desktop", "mobile"]
 const rejectionUsers = ["desktop", "mobile"].flatMap(project => ["light", "dark"].map(theme => {
   const email = `e2e.rejection.${theme}.${project}@tntech.edu`;
   return `INSERT INTO users (email, password_hash, first_name, last_name, role, must_reset_pw)
-    SELECT '${email}', password_hash, 'Rejected', 'Tester', 'STUDENT', 0 FROM users WHERE email = 'student@tntech.edu';
+    SELECT '${email}', password_hash, 'Timecard', 'Tester', 'STUDENT', 0 FROM users WHERE email = 'student@tntech.edu';
     INSERT INTO student_supervisors (student_id, supervisor_id)
     SELECT student.id, supervisor.id FROM users student, users supervisor
     WHERE student.email = '${email}' AND supervisor.email = 'supervisor@tntech.edu';`;
