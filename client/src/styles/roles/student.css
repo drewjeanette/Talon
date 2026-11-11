@@ -312,7 +312,7 @@ th:last-child { border-radius: 0 8px 8px 0; }
 .dashboard--student .pay-stubs { grid-column:1 / -1; order:4; border-top:5px solid var(--tt-purple); }
 .dashboard--student .clock-widget { grid-column:span 6; order:1; min-height:0; }
 .dashboard--student .clock-widget__actions { margin-top:0; }
-.dashboard--student .dashboard-grid:not(:has(.student-todos)) > .clock-widget { grid-column:1 / -1; }
+.dashboard--student .clock-widget .status-message:empty { margin:0; }
 .dashboard--student .student-todos { grid-column:span 6; order:2; margin:0; border-top:5px solid var(--tt-gold); }
 .dashboard--student .dashboard-grid > .card { min-width:0; }
 .student-time-notifications { grid-column:1 / -1; order:0; border-top:5px solid var(--tt-gold); }

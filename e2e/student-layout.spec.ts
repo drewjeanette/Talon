@@ -33,13 +33,16 @@ for (const theme of ["light", "dark"] as const) {
     await expect(timecard.locator("tbody tr")).toHaveCount(12);
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
 
-    for (const width of [1280, 640, 320]) {
+    const desktopWidth = 1280;
+    let clockWidthWithTodos = 0;
+    for (const width of [desktopWidth, 640, 320]) {
       await page.setViewportSize({ width, height: 900 });
       await expect(todos).toBeVisible();
       const clockBox = (await clock.boundingBox())!;
       const todoBox = (await todos.boundingBox())!;
       const timecardBox = (await timecard.boundingBox())!;
-      if (width > 900) {
+      if (width === desktopWidth) {
+        clockWidthWithTodos = clockBox.width;
         expect(Math.abs(clockBox.y - todoBox.y)).toBeLessThan(1);
         expect(Math.abs(clockBox.width - todoBox.width)).toBeLessThan(1);
         expect(Math.abs(clockBox.height - todoBox.height)).toBeLessThan(1);
@@ -58,13 +61,16 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.locator(".student-time-tools")).toBeInViewport();
     await expect(todos.getByRole("button", { name: /Fix rejected time/ })).toBeEnabled();
 
-    // With no outstanding work, the clock uses the available row without an empty card.
+    // Hiding an empty to-do list should leave the desktop clock the same width.
     await page.route("**/api/notifications/todos", (route) => route.fulfill({ json: [] }));
-    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.setViewportSize({ width: desktopWidth, height: 900 });
     await page.reload();
     await expect(todos).toHaveCount(0);
     await expect(timecard.locator("tbody tr")).toHaveCount(12);
-    expect((await clock.boundingBox())!.width).toBeCloseTo((await timecard.boundingBox())!.width, 0);
+    const clockBox = (await clock.boundingBox())!;
+    expect(clockBox.width).toBeCloseTo(clockWidthWithTodos, 0);
+    expect(clockBox.width).toBeLessThan((await timecard.boundingBox())!.width / 2);
+    expect(clockBox.height).toBeLessThan(220);
     await expectAccessible(page);
   });
 }
