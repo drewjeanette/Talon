@@ -115,6 +115,50 @@ test("monthly reports include hours worked", async ({ page }) => {
   await expectAccessible(page);
 });
 
+for (const role of ["ADMIN", "SUPERVISOR"] as const) {
+  test(`${role.toLowerCase()} can select pay periods before stubs are generated`, async ({ page }) => {
+    await page.goto("/login");
+    await expectAccessible(page);
+    await signInToDashboard(page, ACCOUNTS[role]);
+    if (role === "ADMIN") await openAdminTool(page, "Generate Payroll and Pay Periods");
+    else await openSupervisorTool(page, "Payroll Reports");
+
+    const report = page.locator(".payroll-report");
+    const reportFilter = report.getByLabel("Pay period");
+    for (const range of ["9/28/2026 – 10/11/2026", "11/9/2026 – 11/22/2026", "11/23/2026 – 12/6/2026"]) {
+      await expect(reportFilter.getByRole("option", { name: new RegExp(range) })).toHaveCount(1);
+    }
+    const calendarOnly = reportFilter.getByRole("option", { name: /9\/28\/2026 – 10\/11\/2026.*Timecard dates only/ });
+    await reportFilter.selectOption((await calendarOnly.getAttribute("value"))!);
+    await expect(report.getByText("No payroll report has been generated for this timecard period.")).toBeVisible();
+    await expect(report.getByRole("button", { name: "Download CSV" })).toBeDisabled();
+    const emptyPeriods = [];
+    for (const cycle of ["Bi-weekly", "Monthly"]) {
+      const option = reportFilter.getByRole("option", { name: new RegExp(`^${cycle}.*No payroll data`) }).first();
+      const id = (await option.getAttribute("value"))!;
+      emptyPeriods.push(id);
+      await reportFilter.selectOption(id);
+      await expect(report.getByText("No payroll data is available for this pay period.")).toBeVisible();
+      await expect(report.getByRole("button", { name: "Download CSV" })).toBeDisabled();
+    }
+    await expectAccessible(page);
+
+    if (role === "ADMIN") {
+      await page.getByRole("button", { name: "Back to Overview", exact: true }).click();
+      await openAdminTool(page, "Time Entry Approvals");
+    } else {
+      await page.getByRole("button", { name: "Back to Overview", exact: true }).click();
+      await openSupervisorTool(page, "Student Pay Stubs");
+    }
+    const reviews = page.locator(".team-pay-stubs");
+    for (const id of emptyPeriods) {
+      await reviews.getByLabel("Pay period").selectOption(id);
+      await expect(reviews.getByText("No student pay stubs match the selected filters.")).toBeVisible();
+    }
+    await expectAccessible(page);
+  });
+}
+
 test("supervisor's report only includes their students and can be marked reviewed", async ({ page }) => {
   await signInToDashboard(page, PEOPLE.SECOND_SUPERVISOR);
   await openSupervisorTool(page, "Payroll Reports");

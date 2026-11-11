@@ -88,6 +88,27 @@ test("student timecards report a calendar failure and allow retry", async ({ pag
   await expectAccessible(page);
 });
 
+test("student history shows the fall periods even without shifts", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-12-07T18:00:00Z"));
+  await page.route("**/api/timeclock/my-entries", route => route.fulfill({ json: [] }));
+  await page.goto("/login");
+  await expectAccessible(page);
+  await signInToDashboard(page, ACCOUNTS.STUDENT);
+  await openStudentCategory(page, "Past Timecards");
+  const past = page.getByRole("region", { name: "Past Timecards", exact: true });
+  for (const range of [
+    "8/31/2026 – 9/13/2026", "9/14/2026 – 9/27/2026", "9/28/2026 – 10/11/2026",
+    "10/12/2026 – 10/25/2026", "10/26/2026 – 11/8/2026", "11/9/2026 – 11/22/2026",
+    "11/23/2026 – 12/6/2026",
+  ]) {
+    await expect(past.locator("summary").filter({ hasText: range })).toContainText("0.00 hrs");
+  }
+  await past.getByText("11/23/2026 – 12/6/2026", { exact: true }).click();
+  const timecard = past.getByRole("region", { name: "Timecard 11/23/2026 through 12/6/2026" });
+  await expect(timecard.getByRole("cell", { name: "No time entries were recorded for this period." })).toBeVisible();
+  await expectAccessible(page);
+});
+
 test("the student calendar endpoint exposes only biweekly dates and requires sign-in", async ({ request }) => {
   expect((await request.get("/api/payroll/timecard-periods")).status()).toBe(401);
   const login = await request.post("/api/auth/login", { data: { email: ACCOUNTS.STUDENT, password: SEED_PASSWORD } });
