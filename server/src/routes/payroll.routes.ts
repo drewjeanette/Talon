@@ -6,6 +6,7 @@ import { getDb, type Db } from "../db/index.js";
 import { chargeAccounts, departments, payPeriods, payStubs, users } from "../db/schema.js";
 import { centsToDollarString, minutesToHourString } from "../lib/money.js";
 import { buildPdf, type PdfLine, type PdfRule } from "../lib/pdf.js";
+import { timecardCalendar } from "../lib/timecard-calendar.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { finalizePayPeriod, generatePayStubsForPeriod } from "../services/payroll.service.js";
 import { writeAuditLog } from "../services/audit.service.js";
@@ -23,7 +24,7 @@ payrollRoutes.get("/timecard-periods", async (c) => {
   const periods = await getDb(c.env.DB).select({
     startDate: payPeriods.startDate, endDate: payPeriods.endDate,
   }).from(payPeriods).where(eq(payPeriods.type, "BIWEEKLY")).orderBy(desc(payPeriods.startDate));
-  return c.json(periods);
+  return c.json(timecardCalendar(periods));
 });
 
 payrollRoutes.get("/periods", requireRole("SUPERVISOR"), async (c) => {
@@ -32,8 +33,7 @@ payrollRoutes.get("/periods", requireRole("SUPERVISOR"), async (c) => {
   const periods = await db
     .select()
     .from(payPeriods)
-    .orderBy(desc(payPeriods.startDate))
-    .limit(50);
+    .orderBy(desc(payPeriods.startDate), desc(payPeriods.id));
 
   // Supervisors count only stubs for students assigned to them.
   const result = me.role === "SUPERVISOR"

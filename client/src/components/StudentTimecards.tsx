@@ -68,6 +68,11 @@ export function StudentTimecards({ entries }: { entries: TimeEntry[] }) {
   });
   const groups = useMemo(() => {
     const past = new Map<number, { start: number; end: number; entries: TimeEntry[] }>();
+    for (const { startDate, endDate } of periods) {
+      const start = Date.parse(startDate.slice(0, 10));
+      const end = Date.parse(endDate.slice(0, 10));
+      if (end < today) past.set(start, { start, end, entries: [] });
+    }
     for (const entry of entries) {
       const period = periodFor(payrollDay(entry.clockIn));
       if (!period || period.end >= today) continue;
@@ -76,7 +81,7 @@ export function StudentTimecards({ entries }: { entries: TimeEntry[] }) {
       past.set(period.start, group);
     }
     return [...past.values()].sort((a, b) => b.start - a.start);
-  }, [entries, periodFor, today]);
+  }, [entries, periodFor, periods, today]);
   const currentHours = currentEntries.reduce((total, entry) => total + hours(entry), 0);
   const unavailable = loading || error || !current;
 

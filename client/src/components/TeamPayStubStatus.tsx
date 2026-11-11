@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "../api/client";
+import { payPeriodLabel } from "../lib/timecards";
 import { downloadBlob, notifyWorkChanged } from "../lib/work";
 import { PersonSearch } from "./PersonSearch";
 
@@ -24,7 +25,7 @@ interface TeamStub {
   reviewedBy: string | null;
   reviewReason: string | null;
   flag: { note: string; open: boolean; flaggedBy: string | null; resolution: string | null } | null;
-  payPeriod: { id: number; startDate: string; endDate: string; payDate: string };
+  payPeriod: { id: number; type: "BIWEEKLY" | "MONTHLY"; startDate: string; endDate: string; payDate: string };
 }
 
 type Form = { kind: "reject" | "flag" | "resolve"; id: number } | null;
@@ -40,6 +41,7 @@ const date = (value: string) => new Date(value).toLocaleDateString();
 /** Student pay stubs for review: approve one at a time or several at once. */
 export function TeamPayStubStatus() {
   const [stubs, setStubs] = useState<TeamStub[]>([]);
+  const [periods, setPeriods] = useState<TeamStub["payPeriod"][]>([]);
   const [message, setMessage] = useState("");
   const [form, setForm] = useState<Form>(null);
   const [text, setText] = useState("");
@@ -57,13 +59,10 @@ export function TeamPayStubStatus() {
 
   useEffect(() => {
     load().catch(() => setMessage("Could not load student pay stubs."));
+    api.get<TeamStub["payPeriod"][]>("/payroll/periods").then(setPeriods)
+      .catch(() => setMessage("Could not load pay periods."));
   }, []);
 
-  const periods = useMemo(() => {
-    const map = new Map<number, TeamStub["payPeriod"]>();
-    for (const stub of stubs) map.set(stub.payPeriod.id, stub.payPeriod);
-    return [...map.values()];
-  }, [stubs]);
   const students = useMemo(() => {
     const map = new Map<number, { id: number; firstName: string; lastName: string; preferredName: string | null; detail: string | null }>();
     for (const stub of stubs) map.set(stub.employeeId, { id: stub.employeeId, firstName: stub.firstName, lastName: stub.lastName, preferredName: stub.preferredName, detail: stub.department });
@@ -140,7 +139,7 @@ export function TeamPayStubStatus() {
           <label htmlFor="stub-review-period">Pay period</label>
           <select id="stub-review-period" value={periodId} onChange={(event) => setPeriodId(event.target.value)}>
             <option value="">All pay periods</option>
-            {periods.map((period) => <option key={period.id} value={period.id}>{date(period.startDate)} – {date(period.endDate)}</option>)}
+            {periods.map((period) => <option key={period.id} value={period.id}>{payPeriodLabel(period)}</option>)}
           </select>
         </div>
         <label className="stub-review__toggle"><input type="checkbox" checked={showDone} onChange={(event) => setShowDone(event.target.checked)} /> Show reviewed stubs</label>
@@ -167,7 +166,7 @@ export function TeamPayStubStatus() {
             </tr>
           </thead>
           <tbody>
-            {shown.length === 0 && <tr><td colSpan={11}>{stubs.length ? "No pay stubs match. Every stub shown here has been reviewed." : "No student pay stubs are available yet."}</td></tr>}
+            {shown.length === 0 && <tr><td colSpan={11}>No student pay stubs match the selected filters.</td></tr>}
             {shown.map((stub) => (
               <tr key={stub.id}>
                 <td>{stub.reviewStatus === "PENDING" && <input type="checkbox" checked={selected.includes(stub.id)} onChange={() => setSelected((ids) => (ids.includes(stub.id) ? ids.filter((id) => id !== stub.id) : [...ids, stub.id]))} aria-label={`Select pay stub for ${stub.employeeName}`} />}</td>

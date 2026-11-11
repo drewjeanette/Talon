@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { payPeriodLabel, timecardDate, type TimecardPeriod } from "../lib/timecards";
 import { downloadBlob, notifyWorkChanged, useWorkChanged } from "../lib/work";
 import { PersonSearch } from "./PersonSearch";
 
@@ -156,15 +157,12 @@ function cellValues(row: Row) {
   };
 }
 
-function periodLabel(period: PayPeriod) {
-  return `${period.type === "BIWEEKLY" ? "Bi-weekly" : "Monthly"} · ${new Date(period.startDate).toLocaleDateString()} – ${new Date(period.endDate).toLocaleDateString()}`;
-}
-
 export function PayrollReport({ embedded = false }: { embedded?: boolean }) {
   const { user } = useAuth();
   const isAdmin = user?.role === "ADMIN";
   const Heading = embedded ? "h3" : "h2";
   const [periods, setPeriods] = useState<PayPeriod[]>([]);
+  const [timecardPeriods, setTimecardPeriods] = useState<TimecardPeriod[]>([]);
   const [payPeriodId, setPayPeriodId] = useState("");
   const [lines, setLines] = useState<ReportLine[]>([]);
   const [message, setMessage] = useState("");
@@ -205,11 +203,40 @@ export function PayrollReport({ embedded = false }: { embedded?: boolean }) {
       if (!firstReady) setMessage("No pay periods have generated payroll yet.");
     }).catch(() => setMessage("Could not load pay periods."));
   }, [version]);
+
+  useEffect(() => {
+    api.get<TimecardPeriod[]>("/payroll/timecard-periods").then(setTimecardPeriods)
+      .catch(() => setTimecardPeriods([]));
+  }, [version]);
+
+  const periodOptions = [
+    ...periods.map((period) => ({
+      value: String(period.id),
+      startDate: period.startDate,
+      label: `${payPeriodLabel(period)} · ${period.reportRowCount === 0 ? "No payroll data" : `${period.reportRowCount} employee${period.reportRowCount === 1 ? "" : "s"}`}`,
+    })),
+    ...timecardPeriods.filter((dates) => !periods.some((period) =>
+      period.type === "BIWEEKLY" && period.startDate.slice(0, 10) === dates.startDate.slice(0, 10)
+      && period.endDate.slice(0, 10) === dates.endDate.slice(0, 10)
+    )).map(({ startDate, endDate }) => ({
+      value: `timecard:${startDate.slice(0, 10)}`,
+      startDate,
+      label: `Bi-weekly · ${timecardDate(Date.parse(startDate))} – ${timecardDate(Date.parse(endDate))} · Timecard dates only`,
+    })),
+  ].sort((a, b) => b.startDate.localeCompare(a.startDate));
+
   // Generating or reviewing payroll elsewhere on the page changes the numbers.
   useWorkChanged(() => setVersion((value) => value + 1), { poll: false });
 
   useEffect(() => {
-    if (!payPeriodId) return;
+    if (!payPeriodId || payPeriodId.startsWith("timecard:")) {
+      setLines([]);
+      setCompareIds([]);
+      setComparing(false);
+      setLoading(false);
+      setMessage(payPeriodId ? "No payroll report has been generated for this timecard period." : "");
+      return;
+    }
     let active = true;
     setLoading(true);
     setMessage("");
@@ -305,11 +332,7 @@ export function PayrollReport({ embedded = false }: { embedded?: boolean }) {
           <label htmlFor="report-period">Pay period</label>
           <select id="report-period" value={payPeriodId} onChange={(event) => setPayPeriodId(event.target.value)}>
             <option value="">Select a pay period</option>
-            {periods.map((period) => (
-              <option key={period.id} value={period.id} disabled={period.reportRowCount === 0}>
-                {periodLabel(period)} · {period.reportRowCount === 0 ? "No payroll data" : `${period.reportRowCount} employee${period.reportRowCount === 1 ? "" : "s"}`}
-              </option>
-            ))}
+            {periodOptions.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
           </select>
         </div>
         <PersonSearch label="People" people={people} value={peopleFilter} onChange={setPeopleFilter} multiple placeholder="Add people by name" />

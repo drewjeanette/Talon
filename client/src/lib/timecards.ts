@@ -1,5 +1,10 @@
 export interface TimecardPeriod { startDate: string; endDate: string }
 
+export function payPeriodLabel(period: TimecardPeriod & { type: "BIWEEKLY" | "MONTHLY" }): string {
+  const type = period.type === "BIWEEKLY" ? "Bi-weekly" : "Monthly";
+  return `${type} · ${timecardDate(Date.parse(period.startDate))} – ${timecardDate(Date.parse(period.endDate))}`;
+}
+
 const DAY = 86_400_000;
 const centralDate = new Intl.DateTimeFormat("en-US", {
   timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit",
