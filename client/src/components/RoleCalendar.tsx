@@ -8,6 +8,10 @@ const monthFormat = new Intl.DateTimeFormat(undefined, { month: "long", year: "n
 const dateFormat = new Intl.DateTimeFormat(undefined, {
   weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC",
 });
+const centralHour = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/Chicago", hour: "numeric", hourCycle: "h23",
+});
+const HOUR_MS = 3_600_000;
 
 interface StaffShift {
   name: string;
@@ -15,6 +19,7 @@ interface StaffShift {
   days: number[];
   hours: string;
   clockedIn: boolean;
+  onlineHours?: { start: number; end: number };
 }
 
 export function RoleCalendar({ role }: { role: "admin" | "supervisor" }) {
@@ -27,10 +32,20 @@ export function RoleCalendar({ role }: { role: "admin" | "supervisor" }) {
   const firstDay = new Date(Date.UTC(year, monthIndex, 1));
   const firstWeekday = firstDay.getUTCDay();
   const daysInMonth = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
-  const today = payrollDay(Date.now());
+  const now = Date.now();
+  const today = payrollDay(now);
+  const hour = Number(centralHour.format(now));
   const monthLabel = monthFormat.format(firstDay);
   const isSelectedToday = selected.getTime() === today;
-  const shifts = schedule?.filter((shift) => shift.days.includes(selected.getUTCDay()) || (isSelectedToday && shift.clockedIn));
+  const shifts = schedule?.flatMap((shift) => {
+    const scheduled = shift.days.includes(selected.getUTCDay());
+    const onlineHours = shift.onlineHours;
+    const online = isSelectedToday && (onlineHours
+      ? scheduled && hour >= onlineHours.start && hour < onlineHours.end
+      : shift.clockedIn);
+    if (!scheduled && !online) return [];
+    return [{ ...shift, scheduled, online, status: onlineHours ? "Scheduled on duty" : "Clocked in" }];
+  });
   const cells = Array.from({ length: firstWeekday + daysInMonth }, (_, index) =>
     index < firstWeekday ? null : index - firstWeekday + 1
   );
@@ -48,6 +63,12 @@ export function RoleCalendar({ role }: { role: "admin" | "supervisor" }) {
   useWorkChanged(() => {
     if (showSchedule) setRefresh((value) => value + 1);
   });
+
+  useEffect(() => {
+    if (!showSchedule) return;
+    const timer = window.setTimeout(() => setRefresh((value) => value + 1), HOUR_MS - Date.now() % HOUR_MS);
+    return () => window.clearTimeout(timer);
+  }, [showSchedule, refresh]);
 
   function changeMonth(offset: number) {
     const destination = new Date(Date.UTC(year, monthIndex + offset, 1));
@@ -99,10 +120,10 @@ export function RoleCalendar({ role }: { role: "admin" | "supervisor" }) {
           {shifts ? shifts.length ? (
             <ul>
               {shifts.map((shift) => (
-                <li key={shift.name} className={isSelectedToday && shift.clockedIn ? "staff-schedule__clocked-in" : undefined}>
+                <li key={shift.name} className={shift.online ? "staff-schedule__clocked-in" : undefined}>
                   <strong>{shift.name}</strong> <span>({shift.role})</span>
-                  {isSelectedToday && shift.clockedIn && <span> · Clocked in</span>}
-                  <span className="staff-schedule__hours">{shift.days.includes(selected.getUTCDay()) ? shift.hours : "No scheduled shift"}</span>
+                  {shift.online && <span className={shift.onlineHours ? "sr-only" : undefined}> · {shift.status}</span>}
+                  <span className="staff-schedule__hours">{shift.scheduled ? shift.hours : "No scheduled shift"}</span>
                 </li>
               ))}
             </ul>

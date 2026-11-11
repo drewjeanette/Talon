@@ -13,7 +13,7 @@ export const orgRoutes = new Hono<AppEnv>();
 orgRoutes.use("*", requireAuth);
 
 const staffSchedule = [
-  { name: "Rene", email: "admin@tntech.edu", role: "Admin", days: [1, 2, 3, 4, 5], hours: "8 AM – 5 PM" },
+  { name: "Rene", email: "admin@tntech.edu", role: "Admin", days: [1, 2, 3, 4, 5], hours: "8 AM – 5 PM", onlineHours: { start: 8, end: 17 } },
   { name: "Sabrina", email: "supervisor@tntech.edu", role: "Supervisor", days: [1, 3, 4], hours: "12 PM – 5 PM" },
   { name: "Leslie", email: "ljdial42@tntech.edu", role: "Supervisor", days: [2, 3, 4, 5], hours: "12 PM – 4 PM" },
   { name: "Seth", email: "sawilliams42@tntech.edu", role: "Supervisor", days: [1, 3, 5], hours: "9 AM – 5 PM" },
