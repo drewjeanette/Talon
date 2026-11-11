@@ -14,7 +14,7 @@ test("staff calendars show the green dot only while a supervisor is clocked in",
       await signInToDashboard(view, email);
       await view.getByRole("checkbox", { name: "Show Who’s Working" }).check();
       await expect(view.locator(".staff-schedule__panel").getByText("Sabrina", { exact: true })).toBeVisible();
-      await expect(view.locator(".staff-schedule__clocked-in")).toHaveCount(0);
+      await expect(view.locator(".staff-schedule__clocked-in").filter({ hasText: "Sabrina" })).toHaveCount(0);
     }
     const clock = page.getByRole("region", { name: "Web Clock", exact: true });
     const supervisorDot = page.locator(".staff-schedule__clocked-in").filter({ hasText: "Sabrina" });
@@ -43,6 +43,25 @@ test("staff calendars show the green dot only while a supervisor is clocked in",
 });
 
 for (const role of ["ADMIN", "SUPERVISOR"] as const) {
+  test(`${role.toLowerCase()} calendar updates Rene’s dot at her Central shift boundaries`, async ({ page }) => {
+    test.setTimeout(60_000);
+    await page.clock.install({ time: new Date("2026-11-11T13:50:00Z") });
+    await page.goto("/login");
+    await expectAccessible(page);
+    await signInToDashboard(page, ACCOUNTS[role]);
+    await page.getByRole("checkbox", { name: "Show Who’s Working" }).check();
+    const rene = page.locator(".staff-schedule__panel li").filter({ hasText: "Rene" });
+    await expect(rene).toBeVisible();
+    await expect(rene).not.toContainText("Scheduled on duty");
+    await page.clock.fastForward(10 * 60_000);
+    await expect(rene).toHaveClass("staff-schedule__clocked-in");
+    await expect(rene.locator(".sr-only")).toHaveText("· Scheduled on duty");
+    await expectAccessible(page);
+    await page.clock.fastForward(9 * 3_600_000);
+    await expect(rene).not.toHaveClass("staff-schedule__clocked-in");
+    await expect(rene).toBeVisible();
+  });
+
   for (const theme of ["light", "dark"] as const) {
     test(`${role.toLowerCase()} calendar has no added outline and working month navigation in ${theme} mode`, async ({ page }, testInfo) => {
       await mockAccountTheme(page, theme);
