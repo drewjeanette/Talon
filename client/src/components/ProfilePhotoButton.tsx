@@ -60,7 +60,11 @@ function framing(view: ProfilePhotoView): CSSProperties {
   };
 }
 
-export function ProfilePhotoButton({ userId, onStatus }: { userId: number; onStatus: (message: string) => void }) {
+export function ProfilePhotoButton({ userId, femaleSilhouette, onStatus }: {
+  userId: number;
+  femaleSilhouette: boolean;
+  onStatus: (message: string) => void;
+}) {
   const input = useRef<HTMLInputElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -155,7 +159,19 @@ export function ProfilePhotoButton({ userId, onStatus }: { userId: number; onSta
       <input ref={input} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" onChange={upload} aria-label="Choose a profile photo" />
       <button type="button" className="dashboard__photo-button" onClick={open} aria-label={photoUrl ? "View and adjust profile photo" : "Add profile photo"} title={photoUrl ? "View profile photo" : "Add profile photo"}>
         <span className="dashboard__photo-image">
-          {photoUrl ? <img src={photoUrl} alt="" style={framing(savedView)} /> : <svg className="dashboard__photo-silhouette" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="35" r="19" /><path d="M17 94c2-25 14-38 33-38s31 13 33 38" /></svg>}
+          {photoUrl ? <img src={photoUrl} alt="" style={framing(savedView)} /> : (
+            <svg className="dashboard__photo-silhouette" viewBox="0 0 100 100" aria-hidden="true">
+              {femaleSilhouette ? <>
+                <path d="M25 61V38C25 18 35 7 50 7s25 11 25 31v23H63V39c0-10-5-17-13-17S37 29 37 39v22z" fill="#6f647f" />
+                <circle cx="50" cy="38" r="15" fill="#958aa2" />
+                <path d="M17 94c2-24 15-36 33-36s31 12 33 36" />
+                <path d="M41 57c2 7 16 7 18 0v11H41z" fill="#958aa2" />
+              </> : <>
+                <circle cx="50" cy="35" r="19" />
+                <path d="M17 94c2-25 14-38 33-38s31 13 33 38" />
+              </>}
+            </svg>
+          )}
         </span>
         <span className="dashboard__photo-camera" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h4l2-2h4l2 2h4v12H4z" /><circle cx="12" cy="13" r="3" /></svg></span>
       </button>
