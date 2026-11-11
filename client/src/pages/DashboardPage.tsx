@@ -85,7 +85,10 @@ export function DashboardPage() {
 
   return (
     <main id="main-content" className={`dashboard dashboard--${user.role.toLowerCase()}`} data-admin-view={user.role === "ADMIN" && adminSection ? adminSection : undefined}>
-      <h1 className="dashboard__title"><ProfilePhotoButton userId={user.id} onStatus={setPhotoStatus} /><span>{greeting}, {user.preferredName || user.firstName}</span></h1>
+      <h1 className="dashboard__title">
+        <ProfilePhotoButton userId={user.id} femaleSilhouette={["supervisor@tntech.edu", "bmstockmas42@tntech.edu"].includes(user.email)} onStatus={setPhotoStatus} />
+        <span>{greeting}, {user.preferredName || user.firstName}</span>
+      </h1>
       {photoStatus && <p className="dashboard__photo-message" role="status">{photoStatus}</p>}
 
       {user.role === "SUPERVISOR" && (
