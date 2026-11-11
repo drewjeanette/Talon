@@ -56,13 +56,28 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.locator("#time-help-heading")).toBeFocused();
     await expect(todos.locator(".work-queue__count")).toHaveText("1");
     await expectAccessible(page);
+    await corrections.screenshot({ path: testInfo.outputPath(`student-corrections-${theme}.png`) });
 
     await openStudentCategory(page, "Pay Stubs");
     await expect(page.locator(".pay-stubs table")).toBeVisible();
+    await expect(corrections).not.toHaveAttribute("open", "");
     await openStudentCategory(page, "Past Timecards");
     await expect(page.getByRole("region", { name: "Past Timecards", exact: true })).toBeVisible();
+    const openCategories = page.locator("details.student-category[open]");
+    await expect(openCategories).toHaveCount(1);
+    await expectAccessible(page);
+
+    await openCategories.getByRole("button", { name: "Back to Categories" }).click();
+    await expect(openCategories).toHaveCount(0);
+    await expect(categories.first().locator(":scope > summary")).toBeFocused();
+    await expect(categories.first().locator(":scope > summary")).toBeInViewport();
+    await page.keyboard.press("Enter");
+    await expect(openCategories).toHaveCount(1);
+    await todos.getByRole("button", { name: /Fix rejected time/ }).click();
+    await expect(openCategories).toHaveCount(1);
+    await expect(corrections).toHaveAttribute("open", "");
+    await expect(page.locator("#time-help-heading")).toBeFocused();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await expectAccessible(page);
-    await corrections.screenshot({ path: testInfo.outputPath(`student-corrections-${theme}.png`) });
   });
 }
