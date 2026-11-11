@@ -122,10 +122,27 @@ export async function generatePayStubsForPeriod(db: Db, payPeriodId: number) {
       })
   );
 
-  await db.batch([
-    ...(statements as [(typeof statements)[number], ...typeof statements]),
-    db.update(payPeriods).set({ status: "PROCESSING" }).where(eq(payPeriods.id, payPeriodId)),
-  ]);
+  try {
+    await db.batch([
+      db.update(payPeriods).set({
+        // The NOT NULL constraint aborts the batch if the period changed after
+        // these stubs were calculated.
+        status: sql`CASE WHEN ${payPeriods.status} <> 'CLOSED'
+          AND ${eq(payPeriods.startDate, period.startDate)}
+          AND ${eq(payPeriods.endDate, period.endDate)}
+          THEN 'PROCESSING' ELSE NULL END`,
+      }).where(eq(payPeriods.id, payPeriodId)),
+      ...statements,
+    ]);
+  } catch (error) {
+    const current = await db.query.payPeriods.findFirst({ where: eq(payPeriods.id, payPeriodId) });
+    if (current && (current.status === "CLOSED"
+      || current.startDate.getTime() !== period.startDate.getTime()
+      || current.endDate.getTime() !== period.endDate.getTime())) {
+      throw new HTTPException(409, { message: "The pay period changed. Refresh before generating pay stubs." });
+    }
+    throw error;
+  }
 
   return { generated: rows.length };
 }

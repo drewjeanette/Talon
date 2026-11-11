@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { and, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, ne, notExists, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getDb, type Db } from "../db/index.js";
 import { chargeAccounts, departments, payPeriods, payStubs, users } from "../db/schema.js";
@@ -74,6 +74,48 @@ payrollRoutes.post("/periods", requireRole("ADMIN"), async (c) => {
 
   await writeAuditLog(c, "PAY_PERIOD_CREATE", "PayPeriod", period.id);
   return c.json(period, 201);
+});
+
+payrollRoutes.patch("/periods/:id", requireRole("ADMIN"), async (c) => {
+  const id = z.coerce.number().int().positive().parse(c.req.param("id"));
+  const body = createPeriodSchema.omit({ type: true }).parse(await c.req.json());
+  const startDate = new Date(body.startDate);
+  const endDate = new Date(body.endDate);
+  const payDate = new Date(body.payDate);
+  if (body.endDate.slice(0, 10) <= body.startDate.slice(0, 10)) {
+    throw new HTTPException(400, { message: "End date must be after start date." });
+  }
+  const db = getDb(c.env.DB);
+  const previous = await db.query.payPeriods.findFirst({ where: eq(payPeriods.id, id) });
+  if (!previous) throw new HTTPException(404, { message: "Pay period not found." });
+  const rangeChanged = startDate.getTime() !== previous.startDate.getTime()
+    || endDate.getTime() !== previous.endDate.getTime();
+  const hasStubs = db.select({ id: payStubs.id }).from(payStubs).where(eq(payStubs.payPeriodId, id));
+  const overlap = db.select({ id: payPeriods.id }).from(payPeriods).where(and(
+    ne(payPeriods.id, id),
+    eq(payPeriods.type, previous.type),
+    sql`date(${payPeriods.startDate}, 'unixepoch') <= ${body.endDate.slice(0, 10)}`,
+    sql`date(${payPeriods.endDate}, 'unixepoch') >= ${body.startDate.slice(0, 10)}`,
+  ));
+  const [period] = await db.update(payPeriods)
+    .set({ startDate, endDate, payDate, updatedAt: new Date() })
+    .where(and(
+      eq(payPeriods.id, id),
+      eq(payPeriods.status, previous.status),
+      eq(payPeriods.startDate, previous.startDate),
+      eq(payPeriods.endDate, previous.endDate),
+      eq(payPeriods.payDate, previous.payDate),
+      notExists(hasStubs),
+      rangeChanged ? notExists(overlap) : undefined,
+    )).returning();
+  if (!period) {
+    throw new HTTPException(409, { message: "The period changed, overlaps another period of the same type, or already has generated pay stubs." });
+  }
+  await writeAuditLog(c, "PAY_PERIOD_UPDATE", "PayPeriod", id, {
+    previous: { startDate: previous.startDate, endDate: previous.endDate, payDate: previous.payDate },
+    updated: { startDate, endDate, payDate },
+  });
+  return c.json(period);
 });
 
 payrollRoutes.post("/periods/:id/generate", requireRole("ADMIN"), async (c) => {

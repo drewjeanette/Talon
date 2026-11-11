@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { ACCOUNTS, PEOPLE, expectAccessible, openAdminTool, openSupervisorTool, pickPerson, signInToDashboard } from "./helpers";
+import { ACCOUNTS, PEOPLE, SEED_PASSWORD, expectAccessible, openAdminTool, openSupervisorTool, pickPerson, signInToDashboard } from "./helpers";
 
 // The seed's previous bi-weekly period is generated: Chris and Sophie both earn
 // $11.50/hour, but Sophie worked 5 hours of overtime and is charged to the
@@ -36,6 +36,42 @@ test("admin can use the trimmed payroll fields with keyboard focus", async ({ pa
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
   expect(darkFields.violations).toEqual([]);
   await form.screenshot({ path: testInfo.outputPath("payroll-fields-dark.png") });
+});
+
+test("admin can correct a saved pay period without generated stubs", async ({ page, request }, testInfo) => {
+  const month = testInfo.project.name === "mobile" ? "02" : "01";
+  const login = await request.post("/api/auth/login", { data: { email: ACCOUNTS.ADMIN, password: SEED_PASSWORD } });
+  expect(login.ok()).toBe(true);
+  const { accessToken } = await login.json();
+  const headers = { Authorization: `Bearer ${accessToken}` };
+  const created = await request.post("/api/payroll/periods", { headers, data: {
+    type: "BIWEEKLY", startDate: `2032-${month}-02T00:00:00Z`,
+    endDate: `2032-${month}-15T00:00:00Z`, payDate: `2032-${month}-18T00:00:00Z`,
+  } });
+  expect(created.ok()).toBe(true);
+  const { id } = await created.json();
+  expect((await request.post(`/api/payroll/periods/${id}/finalize`, { headers })).ok()).toBe(true);
+
+  await page.goto("/login");
+  await expectAccessible(page);
+  await signInToDashboard(page, ACCOUNTS.ADMIN);
+  await openAdminTool(page, "Generate Payroll and Pay Periods");
+  const edit = page.getByRole("button", { name: `Edit pay period ${Number(month)}/2/2032 through ${Number(month)}/15/2032` });
+  await edit.click();
+  const form = page.getByRole("form", { name: "Edit pay period" });
+  await expect(form.getByLabel("Start date")).toBeFocused();
+  await form.getByLabel("Start date").fill(`2032-${month}-01`);
+  await form.getByLabel("End date").fill(`2032-${month}-14`);
+  await expectAccessible(page);
+  await form.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText("Pay period updated.")).toBeVisible();
+  const updated = page.getByRole("button", { name: `Edit pay period ${Number(month)}/1/2032 through ${Number(month)}/14/2032` });
+  await expect(updated).toBeFocused();
+  await page.reload();
+  await openAdminTool(page, "Generate Payroll and Pay Periods");
+  await expect(updated).toBeEnabled();
+  await expect(updated.locator("xpath=ancestor::tr")).toContainText("CLOSED");
+  await expectAccessible(page);
 });
 
 test("admin compares two students side by side and sees which line items differ", async ({ page }) => {
