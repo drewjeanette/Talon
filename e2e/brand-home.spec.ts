@@ -9,6 +9,7 @@ for (const role of ["STUDENT", "SUPERVISOR", "ADMIN"] as const) {
     await signInToDashboard(page, ACCOUNTS[role]);
     const banner = page.getByRole("banner");
     const brand = banner.getByRole("link", { name: "Talon home", exact: true });
+    const brandName = brand.getByText("Talon", { exact: true });
     await expect(brand).toHaveAttribute("href", "/");
     await expectAccessible(page);
 
@@ -24,13 +25,15 @@ for (const role of ["STUDENT", "SUPERVISOR", "ADMIN"] as const) {
       expect(await brand.boundingBox()).toEqual(homeBounds);
       await expect(brand).toHaveCSS("text-decoration-line", "none");
       await brand.hover();
-      await expect(brand).toHaveCSS("text-decoration-line", "underline");
+      await expect(brand).toHaveCSS("text-decoration-line", "none");
+      await expect(brandName).toHaveCSS("text-decoration-line", "underline");
       expect(await brand.boundingBox()).toEqual(homeBounds);
       await brand.focus();
       await page.keyboard.press("Tab");
       await page.keyboard.press("Shift+Tab");
       await expect(brand).toBeFocused();
       await expect(brand).toHaveCSS("outline-style", "solid");
+      await expect(brandName).toHaveCSS("text-decoration-line", "underline");
       await expectAccessible(page);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       if (width === 320) await banner.screenshot({ path: testInfo.outputPath("settings-home-link.png") });

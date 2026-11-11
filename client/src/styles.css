@@ -424,7 +424,7 @@ header.app-header {
 }
 header.app-header .app-header__brand { grid-area:brand; justify-self:start; display:inline-flex; align-items:center; gap:.35rem; min-height:36px; font-size:1.45rem; font-weight:700; letter-spacing:.02em; line-height:1.5; }
 header.app-header a.app-header__brand { color:#fff; text-decoration:none; }
-header.app-header a.app-header__brand:is(:hover,:focus-visible) { text-decoration:underline; text-underline-offset:.18em; }
+header.app-header a.app-header__brand:is(:hover,:focus-visible) .app-header__brand-name { text-decoration:underline; text-underline-offset:.18em; }
 header.app-header .app-header__nav { grid-area:nav; justify-self:center; }
 header.app-header .app-header__user {
   grid-area:user;
