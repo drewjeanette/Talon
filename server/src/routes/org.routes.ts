@@ -12,6 +12,15 @@ export const orgRoutes = new Hono<AppEnv>();
 
 orgRoutes.use("*", requireAuth);
 
+const staffSchedule = [
+  { name: "Rene", role: "Admin", days: [1, 2, 3, 4, 5], hours: "8 AM – 5 PM" },
+  { name: "Sabrina", role: "Supervisor", days: [1, 3, 4], hours: "12 PM – 5 PM" },
+  { name: "Leslie", role: "Supervisor", days: [2, 3, 4, 5], hours: "12 PM – 4 PM" },
+  { name: "Seth", role: "Supervisor", days: [1, 3, 5], hours: "9 AM – 5 PM" },
+];
+
+orgRoutes.get("/staff-schedule", requireRole("SUPERVISOR"), (c) => c.json(staffSchedule));
+
 orgRoutes.get("/colleges", async (c) => {
   const db = getDb(c.env.DB);
   const rows = await db.query.colleges.findMany({

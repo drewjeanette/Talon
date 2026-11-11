@@ -5,6 +5,8 @@ for (const role of ["ADMIN", "SUPERVISOR"] as const) {
   for (const theme of ["light", "dark"] as const) {
     test(`${role.toLowerCase()} calendar has no added outline and working month navigation in ${theme} mode`, async ({ page }, testInfo) => {
       await mockAccountTheme(page, theme);
+      await page.clock.setFixedTime(new Date("2026-11-11T18:00:00Z"));
+      if (testInfo.project.name === "mobile") await page.setViewportSize({ width: 320, height: 900 });
       await page.goto("/login");
       await expectAccessible(page);
       await signInToDashboard(page, ACCOUNTS[role]);
@@ -24,8 +26,28 @@ for (const role of ["ADMIN", "SUPERVISOR"] as const) {
       await expect(heading).not.toHaveText(currentMonth);
       await calendar.getByRole("button", { name: "Previous month", exact: true }).click();
       await expect(heading).toHaveText(currentMonth);
+
+      const showSchedule = calendar.getByRole("checkbox", { name: "Show Who’s Working" });
+      await expect(calendar.getByText("Scheduled shifts · Central time")).toBeHidden();
+      await showSchedule.check();
+      const wednesday = calendar.getByRole("radio", { name: "Wednesday, November 11, 2026" });
+      await expect(wednesday).toBeChecked();
+      for (const name of ["Rene", "Sabrina", "Leslie", "Seth"]) {
+        await expect(calendar.getByText(name, { exact: true })).toBeVisible();
+      }
+      await expect(calendar.getByText("8 AM – 5 PM")).toBeVisible();
+      await wednesday.press("ArrowRight");
+      await expect(calendar.getByRole("radio", { name: "Thursday, November 12, 2026" })).toBeChecked();
+      await expect(calendar.getByText("Seth", { exact: true })).toBeHidden();
+      await calendar.getByText("14", { exact: true }).click();
+      await expect(calendar.getByText("No staff scheduled.")).toBeVisible();
+      await calendar.getByText("10", { exact: true }).click();
+      await expect(calendar.getByText("Leslie", { exact: true })).toBeVisible();
+      await expect(calendar.getByText("Sabrina", { exact: true })).toBeHidden();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       await expectAccessible(page);
+      await showSchedule.uncheck();
+      await expect(calendar.getByText("Leslie", { exact: true })).toBeHidden();
       await calendar.screenshot({ path: testInfo.outputPath(`calendar-${role.toLowerCase()}-${theme}.png`) });
     });
   }
