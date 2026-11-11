@@ -1,9 +1,9 @@
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "../db/index.js";
-import { chargeAccounts, colleges, departments } from "../db/schema.js";
+import { chargeAccounts, colleges, departments, timeEntries, users } from "../db/schema.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { writeAuditLog } from "../services/audit.service.js";
 import type { AppEnv } from "../types.js";
@@ -13,13 +13,26 @@ export const orgRoutes = new Hono<AppEnv>();
 orgRoutes.use("*", requireAuth);
 
 const staffSchedule = [
-  { name: "Rene", role: "Admin", days: [1, 2, 3, 4, 5], hours: "8 AM – 5 PM" },
-  { name: "Sabrina", role: "Supervisor", days: [1, 3, 4], hours: "12 PM – 5 PM" },
-  { name: "Leslie", role: "Supervisor", days: [2, 3, 4, 5], hours: "12 PM – 4 PM" },
-  { name: "Seth", role: "Supervisor", days: [1, 3, 5], hours: "9 AM – 5 PM" },
+  { name: "Rene", email: "admin@tntech.edu", role: "Admin", days: [1, 2, 3, 4, 5], hours: "8 AM – 5 PM" },
+  { name: "Sabrina", email: "supervisor@tntech.edu", role: "Supervisor", days: [1, 3, 4], hours: "12 PM – 5 PM" },
+  { name: "Leslie", email: "ljdial42@tntech.edu", role: "Supervisor", days: [2, 3, 4, 5], hours: "12 PM – 4 PM" },
+  { name: "Seth", email: "sawilliams42@tntech.edu", role: "Supervisor", days: [1, 3, 5], hours: "9 AM – 5 PM" },
 ];
 
-orgRoutes.get("/staff-schedule", requireRole("SUPERVISOR"), (c) => c.json(staffSchedule));
+orgRoutes.get("/staff-schedule", requireRole("SUPERVISOR"), async (c) => {
+  const openShifts = await getDb(c.env.DB).select({ email: users.email })
+    .from(timeEntries)
+    .innerJoin(users, eq(timeEntries.userId, users.id))
+    .where(and(
+      isNull(timeEntries.clockOut),
+      eq(users.isActive, true),
+      inArray(users.role, ["ADMIN", "SUPERVISOR"]),
+      inArray(users.email, staffSchedule.map((staff) => staff.email)),
+    ));
+  const working = new Set(openShifts.map((shift) => shift.email));
+  c.header("Cache-Control", "no-store");
+  return c.json(staffSchedule.map(({ email, ...staff }) => ({ ...staff, clockedIn: working.has(email) })));
+});
 
 orgRoutes.get("/colleges", async (c) => {
   const db = getDb(c.env.DB);

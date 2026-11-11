@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../api/client";
+import { notifyWorkChanged } from "../lib/work";
 
 interface TimeEntry {
   id: number;
@@ -66,6 +67,7 @@ export function ClockWidget({ onChange }: { onChange?: () => void }) {
     setMessage(null);
     try {
       await api.post("/timeclock/clock-in", multipleJobs ? { jobId } : {});
+      notifyWorkChanged();
       const job = jobs.find((item) => item.id === jobId);
       setMessage(job ? `Clocked in for ${job.title}.` : "Clocked in.");
       await load();
@@ -82,6 +84,7 @@ export function ClockWidget({ onChange }: { onChange?: () => void }) {
     setMessage(null);
     try {
       const completed = await api.post<TimeEntry>("/timeclock/clock-out");
+      notifyWorkChanged();
       if (completed.clockOut) {
         setLastShiftDuration(new Date(completed.clockOut).getTime() - new Date(completed.clockIn).getTime());
       }
