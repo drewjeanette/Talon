@@ -460,8 +460,8 @@ header.app-header .app-header__logout { height:44px; min-height:44px; padding:.6
 .staff-schedule__panel h4,.staff-schedule__panel p { margin:0 0 .4rem; }
 .staff-schedule__panel ul { display:grid; gap:.5rem; margin:.65rem 0 0; padding:0; list-style:none; }
 .staff-schedule__panel li { position:relative; padding-left:1rem; }
-.staff-schedule__panel li::before { content:""; position:absolute; left:0; top:.45em; width:.5rem; height:.5rem; border-radius:50%; background:#247a3b; }
-html[data-theme="dark"] .staff-schedule__panel li::before { background:#78d99a; }
+.staff-schedule__clocked-in::before { content:""; position:absolute; left:0; top:.45em; width:.5rem; height:.5rem; border-radius:50%; background:#247a3b; }
+html[data-theme="dark"] .staff-schedule__clocked-in::before { background:#78d99a; }
 .staff-schedule__hours { display:block; }
 
 .dashboard--student .student-category { grid-column:span 4; order:4; align-self:start; min-width:0; margin:0; padding:0; background:var(--surface); }

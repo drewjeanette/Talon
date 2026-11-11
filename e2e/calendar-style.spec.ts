@@ -1,6 +1,47 @@
 import { test, expect } from "@playwright/test";
 import { ACCOUNTS, expectAccessible, mockAccountTheme, signInToDashboard } from "./helpers";
 
+test("staff calendars show the green dot only while a supervisor is clocked in", async ({ page, browser, baseURL }) => {
+  test.setTimeout(60_000);
+  const adminContext = await browser.newContext({ baseURL });
+  const admin = await adminContext.newPage();
+  try {
+    await page.clock.setFixedTime(new Date("2026-11-11T18:00:00Z"));
+    await admin.clock.install({ time: new Date("2026-11-11T18:00:00Z") });
+    for (const [view, email] of [[page, ACCOUNTS.SUPERVISOR], [admin, ACCOUNTS.ADMIN]] as const) {
+      await view.goto("/login");
+      await expectAccessible(view);
+      await signInToDashboard(view, email);
+      await view.getByRole("checkbox", { name: "Show Who’s Working" }).check();
+      await expect(view.locator(".staff-schedule__panel").getByText("Sabrina", { exact: true })).toBeVisible();
+      await expect(view.locator(".staff-schedule__clocked-in")).toHaveCount(0);
+    }
+    const clock = page.getByRole("region", { name: "Web Clock", exact: true });
+    const supervisorDot = page.locator(".staff-schedule__clocked-in").filter({ hasText: "Sabrina" });
+    const adminDot = admin.locator(".staff-schedule__clocked-in").filter({ hasText: "Sabrina" });
+    await clock.getByRole("button", { name: "Clock In", exact: true }).click();
+    await expect(supervisorDot).toContainText("Clocked in");
+    await admin.clock.fastForward(60_000);
+    await expect(adminDot).toContainText("Clocked in");
+    await expectAccessible(page);
+    await expectAccessible(admin);
+    await admin.locator(".admin-calendar").getByText("12", { exact: true }).click();
+    await expect(adminDot).toHaveCount(0);
+    await admin.locator(".admin-calendar").getByText("11", { exact: true }).click();
+    await expect(adminDot).toBeVisible();
+
+    await clock.getByRole("button", { name: "Clock Out", exact: true }).click();
+    await expect(supervisorDot).toHaveCount(0);
+    await admin.clock.fastForward(60_000);
+    await expect(adminDot).toHaveCount(0);
+    await expect(admin.locator(".staff-schedule__panel").getByText("Sabrina", { exact: true })).toBeVisible();
+  } finally {
+    const clockOut = page.getByRole("button", { name: "Clock Out", exact: true });
+    if (await clockOut.isEnabled({ timeout: 1000 }).catch(() => false)) await clockOut.click();
+    await adminContext.close();
+  }
+});
+
 for (const role of ["ADMIN", "SUPERVISOR"] as const) {
   for (const theme of ["light", "dark"] as const) {
     test(`${role.toLowerCase()} calendar has no added outline and working month navigation in ${theme} mode`, async ({ page }, testInfo) => {
