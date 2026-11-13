@@ -375,6 +375,8 @@ textarea { width:100%; min-height:84px; padding:.55rem; border:1px solid var(--b
 .stub-review-reason { display:block; margin-top:.35rem; color:var(--text-muted,#625c6b); font-weight:500; }
 .approval-rejection-form { display:grid; gap:.45rem; min-width:260px; margin-top:.65rem; padding:.7rem; border:1px solid #d9a9a9; border-radius:6px; background:#fff7f7; }
 .button--secondary { background:#6b6474; }
+.student-time-tools button.button--danger { background:var(--danger); }
+.student-time-tools button.button--danger:hover:not(:disabled) { background:var(--danger-dark); }
 /* The dark heading color is too pale to use as a hover fill behind white text. */
 html[data-theme="dark"] button.button--secondary:hover:not(:disabled) { background:#534c5e; color:#fff; }
 .supervisor-pay-rates,.team-pay-stubs { grid-column:1 / -1; }
