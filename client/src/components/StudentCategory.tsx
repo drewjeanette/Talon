@@ -1,6 +1,6 @@
 import type { MouseEvent, ReactNode } from "react";
 
-function backToCategories(event: MouseEvent<HTMLButtonElement>) {
+function backToOverview(event: MouseEvent<HTMLButtonElement>) {
   const category = event.currentTarget.closest<HTMLDetailsElement>("details.student-category");
   if (!category) return;
 
@@ -22,9 +22,11 @@ export function StudentCategory({ title, description, className, children }: {
       <span className="student-category__label"><strong>{title}</strong><span>{description}</span></span>
       <span className="student-category__arrow" aria-hidden="true">⌄</span>
     </summary>
-    <div className="student-category__body">{children}</div>
-    <div className="student-category__footer">
-      <button type="button" className="button--secondary" onClick={backToCategories}>Back to Categories</button>
+    <div className="student-category__body">
+      <div className="student-category__actions">
+        <button type="button" onClick={backToOverview}>Back to Overview</button>
+      </div>
+      {children}
     </div>
   </details>;
 }

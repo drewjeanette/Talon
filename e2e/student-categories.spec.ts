@@ -23,8 +23,10 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.getByRole("region", { name: "Web Clock", exact: true })).toBeVisible();
     await expect(todos.getByRole("button", { name: /Fix rejected time/ })).toBeVisible();
     const categories = page.locator("details.student-category");
+    const backToOverview = page.getByRole("button", { name: "Back to Overview", exact: true });
     await expect(categories).toHaveCount(3);
     await expect(page.locator("details.student-category[open]")).toHaveCount(0);
+    await expect(backToOverview).toHaveCount(0);
     for (const selector of [".student-time-tools", ".talon-past-timecards", ".pay-stubs"]) await expect(page.locator(selector)).toBeHidden();
     await expect(page.getByRole("region", { name: "My recent time entries" })).toHaveCount(0);
     const currentBounds = (await current.boundingBox())!;
@@ -37,6 +39,8 @@ for (const theme of ["light", "dark"] as const) {
     await summary.focus();
     await page.keyboard.press("Space");
     await expect(corrections).toHaveAttribute("open", "");
+    await page.keyboard.press("Tab");
+    await expect(backToOverview).toBeFocused();
     const tools = page.locator(".student-time-tools");
     await expect(tools.locator(".correction-history li")).toHaveCount(2);
     await tools.getByRole("button", { name: "Fix a missed clock-in or clock-out" }).click();
@@ -61,13 +65,21 @@ for (const theme of ["light", "dark"] as const) {
     await openStudentCategory(page, "Pay Stubs");
     await expect(page.locator(".pay-stubs table")).toBeVisible();
     await expect(corrections).not.toHaveAttribute("open", "");
+    await expect(backToOverview).toBeVisible();
+    await expectAccessible(page);
     await openStudentCategory(page, "Past Timecards");
     await expect(page.getByRole("region", { name: "Past Timecards", exact: true })).toBeVisible();
     const openCategories = page.locator("details.student-category[open]");
     await expect(openCategories).toHaveCount(1);
     await expectAccessible(page);
 
-    await openCategories.getByRole("button", { name: "Back to Categories" }).click();
+    const buttonBounds = (await backToOverview.boundingBox())!;
+    const categoryBounds = (await openCategories.boundingBox())!;
+    const contentBounds = (await page.getByRole("region", { name: "Past Timecards", exact: true }).boundingBox())!;
+    expect(buttonBounds.y + buttonBounds.height).toBeLessThanOrEqual(contentBounds.y);
+    expect(categoryBounds.x + categoryBounds.width - (buttonBounds.x + buttonBounds.width)).toBeLessThan(24);
+    await expect(backToOverview).toHaveCSS("background-color", theme === "light" ? "rgb(81, 40, 136)" : "rgb(111, 69, 181)");
+    await backToOverview.click();
     await expect(openCategories).toHaveCount(0);
     await expect(categories.first().locator(":scope > summary")).toBeFocused();
     await expect(categories.first().locator(":scope > summary")).toBeInViewport();

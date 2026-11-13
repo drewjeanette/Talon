@@ -478,7 +478,8 @@ html[data-theme="dark"] .staff-schedule__clocked-in::before { background:#78d99a
 .student-category[open] > summary .student-category__arrow { transform:rotate(180deg); }
 .student-category__body { border-top:1px solid var(--border); }
 .dashboard--student .student-category__body > .card { margin:0; padding:1rem; border:0; box-shadow:none; }
-.student-category__footer { padding:0 1rem 1rem; }
+.student-category__actions { display:flex; justify-content:flex-end; padding:1rem 1rem 0; }
+.student-category__actions button:hover:not(:disabled) { background:#3b2268; }
 @media (max-width:900px) { .dashboard--student .student-category { grid-column:1 / -1; } }
 
 /* Settings page, shared by every role. */
