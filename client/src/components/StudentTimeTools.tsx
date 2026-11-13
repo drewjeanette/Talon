@@ -222,7 +222,7 @@ export function StudentTimeTools({ entries, onSubmitted }: { entries: TimeEntryO
         </p>
         <div className="button-row">
           <button type="submit" disabled={busy || resolving !== null}>{busy ? "Sending…" : "Send for approval"}</button>
-          <button type="button" className="button--secondary" onClick={closeForm}>Cancel</button>
+          <button type="button" className="button--danger" onClick={closeForm}>Cancel</button>
         </div>
       </form>}
       <p className="status-message" role="status" aria-live="polite">{message}</p>

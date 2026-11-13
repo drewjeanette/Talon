@@ -51,7 +51,11 @@ for (const theme of ["light", "dark"] as const) {
     await expect(tools).toBeHidden();
     await page.keyboard.press("Enter");
     await expect(reason).toHaveValue("Draft correction to finish later");
-    await tools.getByRole("button", { name: "Cancel", exact: true }).click();
+    const cancel = tools.getByRole("button", { name: "Cancel", exact: true });
+    await expect(cancel).toHaveCSS("background-color", theme === "light" ? "rgb(155, 28, 28)" : "rgb(198, 40, 40)");
+    await expectAccessible(page);
+    await cancel.click();
+    await expect(reason).toBeHidden();
     await summary.click();
 
     // Notification shortcuts open the category; viewing work does not clear it.
