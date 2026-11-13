@@ -18,10 +18,11 @@ for (const theme of ["light", "dark"] as const) {
         status: "REJECTED", reviewedBy: "Test Supervisor",
       })),
     }));
-    await page.route("**/api/notifications/todos", (route) => route.fulfill({ json: [{
+    let hasTodos = true;
+    await page.route("**/api/notifications/todos", (route) => route.fulfill({ json: hasTodos ? [{
       key: "rejected-time", label: "Fix rejected time", count: 12, target: "time",
       detail: "12 time entries were rejected. Send a correction with the right times.", since: null,
-    }] }));
+    }] : [] }));
     await page.goto("/login");
     await expectAccessible(page);
     await page.getByLabel("Email").fill(PEOPLE.KATHERINE);
@@ -34,7 +35,6 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
 
     const desktopWidth = 1280;
-    let clockWidthWithTodos = 0;
     for (const width of [desktopWidth, 640, 320]) {
       await page.setViewportSize({ width, height: 900 });
       await expect(todos).toBeVisible();
@@ -42,13 +42,14 @@ for (const theme of ["light", "dark"] as const) {
       const todoBox = (await todos.boundingBox())!;
       const timecardBox = (await timecard.boundingBox())!;
       if (width === desktopWidth) {
-        clockWidthWithTodos = clockBox.width;
         expect(Math.abs(clockBox.y - todoBox.y)).toBeLessThan(1);
         expect(Math.abs(clockBox.width - todoBox.width)).toBeLessThan(1);
         expect(Math.abs(clockBox.height - todoBox.height)).toBeLessThan(1);
         expect(clockBox.height).toBeLessThan(300);
       } else {
         expect(todoBox.y).toBeGreaterThanOrEqual(clockBox.y + clockBox.height);
+        expect(clockBox.width).toBeCloseTo(timecardBox.width, 0);
+        expect(todoBox.width).toBeCloseTo(timecardBox.width, 0);
       }
       expect(timecardBox.y).toBeGreaterThanOrEqual(todoBox.y + todoBox.height);
       expect(timecardBox.width).toBeGreaterThanOrEqual(clockBox.width);
@@ -61,16 +62,19 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.locator(".student-time-tools")).toBeInViewport();
     await expect(todos.getByRole("button", { name: /Fix rejected time/ })).toBeEnabled();
 
-    // Hiding an empty to-do list should leave the desktop clock the same width.
-    await page.route("**/api/notifications/todos", (route) => route.fulfill({ json: [] }));
+    // The clock expands when the last to-do clears, even without a page reload.
     await page.setViewportSize({ width: desktopWidth, height: 900 });
-    await page.reload();
+    hasTodos = false;
+    await page.evaluate(() => window.dispatchEvent(new Event("talon:work-changed")));
     await expect(todos).toHaveCount(0);
-    await expect(timecard.locator("tbody tr")).toHaveCount(12);
-    const clockBox = (await clock.boundingBox())!;
-    expect(clockBox.width).toBeCloseTo(clockWidthWithTodos, 0);
-    expect(clockBox.width).toBeLessThan((await timecard.boundingBox())!.width / 2);
-    expect(clockBox.height).toBeLessThan(220);
-    await expectAccessible(page);
+    for (const width of [desktopWidth, 640, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      const clockBox = (await clock.boundingBox())!;
+      const timecardBox = (await timecard.boundingBox())!;
+      expect(clockBox.x).toBeCloseTo(timecardBox.x, 0);
+      expect(clockBox.width).toBeCloseTo(timecardBox.width, 0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      await expectAccessible(page);
+    }
   });
 }
