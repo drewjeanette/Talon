@@ -22,15 +22,15 @@ export default function App() {
 
   useEffect(() => {
     const titles: Record<string, string> = {
-      "/": "Dashboard | Talon",
-      "/login": "Sign In | Talon",
-      "/settings": "Settings | Talon",
-      "/forgot-password": "Forgot Password | Talon",
-      "/reset-password": "Reset Password | Talon",
-      "/privacy": "Privacy Notice | Talon",
-      "/accessibility": "Accessibility Statement | Talon",
+      "/": "Dashboard | Talon Capstone Project",
+      "/login": "Sign In | Talon Capstone Project",
+      "/settings": "Settings | Talon Capstone Project",
+      "/forgot-password": "Forgot Password | Talon Capstone Project",
+      "/reset-password": "Reset Password | Talon Capstone Project",
+      "/privacy": "Privacy Notice | Talon Capstone Project",
+      "/accessibility": "Accessibility Statement | Talon Capstone Project",
     };
-    document.title = titles[location.pathname] ?? "Page Not Found | Talon";
+    document.title = titles[location.pathname] ?? "Page Not Found | Talon Capstone Project";
   }, [location.pathname]);
 
   return (
