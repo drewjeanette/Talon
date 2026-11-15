@@ -80,6 +80,11 @@ test("admin compares two students side by side and sees which line items differ"
   const report = page.locator(".payroll-report");
   await expect(report.locator(".talon-report-status")).toContainText("report lines loaded");
 
+  await pickPerson(page, "People", "sabrina supervisor", "Sabrina Supervisor", report);
+  await expect(report.getByText("No payroll rows match the selected filters for this pay period.")).toBeVisible();
+  await expect(report.getByRole("button", { name: "Download CSV" })).toBeDisabled();
+  await report.getByRole("button", { name: "Clear filters" }).click();
+
   for (const column of ["Regular hrs", "Regular pay", "Overtime hrs", "Overtime pay", "Total hrs", "Total pay", "Charge account"]) {
     await expect(report.getByRole("columnheader", { name: new RegExp(column) })).toBeVisible();
   }
@@ -168,6 +173,11 @@ for (const role of ["ADMIN", "SUPERVISOR"] as const) {
     await reportFilter.selectOption((await calendarOnly.getAttribute("value"))!);
     await expect(report.getByText("No payroll report has been generated for this timecard period.")).toBeVisible();
     await expect(report.getByRole("button", { name: "Download CSV" })).toBeDisabled();
+    if (role === "ADMIN") {
+      await pickPerson(page, "People", "katherine diaz", "Katherine Diaz", report);
+      await expect(report.getByRole("button", { name: "Remove Katherine Diaz" })).toBeVisible();
+      await report.getByRole("button", { name: "Clear filters" }).click();
+    }
     const emptyPeriods = [];
     for (const cycle of ["Bi-weekly", "Monthly"]) {
       const option = reportFilter.getByRole("option", { name: new RegExp(`^${cycle}.*No payroll data`) }).first();

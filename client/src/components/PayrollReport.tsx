@@ -3,7 +3,12 @@ import { api, ApiError } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { payPeriodLabel, timecardDate, type TimecardPeriod } from "../lib/timecards";
 import { downloadBlob, notifyWorkChanged, useWorkChanged } from "../lib/work";
-import { PersonSearch } from "./PersonSearch";
+import { PersonSearch, type SearchablePerson } from "./PersonSearch";
+
+interface DirectoryUser extends SearchablePerson {
+  role: string;
+  department: { name: string } | null;
+}
 
 interface PayPeriod {
   id: number;
@@ -168,6 +173,8 @@ export function PayrollReport({ embedded = false }: { embedded?: boolean }) {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [peopleFilter, setPeopleFilter] = useState<number[]>([]);
+  const [directoryPeople, setDirectoryPeople] = useState<SearchablePerson[]>([]);
+  const [directoryError, setDirectoryError] = useState(false);
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [accountFilter, setAccountFilter] = useState("");
   const [groupBy, setGroupBy] = useState<GroupBy>("person");
@@ -208,6 +215,20 @@ export function PayrollReport({ embedded = false }: { embedded?: boolean }) {
     api.get<TimecardPeriod[]>("/payroll/timecard-periods").then(setTimecardPeriods)
       .catch(() => setTimecardPeriods([]));
   }, [version]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    let active = true;
+    api.get<DirectoryUser[]>("/users").then((users) => {
+      if (!active) return;
+      setDirectoryPeople(users.filter(({ role }) => role === "STUDENT" || role === "SUPERVISOR")
+        .map(({ id, firstName, lastName, preferredName, department, role }) => ({
+          id, firstName, lastName, preferredName,
+          detail: [role === "STUDENT" ? "Student" : "Supervisor", department?.name].filter(Boolean).join(" · "),
+        })));
+    }).catch(() => { if (active) setDirectoryError(true); });
+    return () => { active = false; };
+  }, [isAdmin]);
 
   const periodOptions = [
     ...periods.map((period) => ({
@@ -254,14 +275,15 @@ export function PayrollReport({ embedded = false }: { embedded?: boolean }) {
   const people = useMemo(() => {
     const byId = new Map<number, ReportLine>();
     for (const line of lines) if (!byId.has(line.employeeId)) byId.set(line.employeeId, line);
-    return [...byId.values()].map((line) => ({
+    const reportPeople = [...byId.values()].map((line) => ({
       id: line.employeeId,
       firstName: line.firstName,
       lastName: line.lastName,
       preferredName: line.preferredName || null,
       detail: [line.department, line.chargeAccount].filter(Boolean).join(" · "),
     }));
-  }, [lines]);
+    return isAdmin ? [...reportPeople, ...directoryPeople.filter(({ id }) => !byId.has(id))] : reportPeople;
+  }, [lines, isAdmin, directoryPeople]);
   const departments = useMemo(() => distinct(lines.map((line) => line.department)), [lines]);
   const accounts = useMemo(() => {
     const map = new Map<string, string>();
@@ -336,6 +358,7 @@ export function PayrollReport({ embedded = false }: { embedded?: boolean }) {
           </select>
         </div>
         <PersonSearch label="People" people={people} value={peopleFilter} onChange={setPeopleFilter} multiple placeholder="Add people by name" />
+        {isAdmin && directoryError && <p role="status">Could not load the account directory. You can still search people in this report.</p>}
         <div className="form-row">
           <label htmlFor="report-department">Home department</label>
           <select id="report-department" value={departmentFilter} onChange={(event) => setDepartmentFilter(event.target.value)}>
@@ -368,7 +391,9 @@ export function PayrollReport({ embedded = false }: { embedded?: boolean }) {
           <button type="button" className="button--secondary" onClick={() => { setPeopleFilter([]); setDepartmentFilter(""); setAccountFilter(""); }}>Clear filters</button>
         )}
       </div>
-      <p role="status" aria-live="polite" className="talon-report-status">{loading ? "Loading report…" : message}</p>
+      <p role="status" aria-live="polite" className="talon-report-status">
+        {loading ? "Loading report…" : lines.length > 0 && rows.length === 0 ? "No payroll rows match the selected filters for this pay period." : message}
+      </p>
 
       {rows.length > 0 && (
         <div className="table-scroll payroll-report__table" role="region" aria-label="Payroll report table" tabIndex={0}>
