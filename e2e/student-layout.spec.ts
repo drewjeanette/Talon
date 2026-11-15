@@ -61,6 +61,12 @@ for (const theme of ["light", "dark"] as const) {
     await todos.getByRole("button", { name: /Fix rejected time/ }).click();
     await expect(page.locator(".student-time-tools")).toBeInViewport();
     await expect(todos.getByRole("button", { name: /Fix rejected time/ })).toBeEnabled();
+    if (theme === "dark") {
+      const openCorrection = page.getByRole("button", { name: "Fix a missed clock-in or clock-out" });
+      await openCorrection.hover();
+      await expect(openCorrection).toHaveCSS("background-color", "rgb(59, 34, 104)");
+      await expectAccessible(page);
+    }
 
     // The clock expands when the last to-do clears, even without a page reload.
     await page.setViewportSize({ width: desktopWidth, height: 900 });
