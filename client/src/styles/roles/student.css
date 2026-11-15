@@ -414,6 +414,7 @@ html[data-theme="dark"] .student-time-tools input,
 html[data-theme="dark"] .student-time-tools select,
 html[data-theme="dark"] .student-time-tools textarea { border-color:#b99be5; }
 html[data-theme="dark"] th { background:var(--table-header); color:var(--tt-purple-dark); }
+html[data-theme="dark"] .student-time-tools__open:hover:not(:disabled) { background:#3b2268; }
 html[data-theme="dark"] .clock-widget__status,
 html[data-theme="dark"] .status-message:not(:empty),
 html[data-theme="dark"] .student-pay-rate,
